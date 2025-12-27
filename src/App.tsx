@@ -15,8 +15,9 @@ import { ModuleRegistry } from '@/core/ModuleRegistry';
 import { EventBus, useEventBus } from '@/core/EventBus';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { ApiKeySetup } from '@/components/auth/ApiKeySetup';
+import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { useGlobalStore, selectHasRequiredApiKeys } from '@/stores/globalStore';
+import { useGlobalStore, selectHasRequiredApiKeys, selectIsAuthenticated } from '@/stores/globalStore';
 import '@fontsource/jetbrains-mono/300.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
@@ -28,7 +29,9 @@ const queryClient = new QueryClient();
 function AeternumCore() {
   const [systemReady, setSystemReady] = useState(false);
   const [showApiSetup, setShowApiSetup] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const hasApiKeys = useGlobalStore(selectHasRequiredApiKeys);
+  const isAuthenticated = useGlobalStore(selectIsAuthenticated);
 
   // Initialize module registry on mount
   useEffect(() => {
@@ -63,7 +66,19 @@ function AeternumCore() {
     }
   }, [hasApiKeys]);
 
-  // Show API setup if not configured
+  // Check if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsLoggedIn(true);
+    }
+  }, [isAuthenticated]);
+
+  // Step 1: Show login screen first
+  if (!isLoggedIn) {
+    return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
+  }
+
+  // Step 2: Show API setup if not configured
   if (showApiSetup && !systemReady) {
     return <ApiKeySetup />;
   }

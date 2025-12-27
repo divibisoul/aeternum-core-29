@@ -53,6 +53,7 @@ export interface GlobalState {
   setApiKeys: (keys: ApiKeyState[]) => void;
   addApiKey: (key: ApiKeyState) => void;
   removeApiKey: (provider: string) => void;
+  setHasRequiredApiKeys: (has: boolean) => void;
   setCurrentSessionId: (id: string | null) => void;
   updateTelemetry: (data: Partial<TelemetryState>) => void;
   setSidebarOpen: (open: boolean) => void;
@@ -98,7 +99,7 @@ export const useGlobalStore = create<GlobalState>()(
 
       setApiKeys: (apiKeys) => set({ 
         apiKeys,
-        hasRequiredApiKeys: apiKeys.some(k => k.provider === 'openai' && k.configured),
+        hasRequiredApiKeys: apiKeys.some(k => k.configured),
       }),
 
       addApiKey: (key) => {
@@ -106,7 +107,7 @@ export const useGlobalStore = create<GlobalState>()(
         const apiKeys = [...existing, key];
         set({ 
           apiKeys,
-          hasRequiredApiKeys: apiKeys.some(k => k.provider === 'openai' && k.configured),
+          hasRequiredApiKeys: apiKeys.some(k => k.configured),
         });
       },
 
@@ -114,9 +115,11 @@ export const useGlobalStore = create<GlobalState>()(
         const apiKeys = get().apiKeys.filter(k => k.provider !== provider);
         set({ 
           apiKeys,
-          hasRequiredApiKeys: apiKeys.some(k => k.provider === 'openai' && k.configured),
+          hasRequiredApiKeys: apiKeys.some(k => k.configured),
         });
       },
+
+      setHasRequiredApiKeys: (hasRequiredApiKeys) => set({ hasRequiredApiKeys }),
 
       setCurrentSessionId: (currentSessionId) => set({ currentSessionId }),
 
