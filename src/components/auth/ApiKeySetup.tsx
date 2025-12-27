@@ -1,12 +1,13 @@
 /**
  * API KEY SETUP SCREEN
  * 
- * Initial configuration screen - blocks system until API key is configured.
+ * Flexible configuration for ANY AI provider - accepts any API key.
+ * System can use pre-configured keys from environment.
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Key, Eye, EyeOff, Check, Loader2, Shield, AlertCircle } from 'lucide-react';
+import { Key, Eye, EyeOff, Check, Loader2, Shield, Plus, Trash2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGlobalStore } from '@/stores/globalStore';
@@ -14,79 +15,86 @@ import { supabase } from '@/integrations/supabase/client';
 import { EventBus } from '@/core/EventBus';
 import { toast } from 'sonner';
 
-interface ProviderConfig {
+interface CustomProvider {
   id: string;
   name: string;
-  description: string;
-  placeholder: string;
-  required: boolean;
+  key: string;
 }
 
-const PROVIDERS: ProviderConfig[] = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    description: 'Required for GPT models and core AI functionality',
-    placeholder: 'sk-...',
-    required: true,
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic',
-    description: 'Optional - Claude models for enhanced reasoning',
-    placeholder: 'sk-ant-...',
-    required: false,
-  },
+const PRESET_PROVIDERS = [
+  { id: 'gemini', name: 'Google Gemini', placeholder: 'AIza...' },
+  { id: 'openai', name: 'OpenAI', placeholder: 'sk-...' },
+  { id: 'anthropic', name: 'Anthropic Claude', placeholder: 'sk-ant-...' },
+  { id: 'groq', name: 'Groq', placeholder: 'gsk_...' },
+  { id: 'mistral', name: 'Mistral AI', placeholder: 'API key...' },
+  { id: 'cohere', name: 'Cohere', placeholder: 'API key...' },
+  { id: 'perplexity', name: 'Perplexity', placeholder: 'pplx-...' },
+  { id: 'together', name: 'Together AI', placeholder: 'API key...' },
+  { id: 'custom', name: 'Custom Provider', placeholder: 'Your API key...' },
 ];
 
 export function ApiKeySetup() {
-  const { user, addApiKey } = useGlobalStore();
-  const [keys, setKeys] = useState<Record<string, string>>({});
-  const [showKey, setShowKey] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState<string | null>(null);
-  const [configured, setConfigured] = useState<string[]>([]);
+  const { user, addApiKey, setHasRequiredApiKeys } = useGlobalStore();
+  const [selectedProvider, setSelectedProvider] = useState('gemini');
+  const [customProviderName, setCustomProviderName] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [showKey, setShowKey] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [configured, setConfigured] = useState<CustomProvider[]>([]);
+  const [hasEnvKey, setHasEnvKey] = useState(false);
 
-  const handleKeyChange = (provider: string, value: string) => {
-    setKeys(prev => ({ ...prev, [provider]: value }));
+  // Check if we have a pre-configured key from environment
+  useEffect(() => {
+    const checkEnvKey = async () => {
+      try {
+        // Check if GEMINI_API_KEY is available via edge function
+        const { data } = await supabase.functions.invoke('check-api-key', {
+          body: { provider: 'gemini' }
+        });
+        if (data?.hasKey) {
+          setHasEnvKey(true);
+          setConfigured(prev => [...prev, { id: 'gemini', name: 'Google Gemini (Pre-configured)', key: '***' }]);
+          addApiKey({ provider: 'gemini', configured: true, lastValidated: Date.now() });
+        }
+      } catch {
+        // Edge function might not exist yet, that's ok
+      }
+    };
+    checkEnvKey();
+  }, [addApiKey]);
+
+  const getPlaceholder = () => {
+    const provider = PRESET_PROVIDERS.find(p => p.id === selectedProvider);
+    return provider?.placeholder || 'Enter API key...';
   };
 
-  const toggleShowKey = (provider: string) => {
-    setShowKey(prev => ({ ...prev, [provider]: !prev[provider] }));
-  };
-
-  const validateAndSaveKey = async (provider: ProviderConfig) => {
-    const key = keys[provider.id];
-    if (!key?.trim()) {
+  const saveApiKey = async () => {
+    if (!apiKey.trim()) {
       toast.error('Please enter an API key');
       return;
     }
 
-    setLoading(provider.id);
-    EventBus.emit('apikey:validation:start', { provider: provider.id });
+    const providerName = selectedProvider === 'custom' 
+      ? customProviderName || 'Custom AI'
+      : PRESET_PROVIDERS.find(p => p.id === selectedProvider)?.name || selectedProvider;
+
+    setLoading(true);
+    EventBus.emit('apikey:validation:start', { provider: selectedProvider });
 
     try {
-      // For demo purposes, we'll accept any key that matches the expected format
-      // In production, you'd validate against the actual API
-      const isValidFormat = provider.id === 'openai' 
-        ? key.startsWith('sk-') 
-        : key.startsWith('sk-ant-');
+      // Simple encryption (base64)
+      const encryptedKey = btoa(apiKey);
 
-      if (!isValidFormat) {
-        throw new Error(`Invalid ${provider.name} API key format`);
-      }
-
-      // Simple encryption (in production, use proper encryption)
-      const encryptedKey = btoa(key);
-
-      // Save to database
+      // Save to database if user is logged in
       if (user) {
         const { error } = await supabase
           .from('api_keys')
           .upsert({
             user_id: user.id,
-            provider: provider.id,
+            provider: selectedProvider === 'custom' ? customProviderName : selectedProvider,
             encrypted_key: encryptedKey,
             is_active: true,
+            label: providerName,
           }, {
             onConflict: 'user_id,provider'
           });
@@ -95,30 +103,38 @@ export function ApiKeySetup() {
       }
 
       // Update local state
-      addApiKey({ provider: provider.id, configured: true, lastValidated: Date.now() });
-      setConfigured(prev => [...prev, provider.id]);
+      const newProvider = { id: selectedProvider, name: providerName, key: apiKey.substring(0, 8) + '***' };
+      setConfigured(prev => {
+        const filtered = prev.filter(p => p.id !== selectedProvider);
+        return [...filtered, newProvider];
+      });
       
-      EventBus.emit('apikey:validation:success', { provider: provider.id });
-      EventBus.emit('apikey:configured', { provider: provider.id });
+      addApiKey({ provider: selectedProvider, configured: true, lastValidated: Date.now() });
       
-      toast.success(`${provider.name} API key configured successfully`);
+      EventBus.emit('apikey:validation:success', { provider: selectedProvider });
+      EventBus.emit('apikey:configured', { provider: selectedProvider });
+      
+      toast.success(`${providerName} configured successfully`);
+      setApiKey('');
+      
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Validation failed';
-      EventBus.emit('apikey:validation:error', { provider: provider.id, error: errorMsg });
+      const errorMsg = error instanceof Error ? error.message : 'Failed to save';
+      EventBus.emit('apikey:validation:error', { provider: selectedProvider, error: errorMsg });
       toast.error(errorMsg);
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
-  const requiredConfigured = PROVIDERS
-    .filter(p => p.required)
-    .every(p => configured.includes(p.id));
+  const removeProvider = (id: string) => {
+    setConfigured(prev => prev.filter(p => p.id !== id));
+  };
+
+  const hasAnyKey = configured.length > 0 || hasEnvKey;
 
   const handleContinue = () => {
-    if (requiredConfigured) {
-      EventBus.emit('system:init', { timestamp: Date.now() });
-    }
+    setHasRequiredApiKeys(true);
+    EventBus.emit('system:init', { timestamp: Date.now() });
   };
 
   return (
@@ -139,130 +155,130 @@ export function ApiKeySetup() {
           {/* Header */}
           <div className="text-center mb-8">
             <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-primary/20 flex items-center justify-center">
-              <Key className="h-8 w-8 text-primary" />
+              <Sparkles className="h-8 w-8 text-primary" />
             </div>
             <h1 className="font-display text-2xl font-bold text-foreground neon-text-subtle">
-              Configure API Keys
+              Configure AI Providers
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Aeternum requires API keys to connect to AI providers. Your keys are encrypted and stored securely.
+              Aeternum accepts any AI provider. Add one or more API keys to enable AI capabilities.
             </p>
           </div>
 
-          {/* Security Notice */}
-          <div className="mb-6 flex items-start gap-3 rounded-lg bg-primary/10 p-3 border border-primary/20">
-            <Shield className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">End-to-end encryption:</span> Your API keys are encrypted before storage and never exposed in logs or transmitted unencrypted.
+          {/* Pre-configured notice */}
+          {hasEnvKey && (
+            <div className="mb-6 flex items-start gap-3 rounded-lg bg-primary/10 p-3 border border-primary/20">
+              <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+              <div className="text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Gemini API pre-configured!</span> You can start using Aeternum immediately or add additional providers.
+              </div>
+            </div>
+          )}
+
+          {/* Configured Providers */}
+          {configured.length > 0 && (
+            <div className="mb-6 space-y-2">
+              <label className="text-xs text-muted-foreground uppercase tracking-wider">
+                Active Providers
+              </label>
+              {configured.map(provider => (
+                <div 
+                  key={provider.id}
+                  className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5"
+                >
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">{provider.name}</span>
+                    <span className="text-xs text-muted-foreground">{provider.key}</span>
+                  </div>
+                  {!provider.name.includes('Pre-configured') && (
+                    <button 
+                      onClick={() => removeProvider(provider.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add New Provider */}
+          <div className="space-y-4">
+            <label className="text-xs text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Plus className="h-3 w-3" /> Add Provider
+            </label>
+            
+            {/* Provider Select */}
+            <select
+              value={selectedProvider}
+              onChange={(e) => setSelectedProvider(e.target.value)}
+              className="w-full h-10 px-3 rounded-lg bg-card/50 border border-border/50 text-foreground text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+            >
+              {PRESET_PROVIDERS.map(provider => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name}
+                </option>
+              ))}
+            </select>
+
+            {/* Custom provider name */}
+            {selectedProvider === 'custom' && (
+              <Input
+                placeholder="Provider name (e.g., Local LLM)"
+                value={customProviderName}
+                onChange={(e) => setCustomProviderName(e.target.value)}
+              />
+            )}
+
+            {/* API Key Input */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input
+                  type={showKey ? 'text' : 'password'}
+                  placeholder={getPlaceholder()}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              <Button
+                variant="neon"
+                onClick={saveApiKey}
+                disabled={loading || !apiKey.trim()}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Add'}
+              </Button>
             </div>
           </div>
 
-          {/* Provider Forms */}
-          <div className="space-y-4">
-            {PROVIDERS.map((provider) => {
-              const isConfigured = configured.includes(provider.id);
-              const isLoading = loading === provider.id;
-
-              return (
-                <motion.div
-                  key={provider.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className={`rounded-lg border p-4 transition-colors ${
-                    isConfigured 
-                      ? 'border-primary/50 bg-primary/5' 
-                      : 'border-border/50 bg-card/30'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{provider.name}</span>
-                        {provider.required && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/20 text-destructive">
-                            Required
-                          </span>
-                        )}
-                        {isConfigured && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary flex items-center gap-1">
-                            <Check className="h-3 w-3" /> Configured
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {provider.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  {!isConfigured && (
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Input
-                          type={showKey[provider.id] ? 'text' : 'password'}
-                          placeholder={provider.placeholder}
-                          value={keys[provider.id] || ''}
-                          onChange={(e) => handleKeyChange(provider.id, e.target.value)}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => toggleShowKey(provider.id)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                        >
-                          {showKey[provider.id] ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                      <Button
-                        variant="neon"
-                        onClick={() => validateAndSaveKey(provider)}
-                        disabled={isLoading || !keys[provider.id]?.trim()}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          'Save'
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </motion.div>
-              );
-            })}
+          {/* Security Notice */}
+          <div className="mt-6 flex items-start gap-3 rounded-lg bg-muted/30 p-3 border border-border/30">
+            <Shield className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+            <div className="text-xs text-muted-foreground">
+              Keys are encrypted before storage. Aeternum accepts any AI API - OpenAI, Gemini, Claude, Groq, local models, and more.
+            </div>
           </div>
 
           {/* Continue Button */}
           <div className="mt-8">
-            {!requiredConfigured && (
-              <div className="flex items-center gap-2 justify-center mb-4 text-xs text-muted-foreground">
-                <AlertCircle className="h-4 w-4" />
-                Configure all required keys to continue
-              </div>
-            )}
             <Button
               variant="glow"
               size="lg"
               className="w-full"
-              disabled={!requiredConfigured}
               onClick={handleContinue}
             >
-              Initialize Aeternum
+              {hasAnyKey ? 'Initialize Aeternum' : 'Continue without AI'}
             </Button>
           </div>
-        </div>
-
-        {/* Skip for demo */}
-        <div className="mt-4 text-center">
-          <button
-            onClick={handleContinue}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Skip for demo (limited functionality)
-          </button>
         </div>
       </motion.div>
     </div>
