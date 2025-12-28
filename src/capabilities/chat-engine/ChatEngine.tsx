@@ -1,16 +1,18 @@
 /**
  * CHAT ENGINE COMPONENT
  * 
- * Multi-persona AI chat interface with orchestration visualization.
+ * Real AI chat interface with streaming responses.
+ * Connects to Super AGI backend via edge function.
  */
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Paperclip, Mic, StopCircle, Sparkles, Bot, User, Clock } from 'lucide-react';
+import { Send, Paperclip, Mic, StopCircle, Sparkles, Bot, User, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ModuleComponentProps } from '@/core/ModuleRegistry';
 import { EventBus } from '@/core/EventBus';
 import { useGlobalStore } from '@/stores/globalStore';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -20,21 +22,42 @@ interface Message {
   timestamp: Date;
   persona?: string;
   thinking?: boolean;
+  error?: boolean;
 }
 
 const PERSONAS = [
-  { id: 'biologist', name: 'Biologist', color: 'text-neon-green' },
-  { id: 'physicist', name: 'Physicist', color: 'text-neon-blue' },
-  { id: 'ethicist', name: 'Ethicist', color: 'text-neon-purple' },
-  { id: 'engineer', name: 'Engineer', color: 'text-neon-orange' },
+  { id: 'analyzer', name: 'Analyzer', color: 'text-neon-green' },
+  { id: 'reasoner', name: 'Reasoner', color: 'text-neon-blue' },
+  { id: 'synthesizer', name: 'Synthesizer', color: 'text-neon-purple' },
+  { id: 'creator', name: 'Creator', color: 'text-neon-orange' },
 ];
 
+// Get browser language for initial message
+const getBrowserLang = () => {
+  const lang = navigator.language || 'en';
+  return lang.startsWith('pt') ? 'pt' : lang.startsWith('es') ? 'es' : 'en';
+};
+
+const WELCOME_MESSAGES: Record<string, string> = {
+  pt: 'Olá! Sou AETERNUM, sua interface de Super AGI. Como posso ajudá-lo hoje?',
+  es: '¡Hola! Soy AETERNUM, tu interfaz de Super AGI. ¿Cómo puedo ayudarte hoy?',
+  en: 'Hello! I am AETERNUM, your Super AGI interface. How can I help you today?',
+};
+
+const PLACEHOLDERS: Record<string, string> = {
+  pt: 'Digite sua mensagem...',
+  es: 'Escribe tu mensaje...',
+  en: 'Type your message...',
+};
+
 export function ChatEngine({ isActive }: ModuleComponentProps) {
+  const browserLang = getBrowserLang();
+  
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Welcome to Aeternum. I am ready to assist you with multi-persona analysis. How can I help you today?',
+      content: WELCOME_MESSAGES[browserLang],
       timestamp: new Date(),
     },
   ]);
@@ -43,6 +66,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
   const [activePersonas, setActivePersonas] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const { updateTelemetry } = useGlobalStore();
 
   const scrollToBottom = () => {
@@ -53,25 +77,16 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     scrollToBottom();
   }, [messages]);
 
-  const simulateOrchestration = async (prompt: string) => {
-    const taskId = Date.now().toString();
-    EventBus.emit('orchestrator:start', { taskId, prompt });
-
-    // Simulate each persona thinking
+  const simulateOrchestration = async () => {
+    // Simulate each persona "thinking"
     for (const persona of PERSONAS) {
       setActivePersonas(prev => [...prev, persona.id]);
-      EventBus.emit('orchestrator:persona:start', { taskId, persona: persona.id });
-      
-      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
-      
-      EventBus.emit('orchestrator:persona:end', { taskId, persona: persona.id, result: {} });
+      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
     }
-
-    // Simulate synthesis
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setActivePersonas([]);
     
-    EventBus.emit('orchestrator:complete', { taskId, result: {} });
+    // Brief synthesis delay
+    await new Promise(resolve => setTimeout(resolve, 200));
+    setActivePersonas([]);
   };
 
   const handleSend = async () => {
@@ -85,11 +100,12 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const userInput = input.trim();
     setInput('');
     setIsProcessing(true);
 
     const startTime = Date.now();
-    EventBus.emit('chat:message:sent', { content: userMessage.content, sessionId: 'demo' });
+    EventBus.emit('chat:message:sent', { content: userMessage.content, sessionId: 'main' });
 
     // Add thinking indicator
     const thinkingId = (Date.now() + 1).toString();
@@ -101,31 +117,133 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       thinking: true,
     }]);
 
-    try {
-      // Simulate orchestration
-      await simulateOrchestration(userMessage.content);
+    // Start orchestration visualization
+    simulateOrchestration();
 
-      // Simulate response delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      abortControllerRef.current = new AbortController();
+      
+      // Build message history for context
+      const messageHistory = messages
+        .filter(m => !m.thinking)
+        .map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }));
+      
+      // Add current user message
+      messageHistory.push({ role: 'user', content: userInput });
+
+      // Call the edge function with streaming
+      const response = await supabase.functions.invoke('chat', {
+        body: { 
+          messages: messageHistory,
+          stream: true,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro na API');
+      }
+
+      // Handle streaming response
+      let fullContent = '';
+      
+      if (response.data) {
+        // Check if it's a streaming response
+        if (response.data instanceof ReadableStream) {
+          const reader = response.data.getReader();
+          const decoder = new TextDecoder();
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n').filter(line => line.startsWith('data: '));
+            
+            for (const line of lines) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+              
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices?.[0]?.delta?.content || '';
+                if (content) {
+                  fullContent += content;
+                  setMessages(prev => prev.map(m => 
+                    m.id === thinkingId 
+                      ? { ...m, content: fullContent, thinking: false }
+                      : m
+                  ));
+                }
+              } catch {
+                // Skip unparseable chunks
+              }
+            }
+          }
+        } else if (typeof response.data === 'object' && response.data.content) {
+          // Non-streaming response
+          fullContent = response.data.content;
+          setMessages(prev => prev.map(m => 
+            m.id === thinkingId 
+              ? { ...m, content: fullContent, thinking: false }
+              : m
+          ));
+        } else if (typeof response.data === 'string') {
+          // Raw string response - parse SSE
+          const lines = response.data.split('\n').filter((line: string) => line.startsWith('data: '));
+          for (const line of lines) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
+              if (content) {
+                fullContent += content;
+              }
+            } catch {
+              // Skip unparseable
+            }
+          }
+          
+          if (fullContent) {
+            setMessages(prev => prev.map(m => 
+              m.id === thinkingId 
+                ? { ...m, content: fullContent, thinking: false }
+                : m
+            ));
+          }
+        }
+      }
+
+      // If no content was extracted, show error
+      if (!fullContent) {
+        throw new Error('Resposta vazia da IA');
+      }
 
       const latency = Date.now() - startTime;
-      updateTelemetry({ latencyMs: latency, tokensPerSecond: 25 + Math.random() * 15 });
+      const tokensPerSec = fullContent.length / (latency / 1000) * 0.75; // Rough estimate
+      updateTelemetry({ latencyMs: latency, tokensPerSecond: tokensPerSec });
 
-      // Replace thinking with actual response
-      const response: Message = {
-        id: thinkingId,
-        role: 'assistant',
-        content: generateDemoResponse(userMessage.content),
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => prev.map(m => m.id === thinkingId ? response : m));
-      EventBus.emit('chat:message:received', { content: response.content, sessionId: 'demo' });
+      EventBus.emit('chat:message:received', { content: fullContent, sessionId: 'main' });
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages(prev => prev.filter(m => m.id !== thinkingId));
+      
+      setMessages(prev => prev.map(m => 
+        m.id === thinkingId 
+          ? { 
+              ...m, 
+              content: error instanceof Error ? error.message : 'Erro ao processar mensagem',
+              thinking: false,
+              error: true,
+            }
+          : m
+      ));
     } finally {
       setIsProcessing(false);
+      setActivePersonas([]);
+      abortControllerRef.current = null;
     }
   };
 
@@ -136,12 +254,20 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     }
   };
 
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
+    setIsProcessing(false);
+    setActivePersonas([]);
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Persona Status Bar */}
       <div className="flex items-center gap-2 border-b border-border/30 bg-card/30 px-4 py-2">
         <Sparkles className="h-4 w-4 text-primary" />
-        <span className="text-xs text-muted-foreground">Active Personas:</span>
+        <span className="text-xs text-muted-foreground">
+          {browserLang === 'pt' ? 'Módulos Ativos:' : browserLang === 'es' ? 'Módulos Activos:' : 'Active Modules:'}
+        </span>
         <div className="flex gap-2">
           {PERSONAS.map((persona) => (
             <div
@@ -180,8 +306,15 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
               )}
             >
               {message.role === 'assistant' && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/20">
-                  <Bot className="h-4 w-4 text-primary" />
+                <div className={cn(
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                  message.error ? "bg-destructive/20" : "bg-primary/20"
+                )}>
+                  {message.error ? (
+                    <AlertCircle className="h-4 w-4 text-destructive" />
+                  ) : (
+                    <Bot className="h-4 w-4 text-primary" />
+                  )}
                 </div>
               )}
 
@@ -190,6 +323,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                   "max-w-[70%] rounded-2xl px-4 py-3",
                   message.role === 'user'
                     ? "bg-primary text-primary-foreground rounded-tr-sm"
+                    : message.error
+                    ? "glass rounded-tl-sm border border-destructive/30"
                     : "glass rounded-tl-sm"
                 )}
               >
@@ -200,11 +335,18 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                       <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '150ms' }} />
                       <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '300ms' }} />
                     </div>
-                    <span className="text-xs text-muted-foreground">Synthesizing responses...</span>
+                    <span className="text-xs text-muted-foreground">
+                      {browserLang === 'pt' ? 'Processando...' : browserLang === 'es' ? 'Procesando...' : 'Processing...'}
+                    </span>
                   </div>
                 ) : (
                   <>
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                    <p className={cn(
+                      "text-sm whitespace-pre-wrap",
+                      message.error && "text-destructive"
+                    )}>
+                      {message.content}
+                    </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       {message.timestamp.toLocaleTimeString()}
@@ -236,7 +378,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Enter your query..."
+            placeholder={PLACEHOLDERS[browserLang]}
             className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             rows={1}
             style={{
@@ -253,8 +395,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
           <Button
             variant="glow"
             size="icon"
-            onClick={handleSend}
-            disabled={!input.trim() || isProcessing}
+            onClick={isProcessing ? handleStop : handleSend}
+            disabled={!input.trim() && !isProcessing}
             className="shrink-0"
           >
             {isProcessing ? (
@@ -275,16 +417,4 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       </div>
     </div>
   );
-}
-
-function generateDemoResponse(prompt: string): string {
-  const responses = [
-    `I've analyzed your query through multiple cognitive lenses:\n\n**Biological Perspective:** The patterns you describe align with natural adaptive systems that optimize for efficiency.\n\n**Physical Analysis:** From a physics standpoint, the energy dynamics suggest a stable equilibrium state.\n\n**Ethical Considerations:** There are important implications to consider regarding responsible implementation.\n\n**Engineering Solution:** A modular approach would provide the flexibility needed while maintaining system integrity.\n\nWould you like me to elaborate on any of these perspectives?`,
-    
-    `Processing your request with our multi-agent ensemble...\n\nAfter synthesizing insights from our specialized personas, here's the integrated analysis:\n\n1. **Core Understanding:** Your query touches on fundamental principles that span multiple domains.\n\n2. **Key Insights:** The interconnected nature of this topic requires a holistic approach.\n\n3. **Recommended Action:** I suggest we explore this iteratively, starting with the most critical aspects.\n\nHow would you like to proceed?`,
-    
-    `Excellent question. Let me provide a comprehensive response:\n\n🔬 **Scientific Foundation:** The underlying mechanisms are well-established and follow predictable patterns.\n\n⚙️ **Technical Implementation:** Several approaches are viable, each with distinct trade-offs.\n\n🎯 **Strategic Recommendation:** Focus on the highest-impact elements first.\n\nI'm ready to dive deeper into any specific aspect you'd like to explore.`,
-  ];
-
-  return responses[Math.floor(Math.random() * responses.length)];
 }

@@ -1,1 +1,7 @@
 project_id = "ipzubsgwlczwihkgjoyh"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.check-api-key]
+verify_jwt = false
