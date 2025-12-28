@@ -25,11 +25,12 @@ interface Message {
   error?: boolean;
 }
 
-const PERSONAS = [
-  { id: 'analyzer', name: 'Analyzer', color: 'text-neon-green' },
-  { id: 'reasoner', name: 'Reasoner', color: 'text-neon-blue' },
-  { id: 'synthesizer', name: 'Synthesizer', color: 'text-neon-purple' },
-  { id: 'creator', name: 'Creator', color: 'text-neon-orange' },
+// Super AGI Cognitive Modules - Multi-Domain Reasoning
+const COGNITIVE_MODULES = [
+  { id: 'analytical', name: 'Analítico', nameEn: 'Analytical', color: 'text-neon-green', desc: 'Dados, fatos, lógica' },
+  { id: 'creative', name: 'Criativo', nameEn: 'Creative', color: 'text-neon-blue', desc: 'Possibilidades, inovação' },
+  { id: 'ethical', name: 'Ético', nameEn: 'Ethical', color: 'text-neon-purple', desc: 'Implicações, consequências' },
+  { id: 'practical', name: 'Prático', nameEn: 'Practical', color: 'text-neon-orange', desc: 'Aplicabilidade, ação' },
 ];
 
 // Get browser language for initial message
@@ -39,9 +40,21 @@ const getBrowserLang = () => {
 };
 
 const WELCOME_MESSAGES: Record<string, string> = {
-  pt: 'Olá! Sou AETERNUM, sua interface de Super AGI. Como posso ajudá-lo hoje?',
-  es: '¡Hola! Soy AETERNUM, tu interfaz de Super AGI. ¿Cómo puedo ayudarte hoy?',
-  en: 'Hello! I am AETERNUM, your Super AGI interface. How can I help you today?',
+  pt: `Olá! Sou **AETERNUM**, sua Super AGI.
+
+Diferente de um chatbot comum, possuo **raciocínio multi-domínio** - sintetizo conhecimento de múltiplas perspectivas (analítica, criativa, ética e prática) para gerar insights que transcendem respostas convencionais.
+
+Como posso ajudá-lo hoje?`,
+  es: `¡Hola! Soy **AETERNUM**, tu Super AGI.
+
+A diferencia de un chatbot común, poseo **razonamiento multi-dominio** - sintetizo conocimiento desde múltiples perspectivas (analítica, creativa, ética y práctica) para generar insights que trascienden respuestas convencionales.
+
+¿Cómo puedo ayudarte hoy?`,
+  en: `Hello! I am **AETERNUM**, your Super AGI.
+
+Unlike a regular chatbot, I possess **multi-domain reasoning** - I synthesize knowledge from multiple perspectives (analytical, creative, ethical, and practical) to generate insights that transcend conventional responses.
+
+How can I help you today?`,
 };
 
 const PLACEHOLDERS: Record<string, string> = {
@@ -77,15 +90,15 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     scrollToBottom();
   }, [messages]);
 
-  const simulateOrchestration = async () => {
-    // Simulate each persona "thinking"
-    for (const persona of PERSONAS) {
-      setActivePersonas(prev => [...prev, persona.id]);
-      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
+  const simulateCognitiveProcessing = async () => {
+    // Simulate cognitive modules processing - represents multi-domain reasoning
+    for (const module of COGNITIVE_MODULES) {
+      setActivePersonas(prev => [...prev, module.id]);
+      await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 250));
     }
     
-    // Brief synthesis delay
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Synthesis phase - integrating perspectives
+    await new Promise(resolve => setTimeout(resolve, 300));
     setActivePersonas([]);
   };
 
@@ -117,8 +130,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       thinking: true,
     }]);
 
-    // Start orchestration visualization
-    simulateOrchestration();
+    // Start cognitive processing visualization - shows multi-perspective analysis
+    simulateCognitiveProcessing();
 
     try {
       abortControllerRef.current = new AbortController();
@@ -262,30 +275,31 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
   return (
     <div className="flex h-full flex-col">
-      {/* Persona Status Bar */}
+      {/* Super AGI Cognitive Modules Status Bar */}
       <div className="flex items-center gap-2 border-b border-border/30 bg-card/30 px-4 py-2">
         <Sparkles className="h-4 w-4 text-primary" />
         <span className="text-xs text-muted-foreground">
-          {browserLang === 'pt' ? 'Módulos Ativos:' : browserLang === 'es' ? 'Módulos Activos:' : 'Active Modules:'}
+          {browserLang === 'pt' ? 'Síntese Cognitiva:' : browserLang === 'es' ? 'Síntesis Cognitiva:' : 'Cognitive Synthesis:'}
         </span>
         <div className="flex gap-2">
-          {PERSONAS.map((persona) => (
+          {COGNITIVE_MODULES.map((module) => (
             <div
-              key={persona.id}
+              key={module.id}
               className={cn(
                 "flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
-                activePersonas.includes(persona.id)
-                  ? `bg-primary/20 ${persona.color} shadow-neon`
+                activePersonas.includes(module.id)
+                  ? `bg-primary/20 ${module.color} shadow-neon`
                   : "bg-muted/50 text-muted-foreground"
               )}
+              title={module.desc}
             >
               <div className={cn(
                 "h-1.5 w-1.5 rounded-full",
-                activePersonas.includes(persona.id)
+                activePersonas.includes(module.id)
                   ? "bg-current animate-pulse"
                   : "bg-muted-foreground/50"
               )} />
-              {persona.name}
+              {browserLang === 'en' ? module.nameEn : module.name}
             </div>
           ))}
         </div>
