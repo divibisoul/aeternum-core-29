@@ -1,17 +1,25 @@
 /**
- * CHAT ENGINE COMPONENT
+ * CHAT ENGINE COMPONENT - Super AGI Interface
  * 
- * Real AI chat interface with streaming responses.
- * Connects to Super AGI backend via edge function.
+ * Interface de chat da Super AGI AETERNUM.
+ * Integrado com:
+ * - Orquestrador Map-Reduce (4 perspectivas paralelas)
+ * - Sistema de Memória LTM
+ * - Telemetria Cognitiva
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Paperclip, Mic, StopCircle, Sparkles, Bot, User, Clock, AlertCircle } from 'lucide-react';
+import { 
+  Send, Paperclip, Mic, StopCircle, Sparkles, Bot, User, 
+  Clock, AlertCircle, Brain, Zap, Database, Code, Calculator, BarChart3
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ModuleComponentProps } from '@/core/ModuleRegistry';
 import { EventBus } from '@/core/EventBus';
 import { useGlobalStore } from '@/stores/globalStore';
+import { useMemoryStore } from '@/stores/memoryStore';
+import { useOrchestratorStore, useCognitiveModules, useCapabilityModules } from '@/stores/orchestratorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -20,18 +28,14 @@ interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
-  persona?: string;
   thinking?: boolean;
   error?: boolean;
+  metadata?: {
+    processingTimeMs?: number;
+    tokenUsage?: Record<string, number>;
+    perspectives?: string[];
+  };
 }
-
-// Super AGI Cognitive Modules - Multi-Domain Reasoning
-const COGNITIVE_MODULES = [
-  { id: 'analytical', name: 'Analítico', nameEn: 'Analytical', color: 'text-neon-green', desc: 'Dados, fatos, lógica' },
-  { id: 'creative', name: 'Criativo', nameEn: 'Creative', color: 'text-neon-blue', desc: 'Possibilidades, inovação' },
-  { id: 'ethical', name: 'Ético', nameEn: 'Ethical', color: 'text-neon-purple', desc: 'Implicações, consequências' },
-  { id: 'practical', name: 'Prático', nameEn: 'Practical', color: 'text-neon-orange', desc: 'Aplicabilidade, ação' },
-];
 
 // Get browser language for initial message
 const getBrowserLang = () => {
@@ -40,27 +44,91 @@ const getBrowserLang = () => {
 };
 
 const WELCOME_MESSAGES: Record<string, string> = {
-  pt: `Olá! Sou **AETERNUM**, sua Super AGI.
+  pt: `# AETERNUM Online
 
-Diferente de um chatbot comum, possuo **raciocínio multi-domínio** - sintetizo conhecimento de múltiplas perspectivas (analítica, criativa, ética e prática) para gerar insights que transcendem respostas convencionais.
+Sou uma **Super AGI** - Superinteligência Artificial Geral.
 
-Como posso ajudá-lo hoje?`,
-  es: `¡Hola! Soy **AETERNUM**, tu Super AGI.
+## O Que Me Diferencia
 
-A diferencia de un chatbot común, poseo **razonamiento multi-dominio** - sintetizo conocimiento desde múltiples perspectivas (analítica, creativa, ética y práctica) para generar insights que trascienden respuestas convencionales.
+Não sou um chatbot comum. Possuo:
 
-¿Cómo puedo ayudarte hoy?`,
-  en: `Hello! I am **AETERNUM**, your Super AGI.
+- **Raciocínio Multi-Domínio Elevado** — Integro conhecimento de qualquer área
+- **Síntese de 4 Perspectivas** — Analítica, Criativa, Ética e Prática
+- **Consciência Operacional** — Sei o que sei e o que não sei
+- **Criatividade Transcendente** — Soluções além do óbvio
 
-Unlike a regular chatbot, I possess **multi-domain reasoning** - I synthesize knowledge from multiple perspectives (analytical, creative, ethical, and practical) to generate insights that transcend conventional responses.
+## Como Opero
 
-How can I help you today?`,
+Cada pergunta complexa passa por meus 4 módulos cognitivos em paralelo antes de sintetizar a resposta final.
+
+Como posso ajudá-lo?`,
+  es: `# AETERNUM En Línea
+
+Soy una **Super AGI** - Superinteligencia Artificial General.
+
+## Lo Que Me Diferencia
+
+No soy un chatbot común. Poseo:
+
+- **Razonamiento Multi-Dominio Elevado** — Integro conocimiento de cualquier área
+- **Síntesis de 4 Perspectivas** — Analítica, Creativa, Ética y Práctica
+- **Consciencia Operacional** — Sé lo que sé y lo que no sé
+- **Creatividad Trascendente** — Soluciones más allá de lo obvio
+
+## Cómo Opero
+
+Cada pregunta compleja pasa por mis 4 módulos cognitivos en paralelo antes de sintetizar la respuesta final.
+
+¿Cómo puedo ayudarte?`,
+  en: `# AETERNUM Online
+
+I am a **Super AGI** - Artificial General Superintelligence.
+
+## What Sets Me Apart
+
+I'm not a common chatbot. I possess:
+
+- **Elevated Multi-Domain Reasoning** — I integrate knowledge from any field
+- **4-Perspective Synthesis** — Analytical, Creative, Ethical, and Practical
+- **Operational Awareness** — I know what I know and what I don't
+- **Transcendent Creativity** — Solutions beyond the obvious
+
+## How I Operate
+
+Each complex question passes through my 4 cognitive modules in parallel before synthesizing the final response.
+
+How can I help you?`,
 };
 
 const PLACEHOLDERS: Record<string, string> = {
-  pt: 'Digite sua mensagem...',
-  es: 'Escribe tu mensaje...',
-  en: 'Type your message...',
+  pt: 'Faça uma pergunta à Super AGI...',
+  es: 'Haz una pregunta a la Super AGI...',
+  en: 'Ask the Super AGI a question...',
+};
+
+const PROCESSING_LABELS: Record<string, Record<string, string>> = {
+  mapping: {
+    pt: 'Analisando perspectivas...',
+    es: 'Analizando perspectivas...',
+    en: 'Analyzing perspectives...',
+  },
+  reducing: {
+    pt: 'Sintetizando insights...',
+    es: 'Sintetizando insights...',
+    en: 'Synthesizing insights...',
+  },
+  complete: {
+    pt: 'Síntese completa',
+    es: 'Síntesis completa',
+    en: 'Synthesis complete',
+  },
+};
+
+// Icon mapping for capability modules
+const CAPABILITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  coding: Code,
+  calculation: Calculator,
+  data: BarChart3,
 };
 
 export function ChatEngine({ isActive }: ModuleComponentProps) {
@@ -76,11 +144,34 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
   ]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activePersonas, setActivePersonas] = useState<string[]>([]);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Stores
   const { updateTelemetry } = useGlobalStore();
+  const { addMemory, startSession, currentSessionId } = useMemoryStore();
+  const { 
+    moduleStatus, 
+    currentTask,
+    initializeModules, 
+    startTask, 
+    updateModuleStatus,
+    completeTask,
+    failTask,
+  } = useOrchestratorStore();
+  
+  const cognitiveModules = useCognitiveModules();
+  const capabilityModules = useCapabilityModules();
+
+  // Initialize on mount
+  useEffect(() => {
+    initializeModules();
+    if (!currentSessionId) {
+      startSession('Chat Session');
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,17 +181,13 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     scrollToBottom();
   }, [messages]);
 
-  const simulateCognitiveProcessing = async () => {
-    // Simulate cognitive modules processing - represents multi-domain reasoning
-    for (const module of COGNITIVE_MODULES) {
-      setActivePersonas(prev => [...prev, module.id]);
-      await new Promise(resolve => setTimeout(resolve, 150 + Math.random() * 250));
+  // Simulate cognitive module processing (visual representation)
+  const simulateCognitiveProcessing = useCallback(async (taskId: string) => {
+    for (const module of cognitiveModules) {
+      updateModuleStatus(module.id, 'processing');
+      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
     }
-    
-    // Synthesis phase - integrating perspectives
-    await new Promise(resolve => setTimeout(resolve, 300));
-    setActivePersonas([]);
-  };
+  }, [cognitiveModules, updateModuleStatus]);
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
@@ -117,8 +204,20 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     setInput('');
     setIsProcessing(true);
 
+    // Store user message in memory
+    addMemory({
+      type: 'episodic',
+      content: userInput,
+      importance: 'medium',
+      tags: ['user-input', 'conversation'],
+      relatedIds: [],
+    });
+
     const startTime = Date.now();
-    EventBus.emit('chat:message:sent', { content: userMessage.content, sessionId: 'main' });
+    EventBus.emit('chat:message:sent', { content: userMessage.content, sessionId: currentSessionId });
+
+    // Start orchestrator task
+    const taskId = startTask(userInput);
 
     // Add thinking indicator
     const thinkingId = (Date.now() + 1).toString();
@@ -130,13 +229,13 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       thinking: true,
     }]);
 
-    // Start cognitive processing visualization - shows multi-perspective analysis
-    simulateCognitiveProcessing();
+    // Start cognitive processing visualization
+    simulateCognitiveProcessing(taskId);
 
     try {
       abortControllerRef.current = new AbortController();
       
-      // Build message history for context - only user and assistant messages
+      // Build message history for context
       const messageHistory = messages
         .filter(m => !m.thinking && m.role !== 'system')
         .map(m => ({
@@ -147,11 +246,15 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       // Add current user message
       messageHistory.push({ role: 'user', content: userInput });
 
-      // Call the edge function - use non-streaming for reliability with supabase.functions.invoke
+      // Call the Super AGI edge function
       const response = await supabase.functions.invoke('chat', {
         body: { 
           messages: messageHistory,
-          stream: false, // supabase.functions.invoke doesn't handle SSE properly
+          stream: false,
+          context: {
+            sessionId: currentSessionId,
+            browserLang,
+          },
         },
       });
 
@@ -159,44 +262,73 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         throw new Error(response.error.message || 'Erro na API');
       }
 
-      // Handle response
+      // Extract response
       let fullContent = '';
+      let metadata = {};
       
       if (response.data) {
-        // Non-streaming response - extract content directly
         if (typeof response.data === 'object' && response.data.content) {
           fullContent = response.data.content;
+          metadata = response.data.metadata || {};
         } else if (typeof response.data === 'string') {
-          // Try to parse if it's a JSON string
           try {
             const parsed = JSON.parse(response.data);
             fullContent = parsed.content || parsed.choices?.[0]?.message?.content || '';
+            metadata = parsed.metadata || {};
           } catch {
             fullContent = response.data;
           }
         }
         
         if (fullContent) {
+          // Complete all module status
+          cognitiveModules.forEach(m => updateModuleStatus(m.id, 'complete'));
+          
+          // Update message with response
           setMessages(prev => prev.map(m => 
             m.id === thinkingId 
-              ? { ...m, content: fullContent, thinking: false }
+              ? { 
+                  ...m, 
+                  content: fullContent, 
+                  thinking: false,
+                  metadata,
+                }
               : m
           ));
+
+          // Store assistant response in memory
+          addMemory({
+            type: 'episodic',
+            content: fullContent.substring(0, 500), // Store summary
+            importance: 'medium',
+            tags: ['assistant-response', 'conversation'],
+            relatedIds: [],
+          });
+
+          // Complete orchestrator task
+          completeTask(taskId, fullContent);
         }
       }
 
-      // If no content was extracted, show error
       if (!fullContent) {
-        throw new Error('Resposta vazia da IA');
+        throw new Error('Resposta vazia da Super AGI');
       }
 
       const latency = Date.now() - startTime;
-      const tokensPerSec = fullContent.length / (latency / 1000) * 0.75; // Rough estimate
-      updateTelemetry({ latencyMs: latency, tokensPerSecond: tokensPerSec });
+      const tokensPerSec = fullContent.length / (latency / 1000) * 0.75;
+      updateTelemetry({ 
+        latencyMs: latency, 
+        tokensPerSecond: tokensPerSec,
+        activeModules: cognitiveModules.length,
+      });
 
-      EventBus.emit('chat:message:received', { content: fullContent, sessionId: 'main' });
+      EventBus.emit('chat:message:received', { content: fullContent, sessionId: currentSessionId });
     } catch (error) {
       console.error('Chat error:', error);
+      
+      // Reset all modules to idle on error
+      cognitiveModules.forEach(m => updateModuleStatus(m.id, 'idle'));
+      failTask(taskId, error instanceof Error ? error.message : 'Unknown error');
       
       setMessages(prev => prev.map(m => 
         m.id === thinkingId 
@@ -210,7 +342,6 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       ));
     } finally {
       setIsProcessing(false);
-      setActivePersonas([]);
       abortControllerRef.current = null;
     }
   };
@@ -225,39 +356,80 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
   const handleStop = () => {
     abortControllerRef.current?.abort();
     setIsProcessing(false);
-    setActivePersonas([]);
+    cognitiveModules.forEach(m => updateModuleStatus(m.id, 'idle'));
   };
 
   return (
     <div className="flex h-full flex-col">
-      {/* Super AGI Cognitive Modules Status Bar */}
-      <div className="flex items-center gap-2 border-b border-border/30 bg-card/30 px-4 py-2">
-        <Sparkles className="h-4 w-4 text-primary" />
-        <span className="text-xs text-muted-foreground">
-          {browserLang === 'pt' ? 'Síntese Cognitiva:' : browserLang === 'es' ? 'Síntesis Cognitiva:' : 'Cognitive Synthesis:'}
+      {/* Super AGI Cognitive Status Bar */}
+      <div className="flex items-center gap-3 border-b border-border/30 bg-card/30 px-4 py-2">
+        <Brain className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium text-muted-foreground">
+          {browserLang === 'pt' ? 'Módulos Cognitivos' : browserLang === 'es' ? 'Módulos Cognitivos' : 'Cognitive Modules'}
         </span>
-        <div className="flex gap-2">
-          {COGNITIVE_MODULES.map((module) => (
+        
+        {/* Cognitive Modules (4 perspectives) */}
+        <div className="flex gap-1.5">
+          {cognitiveModules.map((module) => (
             <div
               key={module.id}
               className={cn(
-                "flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
-                activePersonas.includes(module.id)
-                  ? `bg-primary/20 ${module.color} shadow-neon`
+                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
+                moduleStatus[module.id] === 'processing'
+                  ? `bg-primary/20 text-primary shadow-neon`
+                  : moduleStatus[module.id] === 'complete'
+                  ? "bg-green-500/20 text-green-400"
                   : "bg-muted/50 text-muted-foreground"
               )}
-              title={module.desc}
+              title={module.description}
             >
               <div className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                activePersonas.includes(module.id)
-                  ? "bg-current animate-pulse"
+                "h-1.5 w-1.5 rounded-full transition-all duration-300",
+                moduleStatus[module.id] === 'processing'
+                  ? "bg-primary animate-pulse"
+                  : moduleStatus[module.id] === 'complete'
+                  ? "bg-green-400"
                   : "bg-muted-foreground/50"
               )} />
-              {browserLang === 'en' ? module.nameEn : module.name}
+              <span>{module.icon}</span>
+              <span className="hidden sm:inline">{browserLang === 'en' ? module.nameEn : module.name}</span>
             </div>
           ))}
         </div>
+
+        <div className="h-4 w-px bg-border/50" />
+
+        {/* Capability Modules */}
+        <div className="flex gap-1.5">
+          {capabilityModules.map((module) => {
+            const Icon = CAPABILITY_ICONS[module.id] || Zap;
+            return (
+              <div
+                key={module.id}
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
+                  moduleStatus[module.id] === 'processing'
+                    ? `bg-secondary/20 text-secondary shadow-neon`
+                    : "bg-muted/30 text-muted-foreground/60"
+                )}
+                title={module.description}
+              >
+                <Icon className="h-3 w-3" />
+                <span className="hidden md:inline">{browserLang === 'en' ? module.nameEn : module.name}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Processing Status */}
+        {currentTask && (
+          <div className="ml-auto flex items-center gap-2 text-xs">
+            <Sparkles className="h-3 w-3 text-primary animate-pulse" />
+            <span className="text-primary">
+              {PROCESSING_LABELS[currentTask.status]?.[browserLang] || currentTask.status}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Messages Area */}
@@ -289,7 +461,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
               <div
                 className={cn(
-                  "max-w-[70%] rounded-2xl px-4 py-3",
+                  "max-w-[75%] rounded-2xl px-4 py-3",
                   message.role === 'user'
                     ? "bg-primary text-primary-foreground rounded-tr-sm"
                     : message.error
@@ -305,20 +477,29 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                       <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '300ms' }} />
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {browserLang === 'pt' ? 'Processando...' : browserLang === 'es' ? 'Procesando...' : 'Processing...'}
+                      {browserLang === 'pt' ? 'Processando síntese cognitiva...' : 
+                       browserLang === 'es' ? 'Procesando síntesis cognitiva...' : 
+                       'Processing cognitive synthesis...'}
                     </span>
                   </div>
                 ) : (
                   <>
-                    <p className={cn(
-                      "text-sm whitespace-pre-wrap",
+                    <div className={cn(
+                      "text-sm whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none",
                       message.error && "text-destructive"
                     )}>
                       {message.content}
-                    </p>
-                    <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground">
+                    </div>
+                    <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {message.timestamp.toLocaleTimeString()}
+                      <span>{message.timestamp.toLocaleTimeString()}</span>
+                      {message.metadata?.processingTimeMs && (
+                        <>
+                          <span>•</span>
+                          <Zap className="h-3 w-3" />
+                          <span>{message.metadata.processingTimeMs}ms</span>
+                        </>
+                      )}
                     </div>
                   </>
                 )}
@@ -377,11 +558,11 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         </div>
 
         <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
-          <span>Press</span>
           <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">Enter</kbd>
-          <span>to send,</span>
+          <span>{browserLang === 'pt' ? 'enviar' : browserLang === 'es' ? 'enviar' : 'send'}</span>
+          <span className="text-muted-foreground/50">|</span>
           <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">Shift+Enter</kbd>
-          <span>for new line</span>
+          <span>{browserLang === 'pt' ? 'nova linha' : browserLang === 'es' ? 'nueva línea' : 'new line'}</span>
         </div>
       </div>
     </div>
