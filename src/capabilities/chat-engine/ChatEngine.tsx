@@ -136,9 +136,9 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     try {
       abortControllerRef.current = new AbortController();
       
-      // Build message history for context
+      // Build message history for context - only user and assistant messages
       const messageHistory = messages
-        .filter(m => !m.thinking)
+        .filter(m => !m.thinking && m.role !== 'system')
         .map(m => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
@@ -147,11 +147,11 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       // Add current user message
       messageHistory.push({ role: 'user', content: userInput });
 
-      // Call the edge function with streaming
+      // Call the edge function - use non-streaming for reliability with supabase.functions.invoke
       const response = await supabase.functions.invoke('chat', {
         body: { 
           messages: messageHistory,
-          stream: true,
+          stream: false, // supabase.functions.invoke doesn't handle SSE properly
         },
       });
 
@@ -159,74 +159,29 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         throw new Error(response.error.message || 'Erro na API');
       }
 
-      // Handle streaming response
+      // Handle response
       let fullContent = '';
       
       if (response.data) {
-        // Check if it's a streaming response
-        if (response.data instanceof ReadableStream) {
-          const reader = response.data.getReader();
-          const decoder = new TextDecoder();
-          
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n').filter(line => line.startsWith('data: '));
-            
-            for (const line of lines) {
-              const data = line.slice(6);
-              if (data === '[DONE]') continue;
-              
-              try {
-                const parsed = JSON.parse(data);
-                const content = parsed.choices?.[0]?.delta?.content || '';
-                if (content) {
-                  fullContent += content;
-                  setMessages(prev => prev.map(m => 
-                    m.id === thinkingId 
-                      ? { ...m, content: fullContent, thinking: false }
-                      : m
-                  ));
-                }
-              } catch {
-                // Skip unparseable chunks
-              }
-            }
-          }
-        } else if (typeof response.data === 'object' && response.data.content) {
-          // Non-streaming response
+        // Non-streaming response - extract content directly
+        if (typeof response.data === 'object' && response.data.content) {
           fullContent = response.data.content;
+        } else if (typeof response.data === 'string') {
+          // Try to parse if it's a JSON string
+          try {
+            const parsed = JSON.parse(response.data);
+            fullContent = parsed.content || parsed.choices?.[0]?.message?.content || '';
+          } catch {
+            fullContent = response.data;
+          }
+        }
+        
+        if (fullContent) {
           setMessages(prev => prev.map(m => 
             m.id === thinkingId 
               ? { ...m, content: fullContent, thinking: false }
               : m
           ));
-        } else if (typeof response.data === 'string') {
-          // Raw string response - parse SSE
-          const lines = response.data.split('\n').filter((line: string) => line.startsWith('data: '));
-          for (const line of lines) {
-            const data = line.slice(6);
-            if (data === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
-              if (content) {
-                fullContent += content;
-              }
-            } catch {
-              // Skip unparseable
-            }
-          }
-          
-          if (fullContent) {
-            setMessages(prev => prev.map(m => 
-              m.id === thinkingId 
-                ? { ...m, content: fullContent, thinking: false }
-                : m
-            ));
-          }
         }
       }
 
