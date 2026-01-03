@@ -2,17 +2,20 @@
  * CHAT ENGINE COMPONENT - Super AGI Interface
  * 
  * Interface de chat da Super AGI AETERNUM.
- * Integrado com:
- * - Orquestrador Map-Reduce (4 perspectivas paralelas)
- * - Sistema de Memória LTM
- * - Telemetria Cognitiva
+ * Integrado com o Pipeline de Alta Precisão:
+ * - Fase 1: Pragmatic Interceptor (classificação comportamental)
+ * - Fase 2: Code Vault (memória de código)
+ * - Fase 3: Prompt Crafter (prompts otimizados)
+ * - Fase 4: Precision Engine (orquestração)
+ * - Fase 5: Self-Loop (auto-otimização)
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Send, Paperclip, Mic, StopCircle, Sparkles, Bot, User, 
-  Clock, AlertCircle, Brain, Zap, Database, Code, Calculator, BarChart3
+  Send, Mic, StopCircle, Bot, User, 
+  Clock, AlertCircle, Brain, Zap, Code, Calculator, BarChart3,
+  Database, Lightbulb, Scale, Wrench
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ModuleComponentProps } from '@/core/ModuleRegistry';
@@ -22,6 +25,11 @@ import { useMemoryStore } from '@/stores/memoryStore';
 import { useOrchestratorStore, useCognitiveModules, useCapabilityModules } from '@/stores/orchestratorStore';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
+// Import the new precision pipeline
+import { PrecisionEngine, type ProcessedRequest } from '@/core/PrecisionEngine';
+import { CodeVault } from '@/core/CodeVault';
+import { SelfLoop } from '@/core/SelfLoop';
 
 interface Message {
   id: string;
@@ -33,7 +41,9 @@ interface Message {
   metadata?: {
     processingTimeMs?: number;
     tokenUsage?: Record<string, number>;
-    perspectives?: string[];
+    executionMode?: string;
+    complexity?: string;
+    codeContextUsed?: boolean;
   };
 }
 
@@ -46,85 +56,44 @@ const getBrowserLang = () => {
 const WELCOME_MESSAGES: Record<string, string> = {
   pt: `# AETERNUM Online
 
-Sou uma **Super AGI** - Superinteligência Artificial Geral.
+Sou uma **Super AGI** pronta para **resolver problemas**.
 
-## O Que Me Diferencia
-
-Não sou um chatbot comum. Possuo:
-
-- **Raciocínio Multi-Domínio Elevado** — Integro conhecimento de qualquer área
-- **Síntese de 4 Perspectivas** — Analítica, Criativa, Ética e Prática
-- **Consciência Operacional** — Sei o que sei e o que não sei
-- **Criatividade Transcendente** — Soluções além do óbvio
-
-## Como Opero
-
-Cada pergunta complexa passa por meus 4 módulos cognitivos em paralelo antes de sintetizar a resposta final.
-
-Como posso ajudá-lo?`,
+Como posso ajudá-lo hoje?`,
   es: `# AETERNUM En Línea
 
-Soy una **Super AGI** - Superinteligencia Artificial General.
+Soy una **Super AGI** lista para **resolver problemas**.
 
-## Lo Que Me Diferencia
-
-No soy un chatbot común. Poseo:
-
-- **Razonamiento Multi-Dominio Elevado** — Integro conocimiento de cualquier área
-- **Síntesis de 4 Perspectivas** — Analítica, Creativa, Ética y Práctica
-- **Consciencia Operacional** — Sé lo que sé y lo que no sé
-- **Creatividad Trascendente** — Soluciones más allá de lo obvio
-
-## Cómo Opero
-
-Cada pregunta compleja pasa por mis 4 módulos cognitivos en paralelo antes de sintetizar la respuesta final.
-
-¿Cómo puedo ayudarte?`,
+¿Cómo puedo ayudarte hoy?`,
   en: `# AETERNUM Online
 
-I am a **Super AGI** - Artificial General Superintelligence.
+I'm a **Super AGI** ready to **solve problems**.
 
-## What Sets Me Apart
-
-I'm not a common chatbot. I possess:
-
-- **Elevated Multi-Domain Reasoning** — I integrate knowledge from any field
-- **4-Perspective Synthesis** — Analytical, Creative, Ethical, and Practical
-- **Operational Awareness** — I know what I know and what I don't
-- **Transcendent Creativity** — Solutions beyond the obvious
-
-## How I Operate
-
-Each complex question passes through my 4 cognitive modules in parallel before synthesizing the final response.
-
-How can I help you?`,
+How can I help you today?`,
 };
 
 const PLACEHOLDERS: Record<string, string> = {
-  pt: 'Faça uma pergunta à Super AGI...',
-  es: 'Haz una pregunta a la Super AGI...',
-  en: 'Ask the Super AGI a question...',
+  pt: 'Descreva seu problema ou tarefa...',
+  es: 'Describe tu problema o tarea...',
+  en: 'Describe your problem or task...',
 };
 
-const PROCESSING_LABELS: Record<string, Record<string, string>> = {
-  mapping: {
-    pt: 'Analisando perspectivas...',
-    es: 'Analizando perspectivas...',
-    en: 'Analyzing perspectives...',
-  },
-  reducing: {
-    pt: 'Sintetizando insights...',
-    es: 'Sintetizando insights...',
-    en: 'Synthesizing insights...',
-  },
-  complete: {
-    pt: 'Síntese completa',
-    es: 'Síntesis completa',
-    en: 'Synthesis complete',
-  },
+// Pipeline module icons
+const PIPELINE_MODULES = [
+  { id: 'interceptor', name: 'Interceptor', nameEn: 'Interceptor', icon: '🎯', description: 'Classificação comportamental' },
+  { id: 'vault', name: 'Code Vault', nameEn: 'Code Vault', icon: '🗄️', description: 'Memória de código' },
+  { id: 'crafter', name: 'Prompt', nameEn: 'Prompt', icon: '✨', description: 'Otimização de prompt' },
+  { id: 'engine', name: 'Engine', nameEn: 'Engine', icon: '⚙️', description: 'Motor de precisão' },
+];
+
+// Cognitive perspective icons
+const PERSPECTIVE_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  analytical: Brain,
+  creative: Lightbulb,
+  ethical: Scale,
+  practical: Wrench,
 };
 
-// Icon mapping for capability modules
+// Capability module icons
 const CAPABILITY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   coding: Code,
   calculation: Calculator,
@@ -144,10 +113,12 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
   ]);
   const [input, setInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pipelineStatus, setPipelineStatus] = useState<Record<string, 'idle' | 'processing' | 'complete'>>({});
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const currentRequestRef = useRef<ProcessedRequest | null>(null);
   
   // Stores
   const { updateTelemetry } = useGlobalStore();
@@ -171,6 +142,13 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     if (!currentSessionId) {
       startSession('Chat Session');
     }
+    
+    // Start self-loop in background
+    SelfLoop.start();
+    
+    return () => {
+      SelfLoop.stop();
+    };
   }, []);
 
   const scrollToBottom = () => {
@@ -181,16 +159,37 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Simulate cognitive module processing (visual representation)
-  const simulateCognitiveProcessing = useCallback(async (taskId: string) => {
-    for (const module of cognitiveModules) {
-      updateModuleStatus(module.id, 'processing');
-      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
-    }
-  }, [cognitiveModules, updateModuleStatus]);
+  // Process through the precision pipeline
+  const processWithPipeline = useCallback(async (userInput: string) => {
+    // Reset pipeline status
+    setPipelineStatus({
+      interceptor: 'processing',
+      vault: 'idle',
+      crafter: 'idle',
+      engine: 'idle',
+    });
+    
+    // Phase 1-4: Process through Precision Engine
+    const processed = await PrecisionEngine.process(userInput, browserLang);
+    currentRequestRef.current = processed;
+    
+    // Update pipeline visualization
+    setPipelineStatus(prev => ({ ...prev, interceptor: 'complete', vault: 'processing' }));
+    await new Promise(r => setTimeout(r, 150));
+    
+    setPipelineStatus(prev => ({ ...prev, vault: 'complete', crafter: 'processing' }));
+    await new Promise(r => setTimeout(r, 150));
+    
+    setPipelineStatus(prev => ({ ...prev, crafter: 'complete', engine: 'processing' }));
+    
+    return processed;
+  }, [browserLang]);
 
   const handleSend = async () => {
     if (!input.trim() || isProcessing) return;
+
+    // Mark activity for SelfLoop
+    SelfLoop.markActivity();
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -214,7 +213,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     });
 
     const startTime = Date.now();
-    EventBus.emit('chat:message:sent', { content: userMessage.content, sessionId: currentSessionId });
+    EventBus.emit('chat:message:sent', { content: userMessage.content, sessionId: currentSessionId || '' });
 
     // Start orchestrator task
     const taskId = startTask(userInput);
@@ -229,22 +228,43 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       thinking: true,
     }]);
 
-    // Start cognitive processing visualization
-    simulateCognitiveProcessing(taskId);
-
     try {
       abortControllerRef.current = new AbortController();
       
+      // Process through precision pipeline
+      const processed = await processWithPipeline(userInput);
+      
+      // Activate cognitive modules for visualization
+      cognitiveModules.forEach(m => updateModuleStatus(m.id, 'processing'));
+      
+      // Activate capability modules if needed
+      if (processed.interception.requiresCapabilities.includes('coding')) {
+        updateModuleStatus('coding', 'processing');
+      }
+      if (processed.interception.requiresCapabilities.includes('calculation')) {
+        updateModuleStatus('calculation', 'processing');
+      }
+      if (processed.interception.requiresCapabilities.includes('data')) {
+        updateModuleStatus('data', 'processing');
+      }
+
       // Build message history for context
       const messageHistory = messages
         .filter(m => !m.thinking && m.role !== 'system')
+        .slice(-10) // Last 10 messages for context
         .map(m => ({
           role: m.role as 'user' | 'assistant',
           content: m.content,
         }));
       
-      // Add current user message
-      messageHistory.push({ role: 'user', content: userInput });
+      // Add current user message with crafted context
+      messageHistory.push({ 
+        role: 'user', 
+        content: PrecisionEngine.getUserPrompt(processed)
+      });
+
+      // Get optimized API parameters
+      const apiParams = PrecisionEngine.getApiParams(processed);
 
       // Call the Super AGI edge function
       const response = await supabase.functions.invoke('chat', {
@@ -254,9 +274,17 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
           context: {
             sessionId: currentSessionId,
             browserLang,
+            // Pass crafted system prompt and params
+            systemPrompt: PrecisionEngine.getSystemPrompt(processed),
+            temperature: apiParams.temperature,
+            maxTokens: apiParams.maxTokens,
+            executionMode: processed.interception.executionMode,
           },
         },
       });
+
+      // Complete pipeline visualization
+      setPipelineStatus(prev => ({ ...prev, engine: 'complete' }));
 
       if (response.error) {
         throw new Error(response.error.message || 'Erro na API');
@@ -264,17 +292,27 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
       // Extract response
       let fullContent = '';
-      let metadata = {};
+      let metadata: Message['metadata'] = {};
       
       if (response.data) {
         if (typeof response.data === 'object' && response.data.content) {
           fullContent = response.data.content;
-          metadata = response.data.metadata || {};
+          metadata = {
+            ...response.data.metadata,
+            executionMode: processed.interception.executionMode,
+            complexity: processed.interception.complexity,
+            codeContextUsed: processed.codeContext.length > 0,
+          };
         } else if (typeof response.data === 'string') {
           try {
             const parsed = JSON.parse(response.data);
             fullContent = parsed.content || parsed.choices?.[0]?.message?.content || '';
-            metadata = parsed.metadata || {};
+            metadata = {
+              ...parsed.metadata,
+              executionMode: processed.interception.executionMode,
+              complexity: processed.interception.complexity,
+              codeContextUsed: processed.codeContext.length > 0,
+            };
           } catch {
             fullContent = response.data;
           }
@@ -283,6 +321,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         if (fullContent) {
           // Complete all module status
           cognitiveModules.forEach(m => updateModuleStatus(m.id, 'complete'));
+          capabilityModules.forEach(m => updateModuleStatus(m.id, 'idle'));
           
           // Update message with response
           setMessages(prev => prev.map(m => 
@@ -296,12 +335,15 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
               : m
           ));
 
+          // Post-process: extract and store code in vault
+          await PrecisionEngine.postProcess(processed, fullContent, true);
+
           // Store assistant response in memory
           addMemory({
             type: 'episodic',
-            content: fullContent.substring(0, 500), // Store summary
+            content: fullContent.substring(0, 500),
             importance: 'medium',
-            tags: ['assistant-response', 'conversation'],
+            tags: ['assistant-response', 'conversation', processed.interception.executionMode.toLowerCase()],
             relatedIds: [],
           });
 
@@ -322,13 +364,24 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         activeModules: cognitiveModules.length,
       });
 
-      EventBus.emit('chat:message:received', { content: fullContent, sessionId: currentSessionId });
+      EventBus.emit('chat:message:received', { content: fullContent, sessionId: currentSessionId || '' });
     } catch (error) {
       console.error('Chat error:', error);
       
       // Reset all modules to idle on error
       cognitiveModules.forEach(m => updateModuleStatus(m.id, 'idle'));
+      capabilityModules.forEach(m => updateModuleStatus(m.id, 'idle'));
+      setPipelineStatus({});
       failTask(taskId, error instanceof Error ? error.message : 'Unknown error');
+
+      // Post-process failure
+      if (currentRequestRef.current) {
+        await PrecisionEngine.postProcess(
+          currentRequestRef.current, 
+          '', 
+          false
+        );
+      }
       
       setMessages(prev => prev.map(m => 
         m.id === thinkingId 
@@ -343,6 +396,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     } finally {
       setIsProcessing(false);
       abortControllerRef.current = null;
+      currentRequestRef.current = null;
     }
   };
 
@@ -357,79 +411,97 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     abortControllerRef.current?.abort();
     setIsProcessing(false);
     cognitiveModules.forEach(m => updateModuleStatus(m.id, 'idle'));
+    capabilityModules.forEach(m => updateModuleStatus(m.id, 'idle'));
+    setPipelineStatus({});
   };
 
   return (
     <div className="flex h-full flex-col">
-      {/* Super AGI Cognitive Status Bar */}
-      <div className="flex items-center gap-3 border-b border-border/30 bg-card/30 px-4 py-2">
-        <Brain className="h-4 w-4 text-primary" />
-        <span className="text-xs font-medium text-muted-foreground">
-          {browserLang === 'pt' ? 'Módulos Cognitivos' : browserLang === 'es' ? 'Módulos Cognitivos' : 'Cognitive Modules'}
-        </span>
-        
-        {/* Cognitive Modules (4 perspectives) */}
-        <div className="flex gap-1.5">
-          {cognitiveModules.map((module) => (
-            <div
-              key={module.id}
-              className={cn(
-                "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
-                moduleStatus[module.id] === 'processing'
-                  ? `bg-primary/20 text-primary shadow-neon`
-                  : moduleStatus[module.id] === 'complete'
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-muted/50 text-muted-foreground"
+      {/* Precision Pipeline Status Bar */}
+      <div className="flex items-center gap-2 border-b border-border/30 bg-card/30 px-4 py-2 overflow-x-auto">
+        {/* Pipeline Modules */}
+        <div className="flex items-center gap-1">
+          <Zap className="h-3.5 w-3.5 text-primary/70" />
+          <span className="text-[10px] font-medium text-muted-foreground mr-1">Pipeline:</span>
+          {PIPELINE_MODULES.map((module, idx) => (
+            <div key={module.id} className="flex items-center">
+              <div
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
+                  pipelineStatus[module.id] === 'processing'
+                    ? "bg-primary/20 text-primary animate-pulse"
+                    : pipelineStatus[module.id] === 'complete'
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-muted/30 text-muted-foreground/50"
+                )}
+                title={module.description}
+              >
+                <span>{module.icon}</span>
+                <span className="hidden sm:inline">{module.name}</span>
+              </div>
+              {idx < PIPELINE_MODULES.length - 1 && (
+                <span className="mx-0.5 text-muted-foreground/30">→</span>
               )}
-              title={module.description}
-            >
-              <div className={cn(
-                "h-1.5 w-1.5 rounded-full transition-all duration-300",
-                moduleStatus[module.id] === 'processing'
-                  ? "bg-primary animate-pulse"
-                  : moduleStatus[module.id] === 'complete'
-                  ? "bg-green-400"
-                  : "bg-muted-foreground/50"
-              )} />
-              <span>{module.icon}</span>
-              <span className="hidden sm:inline">{browserLang === 'en' ? module.nameEn : module.name}</span>
             </div>
           ))}
         </div>
 
-        <div className="h-4 w-px bg-border/50" />
+        <div className="h-4 w-px bg-border/50 mx-2" />
+
+        {/* Cognitive Modules (4 perspectives) */}
+        <div className="flex items-center gap-1">
+          <Brain className="h-3.5 w-3.5 text-secondary/70" />
+          {cognitiveModules.map((module) => {
+            const Icon = PERSPECTIVE_ICONS[module.id] || Brain;
+            return (
+              <div
+                key={module.id}
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-all duration-300",
+                  moduleStatus[module.id] === 'processing'
+                    ? "bg-secondary/20 text-secondary animate-pulse"
+                    : moduleStatus[module.id] === 'complete'
+                    ? "bg-green-500/20 text-green-400"
+                    : "bg-muted/20 text-muted-foreground/40"
+                )}
+                title={module.description}
+              >
+                <Icon className="h-3 w-3" />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="h-4 w-px bg-border/50 mx-2" />
 
         {/* Capability Modules */}
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1">
           {capabilityModules.map((module) => {
             const Icon = CAPABILITY_ICONS[module.id] || Zap;
             return (
               <div
                 key={module.id}
                 className={cn(
-                  "flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-all duration-300",
+                  "flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium transition-all duration-300",
                   moduleStatus[module.id] === 'processing'
-                    ? `bg-secondary/20 text-secondary shadow-neon`
-                    : "bg-muted/30 text-muted-foreground/60"
+                    ? "bg-accent/20 text-accent animate-pulse"
+                    : "bg-muted/20 text-muted-foreground/30"
                 )}
                 title={module.description}
               >
                 <Icon className="h-3 w-3" />
-                <span className="hidden md:inline">{browserLang === 'en' ? module.nameEn : module.name}</span>
               </div>
             );
           })}
         </div>
 
-        {/* Processing Status */}
-        {currentTask && (
-          <div className="ml-auto flex items-center gap-2 text-xs">
-            <Sparkles className="h-3 w-3 text-primary animate-pulse" />
-            <span className="text-primary">
-              {PROCESSING_LABELS[currentTask.status]?.[browserLang] || currentTask.status}
-            </span>
-          </div>
-        )}
+        {/* Self-Loop Status */}
+        <div className="ml-auto flex items-center gap-1">
+          <Database className="h-3 w-3 text-muted-foreground/50" />
+          <span className="text-[9px] text-muted-foreground/50">
+            Self-Loop: Active
+          </span>
+        </div>
       </div>
 
       {/* Messages Area */}
@@ -477,9 +549,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                       <div className="h-2 w-2 rounded-full bg-primary animate-pulse" style={{ animationDelay: '300ms' }} />
                     </div>
                     <span className="text-xs text-muted-foreground">
-                      {browserLang === 'pt' ? 'Processando síntese cognitiva...' : 
-                       browserLang === 'es' ? 'Procesando síntesis cognitiva...' : 
-                       'Processing cognitive synthesis...'}
+                      Processando...
                     </span>
                   </div>
                 ) : (
@@ -500,14 +570,26 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                           <span>{message.metadata.processingTimeMs}ms</span>
                         </>
                       )}
+                      {message.metadata?.executionMode && (
+                        <>
+                          <span>•</span>
+                          <span className="text-primary/70">{message.metadata.executionMode}</span>
+                        </>
+                      )}
+                      {message.metadata?.codeContextUsed && (
+                        <>
+                          <span>•</span>
+                          <Database className="h-3 w-3 text-green-400" />
+                        </>
+                      )}
                     </div>
                   </>
                 )}
               </div>
 
               {message.role === 'user' && (
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
-                  <User className="h-4 w-4 text-secondary-foreground" />
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary/20">
+                  <User className="h-4 w-4 text-secondary" />
                 </div>
               )}
             </motion.div>
@@ -518,53 +600,58 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
       {/* Input Area */}
       <div className="border-t border-border/30 bg-card/30 p-4">
-        <div className="glass flex items-end gap-2 rounded-2xl p-2">
-          <Button variant="ghost" size="icon-sm" className="shrink-0">
-            <Paperclip className="h-4 w-4" />
-          </Button>
+        <div className="flex items-end gap-2">
+          <div className="relative flex-1">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={PLACEHOLDERS[browserLang]}
+              disabled={isProcessing}
+              className={cn(
+                "w-full resize-none rounded-xl border border-border/50 bg-background/50 px-4 py-3 pr-12",
+                "text-sm placeholder:text-muted-foreground/50",
+                "focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                "min-h-[48px] max-h-[200px]"
+              )}
+              rows={1}
+              style={{
+                height: 'auto',
+                minHeight: '48px',
+              }}
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = Math.min(target.scrollHeight, 200) + 'px';
+              }}
+            />
+          </div>
 
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={PLACEHOLDERS[browserLang]}
-            className="flex-1 resize-none bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
-            rows={1}
-            style={{
-              minHeight: '36px',
-              maxHeight: '120px',
-              height: 'auto',
-            }}
-          />
-
-          <Button variant="ghost" size="icon-sm" className="shrink-0">
-            <Mic className="h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="glow"
-            size="icon"
-            onClick={isProcessing ? handleStop : handleSend}
-            disabled={!input.trim() && !isProcessing}
-            className="shrink-0"
-          >
-            {isProcessing ? (
-              <StopCircle className="h-4 w-4" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-
-        <div className="mt-2 flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
-          <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">Enter</kbd>
-          <span>{browserLang === 'pt' ? 'enviar' : browserLang === 'es' ? 'enviar' : 'send'}</span>
-          <span className="text-muted-foreground/50">|</span>
-          <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono">Shift+Enter</kbd>
-          <span>{browserLang === 'pt' ? 'nova linha' : browserLang === 'es' ? 'nueva línea' : 'new line'}</span>
+          {isProcessing ? (
+            <Button
+              size="icon"
+              variant="destructive"
+              onClick={handleStop}
+              className="h-12 w-12 rounded-xl"
+            >
+              <StopCircle className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Button
+              size="icon"
+              onClick={handleSend}
+              disabled={!input.trim()}
+              className="h-12 w-12 rounded-xl bg-primary hover:bg-primary/90"
+            >
+              <Send className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
     </div>
   );
 }
+
+export default ChatEngine;
