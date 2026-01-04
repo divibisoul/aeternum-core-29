@@ -26,10 +26,11 @@ import { useOrchestratorStore, useCognitiveModules, useCapabilityModules } from 
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
-// Import the new precision pipeline
+// Import the new precision pipeline with multi-hemispheric architecture
 import { PrecisionEngine, type ProcessedRequest } from '@/core/PrecisionEngine';
 import { CodeVault } from '@/core/CodeVault';
 import { SelfLoop } from '@/core/SelfLoop';
+import { GammaModule } from '@/core/cognitive';
 
 interface Message {
   id: string;
@@ -77,12 +78,15 @@ const PLACEHOLDERS: Record<string, string> = {
   en: 'Describe your problem or task...',
 };
 
-// Pipeline module icons
+// Pipeline module icons (including multi-hemispheric stages)
 const PIPELINE_MODULES = [
-  { id: 'interceptor', name: 'Interceptor', nameEn: 'Interceptor', icon: '🎯', description: 'Classificação comportamental' },
-  { id: 'vault', name: 'Code Vault', nameEn: 'Code Vault', icon: '🗄️', description: 'Memória de código' },
-  { id: 'crafter', name: 'Prompt', nameEn: 'Prompt', icon: '✨', description: 'Otimização de prompt' },
-  { id: 'engine', name: 'Engine', nameEn: 'Engine', icon: '⚙️', description: 'Motor de precisão' },
+  { id: 'interceptor', name: 'Interceptor', icon: '🎯', description: 'Classificação comportamental' },
+  { id: 'intent', name: 'Intent', icon: '🧭', description: 'Análise de intenção' },
+  { id: 'vault', name: 'Vault', icon: '🗄️', description: 'Memória de código' },
+  { id: 'alpha', name: 'Alpha', icon: '🧮', description: 'Hemisfério Analítico' },
+  { id: 'beta', name: 'Beta', icon: '💡', description: 'Hemisfério Criativo' },
+  { id: 'gamma', name: 'Gamma', icon: '⚖️', description: 'Contextualização Ética' },
+  { id: 'unifier', name: 'Unify', icon: '🔮', description: 'Síntese Final' },
 ];
 
 // Cognitive perspective icons
@@ -159,28 +163,41 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     scrollToBottom();
   }, [messages]);
 
-  // Process through the precision pipeline
+  // Process through the multi-hemispheric precision pipeline
   const processWithPipeline = useCallback(async (userInput: string) => {
-    // Reset pipeline status
+    // Reset pipeline status for multi-hemispheric processing
     setPipelineStatus({
       interceptor: 'processing',
+      intent: 'idle',
       vault: 'idle',
-      crafter: 'idle',
-      engine: 'idle',
+      alpha: 'idle',
+      beta: 'idle',
+      gamma: 'idle',
+      unifier: 'idle',
     });
     
-    // Phase 1-4: Process through Precision Engine
+    // Phase 1: Interception
+    await new Promise(r => setTimeout(r, 100));
+    setPipelineStatus(prev => ({ ...prev, interceptor: 'complete', intent: 'processing' }));
+    
+    // Phase 2: Intent Analysis
+    await new Promise(r => setTimeout(r, 100));
+    setPipelineStatus(prev => ({ ...prev, intent: 'complete', vault: 'processing' }));
+    
+    // Phase 3: Code Vault
+    await new Promise(r => setTimeout(r, 100));
+    setPipelineStatus(prev => ({ ...prev, vault: 'complete', alpha: 'processing', beta: 'processing' }));
+    
+    // Phase 4: Multi-hemispheric processing
     const processed = await PrecisionEngine.process(userInput, browserLang);
     currentRequestRef.current = processed;
     
-    // Update pipeline visualization
-    setPipelineStatus(prev => ({ ...prev, interceptor: 'complete', vault: 'processing' }));
-    await new Promise(r => setTimeout(r, 150));
+    // Phase 5: Gamma contextualization
+    setPipelineStatus(prev => ({ ...prev, alpha: 'complete', beta: 'complete', gamma: 'processing' }));
+    await new Promise(r => setTimeout(r, 100));
     
-    setPipelineStatus(prev => ({ ...prev, vault: 'complete', crafter: 'processing' }));
-    await new Promise(r => setTimeout(r, 150));
-    
-    setPipelineStatus(prev => ({ ...prev, crafter: 'complete', engine: 'processing' }));
+    // Phase 6: Unification
+    setPipelineStatus(prev => ({ ...prev, gamma: 'complete', unifier: 'processing' }));
     
     return processed;
   }, [browserLang]);
@@ -283,8 +300,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         },
       });
 
-      // Complete pipeline visualization
-      setPipelineStatus(prev => ({ ...prev, engine: 'complete' }));
+      // Complete multi-hemispheric pipeline visualization
+      setPipelineStatus(prev => ({ ...prev, unifier: 'complete' }));
 
       if (response.error) {
         throw new Error(response.error.message || 'Erro na API');
