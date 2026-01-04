@@ -1,14 +1,19 @@
 /**
- * FASE 4: PRECISION ENGINE
+ * FASE 4: PRECISION ENGINE (MULTI-HEMISPHERIC)
  * 
- * Motor de Alta Precisão - Orquestrador principal que integra todos os módulos.
+ * Motor de Alta Precisão - Orquestrador principal com arquitetura multi-hemisférica.
  * 
- * Pipeline:
+ * Pipeline Completo:
  * 1. Intercepta → PragmaticInterceptor
- * 2. Busca contexto → CodeVault.findSimilarCode()
- * 3. Crafta prompt → PromptCrafter.build()
- * 4. Envia para IA → API Gateway
- * 5. Valida e armazena → CodeVault (se sucesso)
+ * 2. Analisa Intenção → IntentAnalyzer
+ * 3. Busca contexto → CodeVault.findSimilarCode()
+ * 4. Processamento Paralelo:
+ *    a. Alpha Hemisphere (analítico/lógico)
+ *    b. Beta Hemisphere (criativo/intuitivo)
+ * 5. Contextualização → GammaModule (ético/prático)
+ * 6. Unificação → UnifiedResponseGenerator
+ * 7. Crafta prompt → PromptCrafter.build()
+ * 8. Valida e armazena → CodeVault (se sucesso)
  * 
  * Este é o coração da Super AGI - coordena todos os módulos para máxima precisão.
  */
@@ -18,13 +23,32 @@ import { CodeVault, type SearchResult, type CodeSnippet } from './CodeVault';
 import { PromptCrafter, type CraftedPrompt } from './PromptCrafter';
 import { EventBus } from './EventBus';
 
+// Import cognitive modules
+import {
+  IntentAnalyzer,
+  AlphaHemisphere,
+  BetaHemisphere,
+  GammaModule,
+  UnifiedResponseGenerator,
+  type IntentProfile,
+  type HemisphereOutput,
+  type GammaContextualOutput,
+} from './cognitive';
+
 // Interface para a requisição processada
 export interface ProcessedRequest {
   id: string;
   originalInput: string;
   interception: InterceptionResult;
+  intent: IntentProfile;
   codeContext: SearchResult[];
   craftedPrompt: CraftedPrompt;
+  hemisphericProcessing: {
+    alpha: { systemPrompt: string; temperature: number };
+    beta: { systemPrompt: string; temperature: number };
+    gammaContext?: GammaContextualOutput;
+    unificationPrompt?: string;
+  };
   processedAt: number;
 }
 
@@ -53,14 +77,14 @@ export interface ExtractedCode {
 }
 
 /**
- * PrecisionEngine - Motor de Processamento de Alta Precisão
+ * PrecisionEngine - Motor de Processamento de Alta Precisão (Multi-Hemisférico)
  */
 class PrecisionEngineService {
   private requestCounter = 0;
   private processingHistory: ProcessingResult[] = [];
   
   /**
-   * Processa uma entrada do usuário através do pipeline completo
+   * Processa uma entrada do usuário através do pipeline multi-hemisférico completo
    */
   async process(
     input: string,
@@ -69,9 +93,9 @@ class PrecisionEngineService {
     const id = `req_${++this.requestCounter}_${Date.now()}`;
     const startTime = Date.now();
     
-    console.log(`[PrecisionEngine] Processing request ${id}`);
+    console.log(`[PrecisionEngine] Processing request ${id} (Multi-Hemispheric)`);
     
-    // FASE 1: Interceptação
+    // FASE 1: Interceptação Comportamental
     EventBus.emit('orchestrator:persona:start', { taskId: id, persona: 'interceptor' });
     const interception = PragmaticInterceptor.intercept(input, browserLang);
     EventBus.emit('orchestrator:persona:end', { 
@@ -86,10 +110,25 @@ class PrecisionEngineService {
       complexity: interception.complexity,
     });
     
-    // FASE 2: Busca de contexto no Code Vault (se for tarefa técnica)
+    // FASE 2: Análise de Intenção (Multi-Hemisférica)
+    EventBus.emit('orchestrator:persona:start', { taskId: id, persona: 'intent-analyzer' });
+    const intent = IntentAnalyzer.analyze(input);
+    EventBus.emit('orchestrator:persona:end', { 
+      taskId: id, 
+      persona: 'intent-analyzer', 
+      result: intent 
+    });
+    
+    console.log(`[PrecisionEngine] Intent analysis:`, {
+      primary: intent.primary,
+      weights: intent.weights,
+      complexity: intent.metadata.complexity,
+    });
+    
+    // FASE 3: Busca de contexto no Code Vault
     let codeContext: SearchResult[] = [];
     
-    if (interception.requiresCapabilities.includes('coding')) {
+    if (interception.requiresCapabilities.includes('coding') || intent.metadata.requiresCode) {
       EventBus.emit('orchestrator:persona:start', { taskId: id, persona: 'code-vault' });
       
       try {
@@ -110,19 +149,58 @@ class PrecisionEngineService {
       });
     }
     
-    // FASE 3: Construção do prompt otimizado
+    // FASE 4: Processamento Multi-Hemisférico (Preparação)
+    EventBus.emit('orchestrator:persona:start', { taskId: id, persona: 'alpha-hemisphere' });
+    const alphaConfig = AlphaHemisphere.process(input, intent);
+    EventBus.emit('orchestrator:persona:end', { 
+      taskId: id, 
+      persona: 'alpha-hemisphere', 
+      result: { temperature: alphaConfig.temperature } 
+    });
+    
+    EventBus.emit('orchestrator:persona:start', { taskId: id, persona: 'beta-hemisphere' });
+    const betaConfig = BetaHemisphere.process(input, intent);
+    EventBus.emit('orchestrator:persona:end', { 
+      taskId: id, 
+      persona: 'beta-hemisphere', 
+      result: { temperature: betaConfig.temperature } 
+    });
+    
+    console.log(`[PrecisionEngine] Hemispheric processing configured:`, {
+      alpha: { temp: alphaConfig.temperature, tags: alphaConfig.expectedTags },
+      beta: { temp: betaConfig.temperature, tags: betaConfig.expectedTags },
+    });
+    
+    // FASE 5: Construção do prompt otimizado (com contexto hemisférico)
     EventBus.emit('orchestrator:persona:start', { taskId: id, persona: 'prompt-crafter' });
     const craftedPrompt = PromptCrafter.build(interception, codeContext, browserLang);
+    
+    // Enriquecer o system prompt com diretrizes hemisféricas
+    const enhancedSystemPrompt = this.enhanceWithHemisphericContext(
+      craftedPrompt.systemPrompt,
+      intent,
+      alphaConfig,
+      betaConfig
+    );
+    
+    const enhancedCraftedPrompt: CraftedPrompt = {
+      ...craftedPrompt,
+      systemPrompt: enhancedSystemPrompt,
+      // Ajustar temperatura baseado no perfil dominante
+      temperature: this.calculateOptimalTemperature(intent, alphaConfig, betaConfig),
+    };
+    
     EventBus.emit('orchestrator:persona:end', { 
       taskId: id, 
       persona: 'prompt-crafter', 
-      result: { temperature: craftedPrompt.temperature, maxTokens: craftedPrompt.maxTokens } 
+      result: { temperature: enhancedCraftedPrompt.temperature, maxTokens: enhancedCraftedPrompt.maxTokens } 
     });
     
-    console.log(`[PrecisionEngine] Prompt crafted:`, {
-      temperature: craftedPrompt.temperature,
-      maxTokens: craftedPrompt.maxTokens,
+    console.log(`[PrecisionEngine] Enhanced prompt crafted:`, {
+      temperature: enhancedCraftedPrompt.temperature,
+      maxTokens: enhancedCraftedPrompt.maxTokens,
       hasContext: codeContext.length > 0,
+      intentProfile: intent.primary,
     });
     
     const processedAt = Date.now();
@@ -131,10 +209,67 @@ class PrecisionEngineService {
       id,
       originalInput: input,
       interception,
+      intent,
       codeContext,
-      craftedPrompt,
+      craftedPrompt: enhancedCraftedPrompt,
+      hemisphericProcessing: {
+        alpha: { systemPrompt: alphaConfig.systemPrompt, temperature: alphaConfig.temperature },
+        beta: { systemPrompt: betaConfig.systemPrompt, temperature: betaConfig.temperature },
+      },
       processedAt,
     };
+  }
+  
+  /**
+   * Enriquece o system prompt com contexto hemisférico
+   */
+  private enhanceWithHemisphericContext(
+    basePrompt: string,
+    intent: IntentProfile,
+    alphaConfig: { systemPrompt: string; temperature: number; expectedTags: string[] },
+    betaConfig: { systemPrompt: string; temperature: number; expectedTags: string[] }
+  ): string {
+    const hemisphericGuidance = `
+## ARQUITETURA COGNITIVA MULTI-HEMISFÉRICA
+
+Perfil de Intenção Detectado: ${intent.primary.toUpperCase()}
+- Peso Analítico: ${(intent.weights.analytical * 100).toFixed(0)}%
+- Peso Criativo: ${(intent.weights.creative * 100).toFixed(0)}%
+- Peso Prático: ${(intent.weights.practical * 100).toFixed(0)}%
+
+### DIRETRIZ DE SÍNTESE
+${intent.primary === 'analytical' 
+  ? 'PRIORIZE: Raciocínio estruturado, dados, código preciso. SECUNDÁRIO: Insights criativos.'
+  : intent.primary === 'creative'
+  ? 'PRIORIZE: Perspectivas inovadoras, metáforas, visão. SECUNDÁRIO: Fundamentação técnica.'
+  : intent.primary === 'practical'
+  ? 'PRIORIZE: Passos acionáveis, implementação, viabilidade. SECUNDÁRIO: Contexto analítico.'
+  : 'EQUILIBRE: Análise + Criatividade + Praticidade em proporções iguais.'}
+
+### TAGS ESPERADAS
+- Analíticas: ${alphaConfig.expectedTags.join(', ')}
+- Criativas: ${betaConfig.expectedTags.join(', ')}
+
+`;
+
+    return hemisphericGuidance + basePrompt;
+  }
+  
+  /**
+   * Calcula temperatura ótima baseada no perfil de intenção
+   */
+  private calculateOptimalTemperature(
+    intent: IntentProfile,
+    alphaConfig: { temperature: number },
+    betaConfig: { temperature: number }
+  ): number {
+    // Weighted average based on intent profile
+    const weightedTemp = 
+      (alphaConfig.temperature * intent.weights.analytical) +
+      (betaConfig.temperature * intent.weights.creative) +
+      (0.6 * intent.weights.practical); // Practical gets balanced temp
+    
+    return Math.max(0.1, Math.min(0.95, weightedTemp));
   }
   
   /**
