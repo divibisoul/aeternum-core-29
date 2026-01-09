@@ -31,6 +31,7 @@ import { PrecisionEngine, type ProcessedRequest } from '@/core/PrecisionEngine';
 import { CodeVault } from '@/core/CodeVault';
 import { SelfLoop } from '@/core/SelfLoop';
 import { GammaModule } from '@/core/cognitive';
+import { ProjetoClareira } from '@/core/neural';
 
 interface Message {
   id: string;
@@ -150,8 +151,17 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     // Start self-loop in background
     SelfLoop.start();
     
+    // Initialize and start ProjetoClareira neural system
+    if (!ProjetoClareira.initialized) {
+      ProjetoClareira.initialize();
+    }
+    if (!ProjetoClareira.running) {
+      ProjetoClareira.start();
+    }
+    
     return () => {
       SelfLoop.stop();
+      ProjetoClareira.stop();
     };
   }, []);
 
