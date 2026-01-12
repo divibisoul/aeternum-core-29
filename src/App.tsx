@@ -1,9 +1,12 @@
 /**
- * AETERNUM - App Chassis
+ * AETERNUM - App Chassis (QUADRANGULAR ARCHITECTURE)
  * 
  * The App component acts purely as a chassis.
- * It does NOT know about modules directly - they are loaded via the Registry.
- * Zero changes needed here when adding new modules.
+ * Integrates the 4-sided architecture:
+ * - ESTABILIDADE: Error Boundaries, Zod validation
+ * - PERFORMANCE: Cache, parallel processing
+ * - COMUNICAÇÃO: Optimized state, memoization
+ * - OTIMIZAÇÃO: Performance monitoring
  */
 
 import { useEffect, useState } from 'react';
@@ -16,22 +19,37 @@ import { useEventBus } from '@/core/EventBus';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { QuadrangularMetrics } from '@/components/QuadrangularMetrics';
 import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
+import { PerformanceMonitor } from '@/lib/monitoring/PerformanceMonitor';
 import '@fontsource/jetbrains-mono/300.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '@fontsource/jetbrains-mono/600.css';
 import '@fontsource/jetbrains-mono/700.css';
 
-const queryClient = new QueryClient();
+// LADO 2: PERFORMANCE - Query Client otimizado
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minuto
+      gcTime: 5 * 60 * 1000, // 5 minutos
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function AeternumCore() {
   const [systemReady, setSystemReady] = useState(false);
   const isAuthenticated = useGlobalStore(selectIsAuthenticated);
 
-  // Initialize module registry on mount
+  // Initialize module registry and performance monitoring on mount
   useEffect(() => {
     const init = async () => {
+      // LADO 4: OTIMIZAÇÃO - Start performance monitoring
+      PerformanceMonitor.start();
+      
       await ModuleRegistry.initialize();
       
       // Auto-activate first module if none active
@@ -43,6 +61,10 @@ function AeternumCore() {
       setSystemReady(true);
     };
     init();
+    
+    return () => {
+      PerformanceMonitor.stop();
+    };
   }, []);
 
   // Listen for system ready event
@@ -69,10 +91,17 @@ function AeternumCore() {
     );
   }
 
-  return <MainLayout />;
+  return (
+    <>
+      <MainLayout />
+      {/* LADO 4: OTIMIZAÇÃO - Metrics visualization */}
+      <QuadrangularMetrics />
+    </>
+  );
 }
 
 const App = () => (
+  // LADO 1: ESTABILIDADE - Error Boundary
   <AppErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
