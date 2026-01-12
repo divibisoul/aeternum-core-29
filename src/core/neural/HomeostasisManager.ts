@@ -116,6 +116,12 @@ export class HomeostasisManager {
   private calculateGlobalStress(): void {
     let totalStress = 0;
 
+    // Se não há estados reportados, stress é baixo (sistema estável)
+    if (this.nodeStates.size === 0) {
+      this.globalStress = 0.5; // Valor inicial estável
+      return;
+    }
+
     for (const state of this.nodeStates.values()) {
       // Fatores de estresse individual
       const loadStress = Math.max(0, state.loadRatio - 0.8) * 10; // >80% carga
@@ -123,9 +129,11 @@ export class HomeostasisManager {
       totalStress += loadStress + thermalStress;
     }
 
-    // Adicionar stress por nós inativos
+    // Adicionar stress por nós inativos (mas não no início)
     const inactiveNodes = this.allNodes.filter(node => !node.active).length;
-    totalStress += inactiveNodes * 5.0;
+    if (this.nodeStates.size > 0) {
+      totalStress += inactiveNodes * 2.0; // Reduzido de 5.0 para 2.0
+    }
 
     this.globalStress = totalStress;
     this.stressHistory.push(totalStress);

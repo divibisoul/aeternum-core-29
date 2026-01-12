@@ -7,6 +7,10 @@
  * - PERFORMANCE: Cache, parallel processing
  * - COMUNICAÇÃO: Optimized state, memoization
  * - OTIMIZAÇÃO: Performance monitoring
+ * 
+ * Also integrates:
+ * - Projeto Clareira (Neural Bio-Inspired System)
+ * - ConscienciaAlgoritmica (3-Layer Cognitive Architecture)
  */
 
 import { useEffect, useState } from 'react';
@@ -19,9 +23,10 @@ import { useEventBus } from '@/core/EventBus';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { QuadrangularMetrics } from '@/components/QuadrangularMetrics';
+import { SystemDashboard } from '@/components/SystemDashboard';
 import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
-import { PerformanceMonitor } from '@/lib/monitoring/PerformanceMonitor';
+import { ProjetoClareira } from '@/core/neural';
+import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
 import '@fontsource/jetbrains-mono/300.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
@@ -44,12 +49,27 @@ function AeternumCore() {
   const [systemReady, setSystemReady] = useState(false);
   const isAuthenticated = useGlobalStore(selectIsAuthenticated);
 
-  // Initialize module registry and performance monitoring on mount
+  // Initialize all systems on mount
   useEffect(() => {
     const init = async () => {
-      // LADO 4: OTIMIZAÇÃO - Start performance monitoring
-      PerformanceMonitor.start();
+      console.log('[Aeternum] Inicializando sistemas...');
       
+      // 1. Initialize Projeto Clareira (Neural System)
+      if (!ProjetoClareira.initialized) {
+        ProjetoClareira.initialize();
+        console.log('[Aeternum] Projeto Clareira inicializado');
+      }
+      if (!ProjetoClareira.running) {
+        ProjetoClareira.start();
+        console.log('[Aeternum] Projeto Clareira iniciado');
+      }
+      
+      // 2. Run initial test of ConscienciaAlgoritmica to activate all layers
+      const experienciaInicial = Array(10).fill(null).map(() => Math.random());
+      ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
+      console.log('[Aeternum] ConscienciaAlgoritmica ativada');
+      
+      // 3. Initialize Module Registry
       await ModuleRegistry.initialize();
       
       // Auto-activate first module if none active
@@ -59,11 +79,13 @@ function AeternumCore() {
       }
       
       setSystemReady(true);
+      console.log('[Aeternum] Todos os sistemas prontos');
     };
     init();
     
     return () => {
-      PerformanceMonitor.stop();
+      // Cleanup on unmount
+      ProjetoClareira.stop();
     };
   }, []);
 
@@ -84,7 +106,10 @@ function AeternumCore() {
         <div className="text-center">
           <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="mt-4 text-sm text-muted-foreground font-mono">
-            Carregando módulos...
+            Inicializando sistemas neurais...
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground/60 font-mono">
+            Projeto Clareira • ConscienciaAlgoritmica • Arquitetura Quadrangular
           </p>
         </div>
       </div>
@@ -94,8 +119,8 @@ function AeternumCore() {
   return (
     <>
       <MainLayout />
-      {/* LADO 4: OTIMIZAÇÃO - Metrics visualization */}
-      <QuadrangularMetrics />
+      {/* System Dashboard - Shows all metrics */}
+      <SystemDashboard />
     </>
   );
 }
