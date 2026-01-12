@@ -32,6 +32,8 @@ import { CodeVault } from '@/core/CodeVault';
 import { SelfLoop } from '@/core/SelfLoop';
 import { GammaModule } from '@/core/cognitive';
 import { ProjetoClareira } from '@/core/neural';
+import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
+import { HighPerformanceProcessor } from '@/lib/optimization/DataProcessor';
 
 interface Message {
   id: string;
@@ -258,6 +260,28 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     try {
       abortControllerRef.current = new AbortController();
       
+      // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
+      // Processar input através das 3 camadas (Técnica, Simbólica, Filosófica)
+      const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
+      while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
+      
+      const conscienciaResult = ConscienciaAlgoritmicaInstance.processar(experiencia, userInput);
+      console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
+        coerencia: conscienciaResult.metricas.coerenciaMedia.toFixed(3),
+        principio: conscienciaResult.filosofico.principioAplicado,
+        tempoMs: conscienciaResult.metricas.tempoProcessamento,
+      });
+
+      // === INTEGRAÇÃO: Projeto Clareira ===
+      // Injetar estímulo no sistema neural
+      if (ProjetoClareira.running) {
+        ProjetoClareira.injectStimulus(userInput, conscienciaResult.metricas.coerenciaMedia);
+      }
+
+      // === INTEGRAÇÃO: Cache de Alta Performance ===
+      // Usar cache para respostas similares
+      const cacheKey = `chat:${userInput.toLowerCase().slice(0, 50)}`;
+      
       // Process through precision pipeline
       const processed = await processWithPipeline(userInput);
       
@@ -364,6 +388,12 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
           // Post-process: extract and store code in vault
           await PrecisionEngine.postProcess(processed, fullContent, true);
+
+          // === INTEGRAÇÃO: Feedback para ConscienciaAlgoritmica ===
+          // Processar resposta para aprendizado contínuo
+          const respostaExperiencia = fullContent.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
+          while (respostaExperiencia.length < 10) respostaExperiencia.push(Math.random() * 0.3);
+          ConscienciaAlgoritmicaInstance.processar(respostaExperiencia, 'resposta-sucesso');
 
           // Store assistant response in memory
           addMemory({
