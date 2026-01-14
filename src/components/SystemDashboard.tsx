@@ -186,11 +186,11 @@ export function SystemDashboard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      className="fixed right-4 top-20 z-50 w-80"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="fixed bottom-4 right-4 z-[100] w-80"
     >
-      <div className="bg-card/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl overflow-hidden">
+      <div className="bg-card/98 backdrop-blur-xl border-2 border-primary/30 rounded-xl shadow-[0_0_30px_rgba(var(--primary),0.2)] overflow-hidden">
         {/* Header */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
