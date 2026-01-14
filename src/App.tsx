@@ -13,7 +13,7 @@
  * - ConscienciaAlgoritmica (3-Layer Cognitive Architecture)
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -24,9 +24,11 @@ import { AuthProvider } from '@/components/auth/AuthProvider';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SystemDashboard } from '@/components/SystemDashboard';
+import { SystemStatusIndicator } from '@/components/SystemStatusIndicator';
 import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
 import { ProjetoClareira } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
+import { toast } from 'sonner';
 import '@fontsource/jetbrains-mono/300.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
@@ -47,14 +49,16 @@ const queryClient = new QueryClient({
 
 function AeternumCore() {
   const [systemReady, setSystemReady] = useState(false);
+  const [initStage, setInitStage] = useState<string>('');
   const isAuthenticated = useGlobalStore(selectIsAuthenticated);
 
   // Initialize all systems on mount
-  useEffect(() => {
-    const init = async () => {
+  const initializeSystems = useCallback(async () => {
+    try {
       console.log('[Aeternum] Inicializando sistemas...');
       
-      // 1. Initialize Projeto Clareira (Neural System)
+      // Stage 1: Initialize Projeto Clareira (Neural System)
+      setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) {
         ProjetoClareira.initialize();
         console.log('[Aeternum] Projeto Clareira inicializado');
@@ -64,12 +68,18 @@ function AeternumCore() {
         console.log('[Aeternum] Projeto Clareira iniciado');
       }
       
-      // 2. Run initial test of ConscienciaAlgoritmica to activate all layers
-      const experienciaInicial = Array(10).fill(null).map(() => Math.random());
-      ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
-      console.log('[Aeternum] ConscienciaAlgoritmica ativada');
+      await new Promise(r => setTimeout(r, 200));
       
-      // 3. Initialize Module Registry
+      // Stage 2: Activate ConscienciaAlgoritmica
+      setInitStage('Ativando consciência algorítmica...');
+      const experienciaInicial = Array(10).fill(null).map(() => Math.random());
+      const resultado = ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
+      console.log('[Aeternum] ConscienciaAlgoritmica ativada - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
+      
+      await new Promise(r => setTimeout(r, 200));
+      
+      // Stage 3: Initialize Module Registry
+      setInitStage('Carregando módulos...');
       await ModuleRegistry.initialize();
       
       // Auto-activate first module if none active
@@ -78,16 +88,36 @@ function AeternumCore() {
         ModuleRegistry.activate(modules[0].metadata.id);
       }
       
+      await new Promise(r => setTimeout(r, 200));
+      
+      // Stage 4: Run system test
+      setInitStage('Validando sistemas...');
+      const testResult = ConscienciaAlgoritmicaInstance.testarSistemaCompleto();
+      
+      if (testResult.sucesso) {
+        toast.success(`Sistemas online - Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}%`);
+      } else {
+        toast.warning('Sistemas parcialmente ativos');
+      }
+      
       setSystemReady(true);
       console.log('[Aeternum] Todos os sistemas prontos');
-    };
-    init();
+      
+    } catch (error) {
+      console.error('[Aeternum] Erro na inicialização:', error);
+      toast.error('Erro ao inicializar sistemas');
+      setSystemReady(true); // Continue anyway
+    }
+  }, []);
+
+  useEffect(() => {
+    initializeSystems();
     
     return () => {
       // Cleanup on unmount
       ProjetoClareira.stop();
     };
-  }, []);
+  }, [initializeSystems]);
 
   // Listen for system ready event
   useEventBus('system:ready', ({ modules }) => {
@@ -103,14 +133,42 @@ function AeternumCore() {
   if (!systemReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="mt-4 text-sm text-muted-foreground font-mono">
-            Inicializando sistemas neurais...
+        {/* Background effects */}
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        </div>
+        
+        <div className="relative text-center z-10">
+          {/* Animated rings */}
+          <div className="relative mx-auto h-24 w-24 mb-6">
+            <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
+            <div className="absolute inset-2 rounded-full border-2 border-primary/50 animate-pulse" />
+            <div className="absolute inset-4 rounded-full border-2 border-primary animate-spin" style={{ animationDuration: '3s' }} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-8 w-8 rounded-full bg-primary shadow-[0_0_30px_hsl(var(--primary))]" />
+            </div>
+          </div>
+          
+          <h2 className="text-xl font-bold text-foreground mb-2 font-mono">
+            AETERNUM
+          </h2>
+          <p className="text-sm text-primary font-mono mb-4">
+            {initStage}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground/60 font-mono">
-            Projeto Clareira • ConscienciaAlgoritmica • Arquitetura Quadrangular
-          </p>
+          
+          {/* System indicators */}
+          <div className="flex justify-center gap-4 text-[10px] text-muted-foreground">
+            <span className={ProjetoClareira.initialized ? 'text-green-400' : ''}>
+              ● Neural
+            </span>
+            <span className={ConscienciaAlgoritmicaInstance.getMetrics().processamentosTotal > 0 ? 'text-green-400' : ''}>
+              ● Cognitive
+            </span>
+            <span className={ModuleRegistry.isInitialized() ? 'text-green-400' : ''}>
+              ● Modules
+            </span>
+          </div>
         </div>
       </div>
     );
@@ -119,7 +177,9 @@ function AeternumCore() {
   return (
     <>
       <MainLayout />
-      {/* System Dashboard - Shows all metrics */}
+      {/* System Status Indicator - Top Left */}
+      <SystemStatusIndicator />
+      {/* System Dashboard - Bottom Right */}
       <SystemDashboard />
     </>
   );
@@ -130,7 +190,7 @@ const App = () => (
   <AppErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster position="bottom-right" theme="dark" />
+        <Toaster position="bottom-right" theme="dark" richColors />
         <AuthProvider>
           <AeternumCore />
         </AuthProvider>
