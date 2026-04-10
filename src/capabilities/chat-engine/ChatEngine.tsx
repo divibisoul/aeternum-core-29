@@ -271,8 +271,17 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     try {
       abortControllerRef.current = new AbortController();
       
+      // === INTEGRAÇÃO: AeternumAGI (8 motores) ===
+      const agi = AeternumAGI.getInstance();
+      const agiResult = agi.processInput(userInput);
+      console.log('[ChatEngine] AeternumAGI processou:', {
+        intention: agiResult.intention.type,
+        latticeOutput: agiResult.latticeOutput.length,
+        godelAwareness: agiResult.godelState.selfAwareness.toFixed(3),
+        darwinFitness: agiResult.evolutionMetrics.avgFitness.toFixed(3),
+      });
+
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
-      // Processar input através das 3 camadas (Técnica, Simbólica, Filosófica)
       const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
       while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
       
@@ -280,11 +289,22 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
         coerencia: conscienciaResult.metricas.coerenciaMedia.toFixed(3),
         principio: conscienciaResult.filosofico.principioAplicado,
-        tempoMs: conscienciaResult.metricas.tempoProcessamento,
       });
 
+      // === Build ERU cognitive data ===
+      const eru_data = {
+        cognitive_cycle_time_ms: conscienciaResult.metricas.tempoProcessamento,
+        self_scan_coherence: conscienciaResult.metricas.coerenciaMedia,
+        causal_reversal_efficiency: agiResult.godelState.modelingAccuracy,
+        ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? 0.95,
+        quantum_validation: agiResult.latticeOutput.every(v => v > 0.1),
+        agi_subsystems_active: agi.getFullMetrics().overall.activeSubsystems,
+        godel_self_awareness: agiResult.godelState.selfAwareness,
+        darwin_fitness: agiResult.evolutionMetrics.avgFitness,
+        lattice_coherence: agiResult.latticeOutput.reduce((a, b) => a + b, 0) / Math.max(1, agiResult.latticeOutput.length),
+      };
+
       // === INTEGRAÇÃO: Projeto Clareira ===
-      // Injetar estímulo no sistema neural
       if (ProjetoClareira.running) {
         ProjetoClareira.injectStimulus(userInput, conscienciaResult.metricas.coerenciaMedia);
       }
