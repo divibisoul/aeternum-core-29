@@ -85,16 +85,16 @@ export function AGIDashboard() {
                 <Eye className="w-3 h-3" /> Consciousness: {metrics.consciousness?.isRunning ? 'ON' : 'OFF'}
               </span>
               <span className="flex items-center gap-1 text-sky-400">
-                <GitBranch className="w-3 h-3" /> Gödel: {(metrics.godelMeta?.selfAwareness * 100 ?? 0).toFixed(0)}%
+                <GitBranch className="w-3 h-3" /> Gödel: {((metrics.godelMeta?.selfAwareness ?? 0) * 100).toFixed(0)}%
               </span>
               <span className="flex items-center gap-1 text-violet-400">
-                <TrendingUp className="w-3 h-3" /> Darwin: {(metrics.darwin?.avgFitness * 100 ?? 0).toFixed(0)}%
+                <TrendingUp className="w-3 h-3" /> Darwin: {((metrics.darwin?.avgFitness ?? 0) * 100).toFixed(0)}%
               </span>
               <span className="flex items-center gap-1 text-amber-400">
-                <Atom className="w-3 h-3" /> Lattice: {(metrics.lattice?.globalFitness * 100 ?? 0).toFixed(0)}%
+                <Atom className="w-3 h-3" /> Lattice: {((metrics.lattice?.globalFitness ?? 0) * 100).toFixed(0)}%
               </span>
               <span className="flex items-center gap-1 text-primary">
-                <Shield className="w-3 h-3" /> Ethics: {(metrics.ethics?.auditMetrics?.avgScore * 100 ?? 0).toFixed(0)}%
+                <Shield className="w-3 h-3" /> Ethics: {((metrics.ethics?.auditMetrics?.avgScore ?? 0) * 100).toFixed(0)}%
               </span>
             </div>
           )}
