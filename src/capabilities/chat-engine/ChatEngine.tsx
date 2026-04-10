@@ -34,7 +34,7 @@ import { GammaModule } from '@/core/cognitive';
 import { ProjetoClareira } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
 import { HighPerformanceProcessor } from '@/lib/optimization/DataProcessor';
-
+import { AeternumAGI } from '@/core/agi';
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -48,6 +48,17 @@ interface Message {
     executionMode?: string;
     complexity?: string;
     codeContextUsed?: boolean;
+  };
+  eru_data?: {
+    cognitive_cycle_time_ms: number;
+    self_scan_coherence: number;
+    causal_reversal_efficiency: number;
+    ethical_conformance_score: number;
+    quantum_validation: boolean;
+    agi_subsystems_active: number;
+    godel_self_awareness: number;
+    darwin_fitness: number;
+    lattice_coherence: number;
   };
 }
 
