@@ -405,7 +405,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
           cognitiveModules.forEach(m => updateModuleStatus(m.id, 'complete'));
           capabilityModules.forEach(m => updateModuleStatus(m.id, 'idle'));
           
-          // Update message with response
+          // Update message with response + ERU data
           setMessages(prev => prev.map(m => 
             m.id === thinkingId 
               ? { 
@@ -413,6 +413,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                   content: fullContent, 
                   thinking: false,
                   metadata,
+                  eru_data,
                 }
               : m
           ));
