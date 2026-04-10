@@ -23,11 +23,13 @@ import { useEventBus } from '@/core/EventBus';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { AGIDashboard } from '@/components/AGIDashboard';
 import { SystemDashboard } from '@/components/SystemDashboard';
 import { SystemStatusIndicator } from '@/components/SystemStatusIndicator';
 import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
 import { ProjetoClareira } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
+import { AeternumAGI } from '@/core/agi';
 import { toast } from 'sonner';
 import '@fontsource/jetbrains-mono/300.css';
 import '@fontsource/jetbrains-mono/400.css';
@@ -61,41 +63,48 @@ function AeternumCore() {
       setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) {
         ProjetoClareira.initialize();
-        console.log('[Aeternum] Projeto Clareira inicializado');
       }
       if (!ProjetoClareira.running) {
         ProjetoClareira.start();
-        console.log('[Aeternum] Projeto Clareira iniciado');
       }
       
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 150));
       
       // Stage 2: Activate ConscienciaAlgoritmica
       setInitStage('Ativando consciência algorítmica...');
       const experienciaInicial = Array(10).fill(null).map(() => Math.random());
       const resultado = ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
-      console.log('[Aeternum] ConscienciaAlgoritmica ativada - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
+      console.log('[Aeternum] ConscienciaAlgoritmica - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
       
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 150));
       
-      // Stage 3: Initialize Module Registry
+      // Stage 3: Initialize AeternumAGI (all 8 AGI engines)
+      setInitStage('Inicializando motores AGI...');
+      const agi = AeternumAGI.getInstance();
+      agi.initialize();
+      agi.start();
+      console.log('[Aeternum] AeternumAGI - 8 motores ativos');
+      
+      await new Promise(r => setTimeout(r, 150));
+      
+      // Stage 4: Initialize Module Registry
       setInitStage('Carregando módulos...');
       await ModuleRegistry.initialize();
       
-      // Auto-activate first module if none active
       const modules = ModuleRegistry.getAll();
       if (modules.length > 0 && !ModuleRegistry.getActiveId()) {
         ModuleRegistry.activate(modules[0].metadata.id);
       }
       
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 100));
       
-      // Stage 4: Run system test
+      // Stage 5: Run system validation
       setInitStage('Validando sistemas...');
       const testResult = ConscienciaAlgoritmicaInstance.testarSistemaCompleto();
+      const agiMetrics = agi.getFullMetrics();
       
       if (testResult.sucesso) {
-        toast.success(`Sistemas online - Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}%`);
+        toast.success(`Sistemas online - Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | AGI: ${agiMetrics.overall.activeSubsystems}/8 motores`);
       } else {
         toast.warning('Sistemas parcialmente ativos');
       }
@@ -106,7 +115,7 @@ function AeternumCore() {
     } catch (error) {
       console.error('[Aeternum] Erro na inicialização:', error);
       toast.error('Erro ao inicializar sistemas');
-      setSystemReady(true); // Continue anyway
+      setSystemReady(true);
     }
   }, []);
 
@@ -114,8 +123,8 @@ function AeternumCore() {
     initializeSystems();
     
     return () => {
-      // Cleanup on unmount
       ProjetoClareira.stop();
+      AeternumAGI.getInstance().stop();
     };
   }, [initializeSystems]);
 
@@ -158,12 +167,15 @@ function AeternumCore() {
           </p>
           
           {/* System indicators */}
-          <div className="flex justify-center gap-4 text-[10px] text-muted-foreground">
+          <div className="flex justify-center gap-4 text-[10px] text-muted-foreground flex-wrap">
             <span className={ProjetoClareira.initialized ? 'text-green-400' : ''}>
               ● Neural
             </span>
             <span className={ConscienciaAlgoritmicaInstance.getMetrics().processamentosTotal > 0 ? 'text-green-400' : ''}>
               ● Cognitive
+            </span>
+            <span className={AeternumAGI.getInstance().initialized ? 'text-green-400' : ''}>
+              ● AGI
             </span>
             <span className={ModuleRegistry.isInitialized() ? 'text-green-400' : ''}>
               ● Modules
@@ -177,10 +189,9 @@ function AeternumCore() {
   return (
     <>
       <MainLayout />
-      {/* System Status Indicator - Top Left */}
       <SystemStatusIndicator />
-      {/* System Dashboard - Bottom Right */}
       <SystemDashboard />
+      <AGIDashboard />
     </>
   );
 }

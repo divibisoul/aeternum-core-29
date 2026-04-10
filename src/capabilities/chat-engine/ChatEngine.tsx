@@ -34,7 +34,7 @@ import { GammaModule } from '@/core/cognitive';
 import { ProjetoClareira } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
 import { HighPerformanceProcessor } from '@/lib/optimization/DataProcessor';
-
+import { AeternumAGI } from '@/core/agi';
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -48,6 +48,17 @@ interface Message {
     executionMode?: string;
     complexity?: string;
     codeContextUsed?: boolean;
+  };
+  eru_data?: {
+    cognitive_cycle_time_ms: number;
+    self_scan_coherence: number;
+    causal_reversal_efficiency: number;
+    ethical_conformance_score: number;
+    quantum_validation: boolean;
+    agi_subsystems_active: number;
+    godel_self_awareness: number;
+    darwin_fitness: number;
+    lattice_coherence: number;
   };
 }
 
@@ -260,8 +271,17 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     try {
       abortControllerRef.current = new AbortController();
       
+      // === INTEGRAÇÃO: AeternumAGI (8 motores) ===
+      const agi = AeternumAGI.getInstance();
+      const agiResult = agi.processInput(userInput);
+      console.log('[ChatEngine] AeternumAGI processou:', {
+        intention: agiResult.intention.type,
+        latticeOutput: agiResult.latticeOutput.length,
+        godelAwareness: agiResult.godelState.selfAwareness.toFixed(3),
+        darwinFitness: agiResult.evolutionMetrics.avgFitness.toFixed(3),
+      });
+
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
-      // Processar input através das 3 camadas (Técnica, Simbólica, Filosófica)
       const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
       while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
       
@@ -269,11 +289,22 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
         coerencia: conscienciaResult.metricas.coerenciaMedia.toFixed(3),
         principio: conscienciaResult.filosofico.principioAplicado,
-        tempoMs: conscienciaResult.metricas.tempoProcessamento,
       });
 
+      // === Build ERU cognitive data ===
+      const eru_data = {
+        cognitive_cycle_time_ms: conscienciaResult.metricas.tempoProcessamento,
+        self_scan_coherence: conscienciaResult.metricas.coerenciaMedia,
+        causal_reversal_efficiency: agiResult.godelState.modelingAccuracy,
+        ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? 0.95,
+        quantum_validation: agiResult.latticeOutput.every(v => v > 0.1),
+        agi_subsystems_active: agi.getFullMetrics().overall.activeSubsystems,
+        godel_self_awareness: agiResult.godelState.selfAwareness,
+        darwin_fitness: agiResult.evolutionMetrics.avgFitness,
+        lattice_coherence: agiResult.latticeOutput.reduce((a, b) => a + b, 0) / Math.max(1, agiResult.latticeOutput.length),
+      };
+
       // === INTEGRAÇÃO: Projeto Clareira ===
-      // Injetar estímulo no sistema neural
       if (ProjetoClareira.running) {
         ProjetoClareira.injectStimulus(userInput, conscienciaResult.metricas.coerenciaMedia);
       }
@@ -374,7 +405,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
           cognitiveModules.forEach(m => updateModuleStatus(m.id, 'complete'));
           capabilityModules.forEach(m => updateModuleStatus(m.id, 'idle'));
           
-          // Update message with response
+          // Update message with response + ERU data
           setMessages(prev => prev.map(m => 
             m.id === thinkingId 
               ? { 
@@ -382,6 +413,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                   content: fullContent, 
                   thinking: false,
                   metadata,
+                  eru_data,
                 }
               : m
           ));
@@ -617,6 +649,24 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                     )}>
                       {message.content}
                     </div>
+                    {/* ERU Cognitive Data Bar */}
+                    {message.eru_data && (
+                      <div className="mt-2 flex items-center gap-2 text-[10px] font-mono bg-card/50 border border-border/30 rounded px-2 py-1 flex-wrap">
+                        <span className="text-primary">ERU:{message.eru_data.cognitive_cycle_time_ms}ms</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-emerald-500">Λ:{(message.eru_data.self_scan_coherence * 100).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-sky-500">Π:{(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-violet-500">Ε:{(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-amber-500">AGI:{message.eru_data.agi_subsystems_active}/8</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className={message.eru_data.quantum_validation ? 'text-emerald-400' : 'text-destructive'}>
+                          Q:{message.eru_data.quantum_validation ? '✓' : '✗'}
+                        </span>
+                      </div>
+                    )}
                     <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>{message.timestamp.toLocaleTimeString()}</span>
@@ -636,7 +686,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                       {message.metadata?.codeContextUsed && (
                         <>
                           <span>•</span>
-                          <Database className="h-3 w-3 text-green-400" />
+                          <Database className="h-3 w-3 text-emerald-500" />
                         </>
                       )}
                     </div>
