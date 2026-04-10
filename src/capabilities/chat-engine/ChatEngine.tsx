@@ -649,6 +649,24 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                     )}>
                       {message.content}
                     </div>
+                    {/* ERU Cognitive Data Bar */}
+                    {message.eru_data && (
+                      <div className="mt-2 flex items-center gap-2 text-[10px] font-mono bg-card/50 border border-border/30 rounded px-2 py-1 flex-wrap">
+                        <span className="text-primary">ERU:{message.eru_data.cognitive_cycle_time_ms}ms</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-emerald-500">Λ:{(message.eru_data.self_scan_coherence * 100).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-sky-500">Π:{(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-violet-500">Ε:{(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-amber-500">AGI:{message.eru_data.agi_subsystems_active}/8</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className={message.eru_data.quantum_validation ? 'text-emerald-400' : 'text-destructive'}>
+                          Q:{message.eru_data.quantum_validation ? '✓' : '✗'}
+                        </span>
+                      </div>
+                    )}
                     <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>{message.timestamp.toLocaleTimeString()}</span>
@@ -668,7 +686,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                       {message.metadata?.codeContextUsed && (
                         <>
                           <span>•</span>
-                          <Database className="h-3 w-3 text-green-400" />
+                          <Database className="h-3 w-3 text-emerald-500" />
                         </>
                       )}
                     </div>
