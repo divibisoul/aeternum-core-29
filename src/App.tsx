@@ -23,6 +23,7 @@ import { useEventBus } from '@/core/EventBus';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
+import { AGIDashboard } from '@/components/AGIDashboard';
 import { SystemDashboard } from '@/components/SystemDashboard';
 import { SystemStatusIndicator } from '@/components/SystemStatusIndicator';
 import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
@@ -188,10 +189,9 @@ function AeternumCore() {
   return (
     <>
       <MainLayout />
-      {/* System Status Indicator - Top Left */}
       <SystemStatusIndicator />
-      {/* System Dashboard - Bottom Right */}
       <SystemDashboard />
+      <AGIDashboard />
     </>
   );
 }
