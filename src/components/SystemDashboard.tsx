@@ -130,7 +130,7 @@ const Section = memo(function Section({
 });
 
 export function SystemDashboard() {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
   const [neuralMetrics, setNeuralMetrics] = useState<SystemMetrics | null>(null);
   const [conscienciaMetrics, setConscienciaMetrics] = useState<ReturnType<typeof ConscienciaAlgoritmicaInstance.getMetrics> | null>(null);
@@ -188,9 +188,9 @@ export function SystemDashboard() {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed bottom-4 right-4 z-[100] w-80"
+      className="fixed top-20 right-4 z-[90] w-72"
     >
-      <div className="bg-card/98 backdrop-blur-xl border-2 border-primary/30 rounded-xl shadow-[0_0_30px_rgba(var(--primary),0.2)] overflow-hidden">
+      <div className="bg-card/98 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg overflow-hidden">
         {/* Header */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}

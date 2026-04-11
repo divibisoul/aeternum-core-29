@@ -43,7 +43,7 @@ export function AGIDashboard() {
 
   if (!isExpanded) {
     return (
-      <div className="fixed bottom-4 left-4 z-[100]">
+      <div className="fixed top-20 left-[72px] z-[90]">
         <Button
           variant="outline"
           size="sm"
@@ -61,7 +61,7 @@ export function AGIDashboard() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-[100] w-[calc(100vw-2rem)] max-w-4xl max-h-[80vh] overflow-hidden">
+    <div className="fixed top-20 left-[72px] z-[90] w-[calc(100vw-6rem)] max-w-4xl max-h-[70vh] overflow-hidden">
       <Card className="bg-card/95 backdrop-blur-md border-border/50 shadow-2xl">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
