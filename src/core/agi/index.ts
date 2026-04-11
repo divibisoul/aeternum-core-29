@@ -10,6 +10,9 @@
  * - SelfHealingArchitecture: Auto-correção e reconstrução
  * - ImmutableEthicalCore + RSOPEthicalOptimizer: Ética imutável
  * - HyperSafetySystem: Monitoramento cross-layer
+ * - NucleoIncertezaProdutiva: Incerteza produtiva (NIP)
+ * - QuantumNeuralInterface: Interface neural quântica
+ * - ConnectivityManager: Mesh networking entre subsistemas
  */
 
 import { GodelAgent } from './GodelAgent';
@@ -20,6 +23,9 @@ import { SafeSelfImprovementCore } from './SafeSelfImprovementCore';
 import { SelfHealingArchitecture } from './SelfHealingArchitecture';
 import { RSOPEthicalOptimizer } from './ImmutableEthicalCore';
 import { HyperSafetySystem } from './HyperSafetySystem';
+import { NucleoIncertezaProdutiva } from './NucleoIncertezaProdutiva';
+import { QuantumNeuralInterface } from './QuantumNeuralInterface';
+import { ConnectivityManager } from './ConnectivityManager';
 
 export { GodelAgent } from './GodelAgent';
 export { DarwinMachine } from './DarwinMachine';
@@ -29,16 +35,22 @@ export { SafeSelfImprovementCore, EmergencyStopMechanism, EthicalGovernanceCore 
 export { SelfHealingArchitecture, IntegrityScanner } from './SelfHealingArchitecture';
 export { ImmutableEthicalCore, RSOPEthicalOptimizer, ContinuousAuditSystem } from './ImmutableEthicalCore';
 export { HyperSafetySystem } from './HyperSafetySystem';
+export { NucleoIncertezaProdutiva } from './NucleoIncertezaProdutiva';
+export { QuantumNeuralInterface, NeuralCommunication, QuantumNetworking } from './QuantumNeuralInterface';
+export { ConnectivityManager } from './ConnectivityManager';
 
 export type { UserIntention, ProactiveSuggestion } from './AGIConsciousness';
 export type { MetaCognitionState, SelfModificationCommand } from './GodelAgent';
 export type { LatticeMetrics } from './RecursiveNeuralLattice';
 export type { SystemHealth, ModuleHealth } from './SelfHealingArchitecture';
 export type { CrossLayerHealthReport } from './HyperSafetySystem';
+export type { DuvidaAtiva, RelatorioIncerteza } from './NucleoIncertezaProdutiva';
+export type { NeuralSignal, QuantumState } from './QuantumNeuralInterface';
+export type { ConnectivityMetrics, MeshNode } from './ConnectivityManager';
 
 /**
  * AeternumAGI - Orquestrador Central de todos os sistemas AGI
- * Singleton que gerencia ciclo de vida de todos os subsistemas
+ * Singleton que gerencia ciclo de vida de todos os 11 subsistemas
  */
 export class AeternumAGI {
   private static instance: AeternumAGI | null = null;
@@ -51,6 +63,9 @@ export class AeternumAGI {
   public selfHealing: SelfHealingArchitecture;
   public ethicalOptimizer: RSOPEthicalOptimizer;
   public safetySystem: HyperSafetySystem;
+  public nip: NucleoIncertezaProdutiva;
+  public quantumNeural: QuantumNeuralInterface;
+  public connectivity: ConnectivityManager;
 
   private _initialized = false;
   private _running = false;
@@ -67,6 +82,9 @@ export class AeternumAGI {
     this.selfHealing = new SelfHealingArchitecture(this.safeCore);
     this.ethicalOptimizer = new RSOPEthicalOptimizer();
     this.safetySystem = new HyperSafetySystem();
+    this.nip = new NucleoIncertezaProdutiva(0.05, 0.8, 30);
+    this.quantumNeural = new QuantumNeuralInterface();
+    this.connectivity = new ConnectivityManager();
   }
 
   static getInstance(): AeternumAGI {
@@ -78,7 +96,20 @@ export class AeternumAGI {
 
   initialize(): void {
     if (this._initialized) return;
-    console.log('[AeternumAGI] Inicializando todos os subsistemas...');
+    console.log('[AeternumAGI] Inicializando todos os 11 subsistemas...');
+
+    // Initialize new subsystems
+    this.quantumNeural.initialize();
+    this.connectivity.initialize();
+
+    // Establish quantum entanglement between all subsystems
+    const subsystemIds = [
+      'consciousness', 'godel', 'darwin', 'lattice',
+      'safeCore', 'selfHealing', 'ethics', 'hyperSafety', 'nip'
+    ];
+    subsystemIds.forEach(id => {
+      this.quantumNeural.establishEntanglement(id);
+    });
 
     // Register health providers for cross-layer monitoring
     this.safetySystem.registerHealthProvider('consciousness', () => {
@@ -98,9 +129,21 @@ export class AeternumAGI {
     this.safetySystem.registerHealthProvider('lattice', () => {
       return this.neuralLattice.getMetrics().globalFitness;
     });
+    this.safetySystem.registerHealthProvider('nip', () => {
+      const report = this.nip.getRelatorio();
+      return report.saudeEpistemologica === 'saudavel' ? 0.95
+        : report.saudeEpistemologica === 'rigida' ? 0.6 : 0.3;
+    });
+    this.safetySystem.registerHealthProvider('quantumNeural', () => {
+      const status = this.quantumNeural.getInterfaceStatus();
+      return status.quantum.coherence;
+    });
+    this.safetySystem.registerHealthProvider('connectivity', () => {
+      return this.connectivity.getMetrics().reliability;
+    });
 
     this._initialized = true;
-    console.log('[AeternumAGI] Todos os subsistemas inicializados');
+    console.log('[AeternumAGI] Todos os 11 subsistemas inicializados');
   }
 
   start(): void {
@@ -114,6 +157,9 @@ export class AeternumAGI {
     this.selfHealing.startContinuousDiagnosis(60000);
     this.ethicalOptimizer.startOptimization(300000);
     this.safetySystem.startMonitoring(30000);
+    this.nip.iniciar();
+    this.quantumNeural.startContinuousTick(5000);
+    this.connectivity.start(5000);
 
     // Initial Gödel cycle
     this.godelAgent.executeSelfImprovementCycle().then(mods => {
@@ -121,7 +167,7 @@ export class AeternumAGI {
     });
 
     this._running = true;
-    console.log('[AeternumAGI] Todos os motores ativos ✓');
+    console.log('[AeternumAGI] Todos os 11 motores ativos ✓');
   }
 
   stop(): void {
@@ -131,6 +177,9 @@ export class AeternumAGI {
     this.selfHealing.stopContinuousDiagnosis();
     this.ethicalOptimizer.stopOptimization();
     this.safetySystem.stopMonitoring();
+    this.nip.parar();
+    this.quantumNeural.stopContinuousTick();
+    this.connectivity.stop();
     this._running = false;
     console.log('[AeternumAGI] Todos os motores parados');
   }
@@ -139,7 +188,7 @@ export class AeternumAGI {
   get running() { return this._running; }
 
   /**
-   * Process user input through ALL cognitive layers
+   * Process user input through ALL cognitive layers (11 engines)
    */
   processInput(userInput: string): {
     intention: ReturnType<AGIConsciousness['processInput']>;
@@ -147,6 +196,9 @@ export class AeternumAGI {
     godelState: ReturnType<GodelAgent['getMetaCognitionState']>;
     evolutionMetrics: ReturnType<DarwinMachine['getMetrics']>;
     safetyReport: ReturnType<HyperSafetySystem['getLatestReport']>;
+    nipResult: ReturnType<NucleoIncertezaProdutiva['processInput']>;
+    quantumResult: ReturnType<QuantumNeuralInterface['processMessage']>;
+    connectivityMetrics: ReturnType<ConnectivityManager['getMetrics']>;
   } {
     // 1. Consciousness processes intention
     const intention = this.consciousness.processInput(userInput);
@@ -155,7 +207,13 @@ export class AeternumAGI {
     const inputSignal = userInput.split('').slice(0, 4).map(c => c.charCodeAt(0) / 255);
     const latticeOutput = this.neuralLattice.processInput(inputSignal);
 
-    // 3. Update safe core context
+    // 3. NIP processes epistemological uncertainty
+    const nipResult = this.nip.processInput(userInput);
+
+    // 4. Quantum-Neural Interface processes message
+    const quantumResult = this.quantumNeural.processMessage(userInput);
+
+    // 5. Update safe core context
     this.safeCore.updateAppContext({ userInteractions: this.consciousness.getMetrics().interactionCount });
 
     return {
@@ -163,12 +221,15 @@ export class AeternumAGI {
       latticeOutput,
       godelState: this.godelAgent.getMetaCognitionState(),
       evolutionMetrics: this.darwinMachine.getMetrics(),
-      safetyReport: this.safetySystem.getLatestReport()
+      safetyReport: this.safetySystem.getLatestReport(),
+      nipResult,
+      quantumResult,
+      connectivityMetrics: this.connectivity.getMetrics()
     };
   }
 
   /**
-   * Get comprehensive system metrics for dashboard
+   * Get comprehensive system metrics for dashboard (11 engines)
    */
   getFullMetrics() {
     return {
@@ -180,17 +241,25 @@ export class AeternumAGI {
       healing: this.selfHealing.getLatestHealth(),
       ethics: this.ethicalOptimizer.getMetrics(),
       safety: this.safetySystem.getLatestReport(),
+      nip: this.nip.getRelatorio(),
+      quantumNeural: this.quantumNeural.getInterfaceStatus(),
+      connectivity: this.connectivity.getMetrics(),
       overall: {
         initialized: this._initialized,
         running: this._running,
-        subsystems: 8,
+        subsystems: 11,
         activeSubsystems: [
           this.consciousness.isRunning,
           this.darwinMachine.isRunning,
           this.neuralLattice.isRunning,
           this.selfHealing.isRunning,
           this.ethicalOptimizer.isRunning,
-          this.safetySystem.isRunning
+          this.safetySystem.isRunning,
+          this.nip.isRunning,
+          this.quantumNeural.getInterfaceStatus().initialized,
+          this.connectivity.isRunning,
+          true, // GodelAgent (always available)
+          true, // SafeCore (always available)
         ].filter(Boolean).length
       }
     };
