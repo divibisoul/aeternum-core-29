@@ -188,7 +188,7 @@ export function SystemDashboard() {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="fixed top-20 right-4 z-[90] w-72"
+      className="fixed top-12 right-4 z-40 w-72"
     >
       <div className="bg-card/98 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg overflow-hidden">
         {/* Header */}

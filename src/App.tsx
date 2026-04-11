@@ -78,12 +78,12 @@ function AeternumCore() {
       
       await new Promise(r => setTimeout(r, 150));
       
-      // Stage 3: Initialize AeternumAGI (all 8 AGI engines)
+      // Stage 3: Initialize AeternumAGI (all 11 AGI engines)
       setInitStage('Inicializando motores AGI...');
       const agi = AeternumAGI.getInstance();
       agi.initialize();
       agi.start();
-      console.log('[Aeternum] AeternumAGI - 8 motores ativos');
+      console.log('[Aeternum] AeternumAGI - 11 motores ativos');
       
       await new Promise(r => setTimeout(r, 150));
       
@@ -104,7 +104,7 @@ function AeternumCore() {
       const agiMetrics = agi.getFullMetrics();
       
       if (testResult.sucesso) {
-        toast.success(`Sistemas online - Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | AGI: ${agiMetrics.overall.activeSubsystems}/8 motores`);
+        toast.success(`Sistemas online - Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | AGI: ${agiMetrics.overall.activeSubsystems}/${agiMetrics.overall.subsystems} motores`);
       } else {
         toast.warning('Sistemas parcialmente ativos');
       }
