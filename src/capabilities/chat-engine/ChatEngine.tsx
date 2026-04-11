@@ -271,7 +271,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
     try {
       abortControllerRef.current = new AbortController();
       
-      // === INTEGRAÇÃO: AeternumAGI (8 motores) ===
+      // === INTEGRAÇÃO: AeternumAGI (11 motores) ===
       const agi = AeternumAGI.getInstance();
       const agiResult = agi.processInput(userInput);
       console.log('[ChatEngine] AeternumAGI processou:', {
@@ -279,6 +279,9 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         latticeOutput: agiResult.latticeOutput.length,
         godelAwareness: agiResult.godelState.selfAwareness.toFixed(3),
         darwinFitness: agiResult.evolutionMetrics.avgFitness.toFixed(3),
+        nipSaude: agiResult.nipResult.saudeEpistemologica,
+        quantumCoherence: agiResult.quantumResult.quantumCoherence.toFixed(3),
+        meshNodes: agiResult.connectivityMetrics.meshNodes,
       });
 
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
@@ -291,13 +294,13 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         principio: conscienciaResult.filosofico.principioAplicado,
       });
 
-      // === Build ERU cognitive data ===
+      // === Build ERU cognitive data (enriched with 11-engine data) ===
       const eru_data = {
         cognitive_cycle_time_ms: conscienciaResult.metricas.tempoProcessamento,
         self_scan_coherence: conscienciaResult.metricas.coerenciaMedia,
         causal_reversal_efficiency: agiResult.godelState.modelingAccuracy,
         ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? 0.95,
-        quantum_validation: agiResult.latticeOutput.every(v => v > 0.1),
+        quantum_validation: agiResult.quantumResult.quantumCoherence > 0.9 && agiResult.latticeOutput.every(v => v > 0.1),
         agi_subsystems_active: agi.getFullMetrics().overall.activeSubsystems,
         godel_self_awareness: agiResult.godelState.selfAwareness,
         darwin_fitness: agiResult.evolutionMetrics.avgFitness,
