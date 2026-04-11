@@ -72,7 +72,7 @@ export function SystemStatusIndicator() {
   const processingCount = systems.filter(s => s.processing).length;
 
   return (
-    <div className="fixed top-3 right-4 z-[90]">
+    <div className="fixed top-2 right-4 z-40">
       {/* Main indicator button */}
       <motion.button
         onClick={() => setIsExpanded(!isExpanded)}
