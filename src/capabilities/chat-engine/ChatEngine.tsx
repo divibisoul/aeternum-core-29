@@ -59,6 +59,8 @@ interface Message {
     godel_self_awareness: number;
     darwin_fitness: number;
     lattice_coherence: number;
+    saiic_integrity: number;
+    resource_cpu: number;
   };
 }
 
