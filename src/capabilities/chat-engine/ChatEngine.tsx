@@ -672,6 +672,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                         <span className={message.eru_data.quantum_validation ? 'text-emerald-400' : 'text-destructive'}>
                           Q:{message.eru_data.quantum_validation ? '✓' : '✗'}
                         </span>
+                        <span className="text-muted-foreground">|</span>
+                        <span className="text-red-400">SAIIC:{(message.eru_data.saiic_integrity * 100).toFixed(0)}%</span>
                       </div>
                     )}
                     <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
