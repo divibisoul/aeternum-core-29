@@ -139,31 +139,31 @@ export function Telemetry() {
         />
       </div>
 
-      {/* Center - Neural System Status */}
-      <div className="flex items-center gap-4">
-        {/* Neural Status Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30">
+      {/* Center - AGI + Neural Status (always active, no toggle) */}
+      <div className="flex items-center gap-3">
+        {/* AGI 13 engines */}
+        <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/10 border border-primary/30">
+          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-mono text-[10px] text-primary">AGI:13/13</span>
+        </div>
+
+        {/* Neural */}
+        <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/10 border border-primary/30">
           <div className={cn(
             "h-2 w-2 rounded-full",
-            ProjetoClareira.running ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-red-500",
-            neuralMetrics?.turboActive && "animate-pulse bg-purple-500 shadow-[0_0_12px_rgba(168,85,247,0.8)]"
+            ProjetoClareira.running ? "bg-emerald-500" : "bg-red-500",
+            neuralMetrics?.turboActive && "animate-pulse bg-purple-500"
           )} />
-          <span className="font-mono text-xs text-primary">
-            {neuralMetrics?.turboActive ? '⚡ TURBO' : ProjetoClareira.running ? 'NEURAL ACTIVE' : 'NEURAL OFFLINE'}
+          <span className="font-mono text-[10px] text-primary">
+            {neuralMetrics?.turboActive ? '⚡TURBO' : ProjetoClareira.running ? 'NEURAL' : 'N/OFF'}
           </span>
         </div>
 
-        {/* ConscienciaAlgoritmica Status */}
-        <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30">
-          <Brain className={cn(
-            "h-3.5 w-3.5",
-            conscienciaActive ? "text-orange-400" : "text-muted-foreground"
-          )} />
-          <span className={cn(
-            "font-mono text-xs",
-            conscienciaActive ? "text-orange-400" : "text-muted-foreground"
-          )}>
-            3-LAYER {conscienciaActive ? 'ON' : 'IDLE'}
+        {/* 3-Layer */}
+        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-orange-500/10 border border-orange-500/30">
+          <Brain className={cn("h-3 w-3", conscienciaActive ? "text-orange-400" : "text-muted-foreground")} />
+          <span className={cn("font-mono text-[10px]", conscienciaActive ? "text-orange-400" : "text-muted-foreground")}>
+            3L:{conscienciaActive ? 'ON' : 'IDLE'}
           </span>
         </div>
       </div>

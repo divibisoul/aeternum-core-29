@@ -1,8 +1,8 @@
 /**
  * AETERNUM - App Chassis (QUADRANGULAR ARCHITECTURE + 13 AGI ENGINES)
  * 
- * Integrates the 4-sided architecture + 13 continuous foreground AGI engines.
- * All engines run in FIRST-PRIORITY CONTINUOUS mode.
+ * All engines run in CONTINUOUS FOREGROUND mode.
+ * No modals - everything is embedded as active modules.
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -15,9 +15,6 @@ import { useEventBus } from '@/core/EventBus';
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { LoginScreen } from '@/components/auth/LoginScreen';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { AGIDashboard } from '@/components/AGIDashboard';
-import { SystemDashboard } from '@/components/SystemDashboard';
-import { SystemStatusIndicator } from '@/components/SystemStatusIndicator';
 import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
 import { ProjetoClareira } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
@@ -49,20 +46,17 @@ function AeternumCore() {
     try {
       console.log('[Aeternum] Inicializando 13 motores de primeiro plano...');
       
-      // Stage 1: Neural System
       setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) ProjetoClareira.initialize();
       if (!ProjetoClareira.running) ProjetoClareira.start();
       await new Promise(r => setTimeout(r, 100));
       
-      // Stage 2: Consciência Algorítmica
       setInitStage('Ativando consciência algorítmica...');
       const experienciaInicial = Array(10).fill(null).map(() => Math.random());
       const resultado = ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
       console.log('[Aeternum] ConscienciaAlgoritmica - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
       await new Promise(r => setTimeout(r, 100));
       
-      // Stage 3: AeternumAGI (13 engines, continuous foreground)
       setInitStage('Inicializando 13 motores AGI...');
       const agi = AeternumAGI.getInstance();
       agi.initialize();
@@ -70,7 +64,6 @@ function AeternumCore() {
       console.log('[Aeternum] AeternumAGI - 13 motores de primeiro plano contínuo ativos');
       await new Promise(r => setTimeout(r, 100));
       
-      // Stage 4: Module Registry
       setInitStage('Carregando módulos...');
       await ModuleRegistry.initialize();
       const modules = ModuleRegistry.getAll();
@@ -79,7 +72,6 @@ function AeternumCore() {
       }
       await new Promise(r => setTimeout(r, 100));
       
-      // Stage 5: Validation
       setInitStage('Validando integridade...');
       const testResult = ConscienciaAlgoritmicaInstance.testarSistemaCompleto();
       const agiMetrics = agi.getFullMetrics();
@@ -156,14 +148,8 @@ function AeternumCore() {
     );
   }
 
-  return (
-    <>
-      <MainLayout />
-      <SystemStatusIndicator />
-      <SystemDashboard />
-      <AGIDashboard />
-    </>
-  );
+  // No floating modals - everything is embedded in MainLayout
+  return <MainLayout />;
 }
 
 const App = () => (
