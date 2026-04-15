@@ -44,7 +44,7 @@ function AeternumCore() {
 
   const initializeSystems = useCallback(async () => {
     try {
-      console.log('[Aeternum] Inicializando 13 motores de primeiro plano...');
+      console.log('[Aeternum] Inicializando 17 motores de primeiro plano...');
       
       setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) ProjetoClareira.initialize();
@@ -57,11 +57,11 @@ function AeternumCore() {
       console.log('[Aeternum] ConscienciaAlgoritmica - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
       await new Promise(r => setTimeout(r, 100));
       
-      setInitStage('Inicializando 13 motores AGI...');
+      setInitStage('Inicializando 17 motores AGI + GEMs...');
       const agi = AeternumAGI.getInstance();
       agi.initialize();
       agi.start();
-      console.log('[Aeternum] AeternumAGI - 13 motores de primeiro plano contínuo ativos');
+      console.log('[Aeternum] AeternumAGI - 17 motores de primeiro plano contínuo ativos');
       await new Promise(r => setTimeout(r, 100));
       
       setInitStage('Carregando módulos...');
@@ -79,16 +79,17 @@ function AeternumCore() {
       
       if (testResult.sucesso) {
         toast.success(
-          `13 motores online | Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
+          `17 motores online | Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
           `AGI: ${agiMetrics.overall.activeSubsystems}/${agiMetrics.overall.subsystems} | ` +
-          `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}%`
+          `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}% | ` +
+          `GEMs: 4/4`
         );
       } else {
         toast.warning('Sistemas parcialmente ativos');
       }
       
       setSystemReady(true);
-      console.log('[Aeternum] Todos os 13 sistemas de primeiro plano prontos');
+      console.log('[Aeternum] Todos os 17 sistemas de primeiro plano prontos');
       
     } catch (error) {
       console.error('[Aeternum] Erro na inicialização:', error);

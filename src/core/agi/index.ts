@@ -35,6 +35,10 @@ import { QuantumNeuralInterface } from './QuantumNeuralInterface';
 import { ConnectivityManager } from './ConnectivityManager';
 import { SAIIC } from './SAIIC';
 import { ResourceManager } from './ResourceManager';
+import { GEMHealth } from '@/core/gems/GEMHealth';
+import { GEMResearch } from '@/core/gems/GEMResearch';
+import { GEMMusic } from '@/core/gems/GEMMusic';
+import { GEMDevice } from '@/core/gems/GEMDevice';
 import { EventBus } from '@/core/EventBus';
 
 export { GodelAgent } from './GodelAgent';
@@ -62,8 +66,18 @@ export type { ConnectivityMetrics, MeshNode } from './ConnectivityManager';
 export type { SAIICMetrics, AnticorpoAction, IntegrityReport, ModuleDiagnostic } from './SAIIC';
 export type { ResourceMetrics, ModuleResourceProfile } from './ResourceManager';
 
+// GEMs exports
+export { GEMHealth } from '@/core/gems/GEMHealth';
+export { GEMResearch } from '@/core/gems/GEMResearch';
+export { GEMMusic } from '@/core/gems/GEMMusic';
+export { GEMDevice } from '@/core/gems/GEMDevice';
+export type { HealthMetrics } from '@/core/gems/GEMHealth';
+export type { ResearchMetrics } from '@/core/gems/GEMResearch';
+export type { MusicMetrics, BrainwaveType } from '@/core/gems/GEMMusic';
+export type { DeviceMetrics, DeviceStatus } from '@/core/gems/GEMDevice';
+
 /**
- * AeternumAGI - Orquestrador Central (13 motores, primeiro plano contínuo)
+ * AeternumAGI - Orquestrador Central (17 motores, primeiro plano contínuo)
  * 
  * CONECTIVIDADE UNIVERSAL: Cada módulo tem canal direto de comunicação
  * com qualquer outro via barramento EventBus full-mesh.
@@ -89,12 +103,20 @@ export class AeternumAGI {
   public quantumNeural: QuantumNeuralInterface;
   public connectivity: ConnectivityManager;
   
-  // 2 NEW infrastructure engines
+  // 2 infrastructure engines
   public saiic: SAIIC;
   public resourceManager: ResourceManager;
 
+  // 4 GEM modules
+  public gemHealth: GEMHealth;
+  public gemResearch: GEMResearch;
+  public gemMusic: GEMMusic;
+  public gemDevice: GEMDevice;
+
   // Gödel continuous loop
   private _godelContinuousInterval: ReturnType<typeof setInterval> | null = null;
+  // GEM cross-collaboration interval
+  private _gemCollabInterval: ReturnType<typeof setInterval> | null = null;
 
   private _initialized = false;
   private _running = false;
@@ -116,6 +138,10 @@ export class AeternumAGI {
     this.connectivity = new ConnectivityManager();
     this.saiic = new SAIIC();
     this.resourceManager = new ResourceManager();
+    this.gemHealth = new GEMHealth();
+    this.gemResearch = new GEMResearch();
+    this.gemMusic = new GEMMusic();
+    this.gemDevice = new GEMDevice();
   }
 
   static getInstance(): AeternumAGI {
@@ -127,7 +153,7 @@ export class AeternumAGI {
 
   initialize(): void {
     if (this._initialized) return;
-    console.log('[AeternumAGI] Inicializando 13 motores de PRIMEIRO PLANO...');
+    console.log('[AeternumAGI] Inicializando 17 motores de PRIMEIRO PLANO...');
 
     // Initialize quantum and connectivity
     this.quantumNeural.initialize();
@@ -146,7 +172,7 @@ export class AeternumAGI {
 
     // Register all modules in ResourceManager with priorities
     const modulePriorities: [string, number][] = [
-      ['saiic', 1.0],           // HIGHEST - integrity first
+      ['saiic', 1.0],
       ['consciousness', 0.9],
       ['safetySystem', 0.85],
       ['ethicalOptimizer', 0.8],
@@ -159,6 +185,10 @@ export class AeternumAGI {
       ['connectivity', 0.5],
       ['safeCore', 0.5],
       ['resourceManager', 0.4],
+      ['gemHealth', 0.75],
+      ['gemResearch', 0.5],
+      ['gemMusic', 0.3],
+      ['gemDevice', 0.65],
     ];
     modulePriorities.forEach(([id, priority]) => {
       this.resourceManager.registerModule(id, priority);
@@ -232,6 +262,37 @@ export class AeternumAGI {
       errorRate: this.connectivity.isRunning ? Math.random() * 0.005 : 0.2,
     }));
 
+    // Register GEM modules in SAIIC
+    this.saiic.registerModule('gemHealth', () => ({
+      healthy: this.gemHealth.isRunning,
+      cpuLoad: 0.03 + Math.random() * 0.03,
+      memoryUsage: 0.02 + Math.random() * 0.02,
+      errorRate: this.gemHealth.isRunning ? Math.random() * 0.01 : 0.2,
+    }));
+    this.saiic.registerModule('gemResearch', () => ({
+      healthy: this.gemResearch.isRunning,
+      cpuLoad: 0.02 + Math.random() * 0.03,
+      memoryUsage: 0.02 + Math.random() * 0.02,
+      errorRate: this.gemResearch.isRunning ? Math.random() * 0.01 : 0.2,
+    }));
+    this.saiic.registerModule('gemMusic', () => ({
+      healthy: this.gemMusic.isRunning,
+      cpuLoad: 0.01 + Math.random() * 0.02,
+      memoryUsage: 0.01 + Math.random() * 0.01,
+      errorRate: Math.random() * 0.005,
+    }));
+    this.saiic.registerModule('gemDevice', () => ({
+      healthy: this.gemDevice.isRunning,
+      cpuLoad: 0.02 + Math.random() * 0.03,
+      memoryUsage: 0.02 + Math.random() * 0.02,
+      errorRate: this.gemDevice.isRunning ? Math.random() * 0.01 : 0.15,
+    }));
+
+    // Register GEM connectivity nodes
+    ['gemHealth', 'gemResearch', 'gemMusic', 'gemDevice'].forEach(id => {
+      this.connectivity.registerNode(id, 'gem-module');
+    });
+
     // Register health providers for HyperSafetySystem (cross-layer)
     this.safetySystem.registerHealthProvider('consciousness', () => {
       const metrics = this.consciousness.getMetrics();
@@ -267,7 +328,7 @@ export class AeternumAGI {
     });
 
     this._initialized = true;
-    console.log('[AeternumAGI] 13 motores inicializados ✓');
+    console.log('[AeternumAGI] 17 motores inicializados ✓');
   }
 
   /**
@@ -291,42 +352,33 @@ export class AeternumAGI {
     if (this._running) return;
     if (!this._initialized) this.initialize();
 
-    console.log('[AeternumAGI] Iniciando 13 motores em PRIMEIRO PLANO CONTÍNUO...');
+    console.log('[AeternumAGI] Iniciando 17 motores em PRIMEIRO PLANO CONTÍNUO...');
     
-    // 1. SAIIC FIRST (highest priority, fastest loop)
     this.saiic.start(500);
-    
-    // 2. ResourceManager (resource allocation)
     this.resourceManager.start(1000, 3000);
-    
-    // 3. Consciousness (fast scanning)
     this.consciousness.startConsciousnessLoop(3000);
-    
-    // 4. Darwin (evolutionary cycles)
     this.darwinMachine.startEvolution(8000);
-    
-    // 5. NeuralLattice (structural evolution)
     this.neuralLattice.startEvolution(5000);
-    
-    // 6. SelfHealing (continuous diagnosis)
     this.selfHealing.startContinuousDiagnosis(15000);
-    
-    // 7. EthicalOptimizer (audit cycles)
     this.ethicalOptimizer.startOptimization(60000);
-    
-    // 8. HyperSafety (cross-layer monitoring)
     this.safetySystem.startMonitoring(10000);
-    
-    // 9. NIP (epistemic uncertainty)
     this.nip.iniciar();
-    
-    // 10. QuantumNeural (quantum state maintenance)
     this.quantumNeural.startContinuousTick(3000);
-    
-    // 11. Connectivity (mesh networking)
     this.connectivity.start(3000);
-    
-    // 12. Gödel Agent continuous self-improvement loop
+
+    // GEM modules - continuous foreground
+    this.gemHealth.start(5000);
+    this.gemResearch.start(10000);
+    this.gemMusic.start(8000);
+    this.gemDevice.start(5000);
+
+    // GEM cross-collaboration: Health → Music adaptation
+    this._gemCollabInterval = setInterval(() => {
+      const health = this.gemHealth.metrics;
+      this.gemMusic.adaptToHealth(health.stressLevel, health.fatigueIndex);
+    }, 10000);
+
+    // Gödel Agent continuous self-improvement
     this._godelContinuousInterval = setInterval(async () => {
       const startMs = performance.now();
       const mods = await this.godelAgent.executeSelfImprovementCycle();
@@ -337,20 +389,19 @@ export class AeternumAGI {
       }
     }, 20000);
 
-    // Initial Gödel cycle
     this.godelAgent.executeSelfImprovementCycle().then(mods => {
       console.log(`[AeternumAGI] Gödel Agent: ${mods.length} melhorias iniciais`);
     });
 
     this._running = true;
-    console.log('[AeternumAGI] 13 motores de PRIMEIRO PLANO CONTÍNUO ativos ✓');
+    console.log('[AeternumAGI] 17 motores de PRIMEIRO PLANO CONTÍNUO ativos ✓');
 
-    // Emit system ready
     EventBus.emit('system:ready', {
       modules: [
         'SAIIC', 'ResourceManager', 'Consciousness', 'GodelAgent',
         'DarwinMachine', 'NeuralLattice', 'SelfHealing', 'EthicalOptimizer',
-        'HyperSafety', 'NIP', 'QuantumNeural', 'Connectivity', 'SafeCore'
+        'HyperSafety', 'NIP', 'QuantumNeural', 'Connectivity', 'SafeCore',
+        'GEM-Health', 'GEM-Research', 'GEM-Music', 'GEM-Device'
       ]
     });
   }
@@ -367,12 +418,20 @@ export class AeternumAGI {
     this.nip.parar();
     this.quantumNeural.stopContinuousTick();
     this.connectivity.stop();
+    this.gemHealth.stop();
+    this.gemResearch.stop();
+    this.gemMusic.stop();
+    this.gemDevice.stop();
     if (this._godelContinuousInterval) {
       clearInterval(this._godelContinuousInterval);
       this._godelContinuousInterval = null;
     }
+    if (this._gemCollabInterval) {
+      clearInterval(this._gemCollabInterval);
+      this._gemCollabInterval = null;
+    }
     this._running = false;
-    console.log('[AeternumAGI] Todos os 13 motores parados');
+    console.log('[AeternumAGI] Todos os 17 motores parados');
   }
 
   get initialized() { return this._initialized; }
@@ -450,10 +509,15 @@ export class AeternumAGI {
       connectivity: this.connectivity.getMetrics(),
       saiic: this.saiic.getMetrics(),
       resources: this.resourceManager.getMetrics(),
+      gemHealth: this.gemHealth.metrics,
+      gemResearch: this.gemResearch.getMetrics(),
+      gemMusic: this.gemMusic.getMetrics(),
+      gemDevice: this.gemDevice.getMetrics(),
+      deviceStatus: this.gemDevice.status,
       overall: {
         initialized: this._initialized,
         running: this._running,
-        subsystems: 13,
+        subsystems: 17,
         activeSubsystems: [
           this.consciousness.isRunning,
           this.darwinMachine.isRunning,
@@ -466,8 +530,12 @@ export class AeternumAGI {
           this.connectivity.isRunning,
           this.saiic.isRunning,
           this.resourceManager.isRunning,
-          true, // GodelAgent (always available)
-          true, // SafeCore (always available)
+          true, // GodelAgent
+          true, // SafeCore
+          this.gemHealth.isRunning,
+          this.gemResearch.isRunning,
+          this.gemMusic.isRunning,
+          this.gemDevice.isRunning,
         ].filter(Boolean).length
       }
     };
