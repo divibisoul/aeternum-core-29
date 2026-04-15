@@ -61,6 +61,8 @@ interface Message {
     lattice_coherence: number;
     saiic_integrity: number;
     resource_cpu: number;
+    gem_health_stress: number;
+    gem_device_connected: boolean;
   };
 }
 
@@ -309,6 +311,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         lattice_coherence: agiResult.latticeOutput.reduce((a, b) => a + b, 0) / Math.max(1, agiResult.latticeOutput.length),
         saiic_integrity: agiResult.saiicMetrics.overallIntegrity,
         resource_cpu: agiResult.resourceMetrics.totalCpuUsage,
+        gem_health_stress: agi.gemHealth.metrics.stressLevel,
+        gem_device_connected: agi.gemDevice.connected,
       };
 
       // === INTEGRAÇÃO: Projeto Clareira ===
