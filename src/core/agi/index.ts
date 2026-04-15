@@ -262,6 +262,37 @@ export class AeternumAGI {
       errorRate: this.connectivity.isRunning ? Math.random() * 0.005 : 0.2,
     }));
 
+    // Register GEM modules in SAIIC
+    this.saiic.registerModule('gemHealth', () => ({
+      healthy: this.gemHealth.isRunning,
+      cpuLoad: 0.03 + Math.random() * 0.03,
+      memoryUsage: 0.02 + Math.random() * 0.02,
+      errorRate: this.gemHealth.isRunning ? Math.random() * 0.01 : 0.2,
+    }));
+    this.saiic.registerModule('gemResearch', () => ({
+      healthy: this.gemResearch.isRunning,
+      cpuLoad: 0.02 + Math.random() * 0.03,
+      memoryUsage: 0.02 + Math.random() * 0.02,
+      errorRate: this.gemResearch.isRunning ? Math.random() * 0.01 : 0.2,
+    }));
+    this.saiic.registerModule('gemMusic', () => ({
+      healthy: this.gemMusic.isRunning,
+      cpuLoad: 0.01 + Math.random() * 0.02,
+      memoryUsage: 0.01 + Math.random() * 0.01,
+      errorRate: Math.random() * 0.005,
+    }));
+    this.saiic.registerModule('gemDevice', () => ({
+      healthy: this.gemDevice.isRunning,
+      cpuLoad: 0.02 + Math.random() * 0.03,
+      memoryUsage: 0.02 + Math.random() * 0.02,
+      errorRate: this.gemDevice.isRunning ? Math.random() * 0.01 : 0.15,
+    }));
+
+    // Register GEM connectivity nodes
+    ['gemHealth', 'gemResearch', 'gemMusic', 'gemDevice'].forEach(id => {
+      this.connectivity.registerNode(id, 'gem-module');
+    });
+
     // Register health providers for HyperSafetySystem (cross-layer)
     this.safetySystem.registerHealthProvider('consciousness', () => {
       const metrics = this.consciousness.getMetrics();
