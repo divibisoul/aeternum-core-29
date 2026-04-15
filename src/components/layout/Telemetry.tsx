@@ -141,10 +141,10 @@ export function Telemetry() {
 
       {/* Center - AGI + Neural Status (always active, no toggle) */}
       <div className="flex items-center gap-3">
-        {/* AGI 13 engines */}
+        {/* AGI 17 engines */}
         <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/10 border border-primary/30">
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-[10px] text-primary">AGI:13/13</span>
+          <span className="font-mono text-[10px] text-primary">AGI:17/17</span>
         </div>
 
         {/* Neural */}
