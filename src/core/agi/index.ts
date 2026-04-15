@@ -35,6 +35,10 @@ import { QuantumNeuralInterface } from './QuantumNeuralInterface';
 import { ConnectivityManager } from './ConnectivityManager';
 import { SAIIC } from './SAIIC';
 import { ResourceManager } from './ResourceManager';
+import { GEMHealth } from '@/core/gems/GEMHealth';
+import { GEMResearch } from '@/core/gems/GEMResearch';
+import { GEMMusic } from '@/core/gems/GEMMusic';
+import { GEMDevice } from '@/core/gems/GEMDevice';
 import { EventBus } from '@/core/EventBus';
 
 export { GodelAgent } from './GodelAgent';
@@ -62,8 +66,18 @@ export type { ConnectivityMetrics, MeshNode } from './ConnectivityManager';
 export type { SAIICMetrics, AnticorpoAction, IntegrityReport, ModuleDiagnostic } from './SAIIC';
 export type { ResourceMetrics, ModuleResourceProfile } from './ResourceManager';
 
+// GEMs exports
+export { GEMHealth } from '@/core/gems/GEMHealth';
+export { GEMResearch } from '@/core/gems/GEMResearch';
+export { GEMMusic } from '@/core/gems/GEMMusic';
+export { GEMDevice } from '@/core/gems/GEMDevice';
+export type { HealthMetrics } from '@/core/gems/GEMHealth';
+export type { ResearchMetrics } from '@/core/gems/GEMResearch';
+export type { MusicMetrics, BrainwaveType } from '@/core/gems/GEMMusic';
+export type { DeviceMetrics, DeviceStatus } from '@/core/gems/GEMDevice';
+
 /**
- * AeternumAGI - Orquestrador Central (13 motores, primeiro plano contínuo)
+ * AeternumAGI - Orquestrador Central (17 motores, primeiro plano contínuo)
  * 
  * CONECTIVIDADE UNIVERSAL: Cada módulo tem canal direto de comunicação
  * com qualquer outro via barramento EventBus full-mesh.
@@ -89,12 +103,20 @@ export class AeternumAGI {
   public quantumNeural: QuantumNeuralInterface;
   public connectivity: ConnectivityManager;
   
-  // 2 NEW infrastructure engines
+  // 2 infrastructure engines
   public saiic: SAIIC;
   public resourceManager: ResourceManager;
 
+  // 4 GEM modules
+  public gemHealth: GEMHealth;
+  public gemResearch: GEMResearch;
+  public gemMusic: GEMMusic;
+  public gemDevice: GEMDevice;
+
   // Gödel continuous loop
   private _godelContinuousInterval: ReturnType<typeof setInterval> | null = null;
+  // GEM cross-collaboration interval
+  private _gemCollabInterval: ReturnType<typeof setInterval> | null = null;
 
   private _initialized = false;
   private _running = false;
@@ -116,6 +138,10 @@ export class AeternumAGI {
     this.connectivity = new ConnectivityManager();
     this.saiic = new SAIIC();
     this.resourceManager = new ResourceManager();
+    this.gemHealth = new GEMHealth();
+    this.gemResearch = new GEMResearch();
+    this.gemMusic = new GEMMusic();
+    this.gemDevice = new GEMDevice();
   }
 
   static getInstance(): AeternumAGI {
@@ -127,7 +153,7 @@ export class AeternumAGI {
 
   initialize(): void {
     if (this._initialized) return;
-    console.log('[AeternumAGI] Inicializando 13 motores de PRIMEIRO PLANO...');
+    console.log('[AeternumAGI] Inicializando 17 motores de PRIMEIRO PLANO...');
 
     // Initialize quantum and connectivity
     this.quantumNeural.initialize();
@@ -146,7 +172,7 @@ export class AeternumAGI {
 
     // Register all modules in ResourceManager with priorities
     const modulePriorities: [string, number][] = [
-      ['saiic', 1.0],           // HIGHEST - integrity first
+      ['saiic', 1.0],
       ['consciousness', 0.9],
       ['safetySystem', 0.85],
       ['ethicalOptimizer', 0.8],
@@ -159,6 +185,10 @@ export class AeternumAGI {
       ['connectivity', 0.5],
       ['safeCore', 0.5],
       ['resourceManager', 0.4],
+      ['gemHealth', 0.75],
+      ['gemResearch', 0.5],
+      ['gemMusic', 0.3],
+      ['gemDevice', 0.65],
     ];
     modulePriorities.forEach(([id, priority]) => {
       this.resourceManager.registerModule(id, priority);
