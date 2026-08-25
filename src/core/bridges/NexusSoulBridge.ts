@@ -1,12 +1,23 @@
 import type { NexusCapability, NexusInteractionRequest, NexusInteractionResult } from '../contracts/NexusCapabilityContract';
 import { EventBus } from '../EventBus';
 
-/**
- * Core-side adapter for Nexus. It registers interaction capabilities and
- * routes results into the same EventBus used by the Soul core.
- */
+/** Core-side transport adapter for Nexus capabilities. */
 export class NexusSoulBridge {
   private readonly capabilities = new Set<NexusCapability>();
+  private started = false;
+
+  start(): void {
+    if (this.started || typeof window === 'undefined') return;
+    this.started = true;
+    window.addEventListener('soul:nexus:capabilities', (event) => {
+      const descriptors = (event as CustomEvent<Array<{ id: NexusCapability; available: boolean }>>).detail ?? [];
+      for (const descriptor of descriptors) this.register(descriptor);
+    });
+    window.addEventListener('soul:nexus:result', (event) => {
+      const result = (event as CustomEvent<NexusInteractionResult>).detail;
+      if (result) this.acceptResult(result);
+    });
+  }
 
   register(descriptor: { id: NexusCapability; available: boolean }): void {
     if (descriptor.available) this.capabilities.add(descriptor.id);
@@ -26,6 +37,9 @@ export class NexusSoulBridge {
       input,
       context,
     };
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('soul:nexus:request', { detail: request }));
+    }
     EventBus.emit('chat:send', { message: JSON.stringify({ source: 'nexus', request }) });
     return request;
   }
