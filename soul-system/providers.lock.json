@@ -1,0 +1,15 @@
+{
+  "system": "Soul Unified System",
+  "canonical": {
+    "repository": "divibisoul/aeternum-core-29",
+    "ref": "soul-android-foundation"
+  },
+  "providers": [
+    {"id":"nexus-aeternum-fusion","repository":"divibisoul/nexus-aeternum-fusion","ref":"main","commit":"da79996e6ed00d6d07da8dea447260f2d7af6d5b"},
+    {"id":"eternium","repository":"divibisoul/Eternium-","ref":"main","commit":"213a5ed8e9f727fbd23322d0bbc0e0fd177a65d2"},
+    {"id":"ai-chatbot","repository":"divibisoul/nextjs-ai-chatbot","ref":"main","commit":"ba4dbd2808a37ed5ad3699fa02d488c8e0ee9c51"},
+    {"id":"ai-chatbot-2000","repository":"divibisoul/nextjs-ai-chatbot-2000","ref":"main","commit":"faa158f94fe50efd25ba606e7f6c8a1344b74cd0"},
+    {"id":"ai-chatbots","repository":"divibisoul/nextjs-ai-chatbots","ref":"main","commit":"35e30080c46550d24093ff213364ddcaa59f7413"}
+  ],
+  "rule": "The build must use these pinned revisions; runtime adapters must declare which provider they consume."
+}
