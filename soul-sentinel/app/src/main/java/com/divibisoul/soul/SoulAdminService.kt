@@ -6,11 +6,8 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import android.util.Log
-import kotlinx.coroutines.*
 
 class SoulAdminService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var config: SoulConfig
     private lateinit var cortex: SoulCortex
     private lateinit var actions: SoulActions
@@ -22,37 +19,59 @@ class SoulAdminService : Service() {
         actions = SoulActions(this)
         createChannel()
         startForeground(NOTIFICATION_ID, notification("Soul Admin active — observing Android"))
-        scope.launch {
-            while (isActive) {
+        // Única inicialização do ciclo administrativo.
+        // A execução continua pertencendo ao serviço; onStartCommand não cria outro ciclo.
+        kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default
+        ).launch {
+            while (kotlinx.coroutines.isActive) {
                 runCycle()
-                delay(config.checkIntervalMs)
+                kotlinx.coroutines.delay(config.checkIntervalMs)
             }
         }
     }
 
     private fun runCycle() {
         cortex.evaluate().forEach { decision ->
-            Log.i("SoulAdmin", "${decision.action}: ${decision.reason}")
-            // Android 10+ and 13+ intentionally prevent third-party apps targeting modern SDKs
-            // from silently toggling Wi-Fi/Bluetooth or airplane mode. The Cortex records the
-            // decision and the Action layer can present the appropriate user-approved Settings UI.
+            android.util.Log.i("SoulAdmin", "${decision.action}: ${decision.reason}")
+            // Android moderno impede várias alterações administrativas silenciosas.
+            // O Cortex registra a decisão; a camada de ações trata apenas capacidades permitidas.
         }
     }
 
     private fun createChannel() {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Soul Admin", NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL,
+                "Soul Admin",
+                NotificationManager.IMPORTANCE_LOW
+            )
+        )
     }
 
-    private fun notification(text: String): Notification = Notification.Builder(this, CHANNEL)
-        .setContentTitle("Soul Admin")
-        .setContentText(text)
-        .setSmallIcon(android.R.drawable.ic_menu_manage)
-        .setOngoing(true)
-        .build()
+    private fun notification(text: String): Notification =
+        Notification.Builder(this, CHANNEL)
+            .setContentTitle("Soul Admin")
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.ic_menu_manage)
+            .setOngoing(true)
+            .build()
 
-    override fun onDestroy() { scope.cancel(); super.onDestroy() }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // O runtime/ciclo já foi iniciado em onCreate.
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        // O escopo é encerrado pelo próprio processo do serviço quando destruído.
+        super.onDestroy()
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
-    companion object { const val CHANNEL = "soul_admin"; const val NOTIFICATION_ID = 7001 }
+    companion object {
+        const val CHANNEL = "soul_admin"
+        const val NOTIFICATION_ID = 7001
+    }
 }
