@@ -2,133 +2,167 @@ package com.divibisoul.soul
 
 import android.app.ActivityManager
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.divibisoul.soul.core.SoulEvent
+import com.divibisoul.soul.core.SoulEventBus
+import com.divibisoul.soul.core.SystemEventCollector
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import rikka.shizuku.Shizuku
 
 class MainActivity : ComponentActivity() {
+    private val eventBus = SoulEventBus()
+    private lateinit var collector: SystemEventCollector
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    SentinelScreen(this@MainActivity)
-                }
-            }
-        }
+        collector = SystemEventCollector(this, eventBus)
+        collector.start()
+        setContent { MaterialTheme { Surface { SoulCockpit(this@MainActivity, eventBus) } } }
+    }
+
+    override fun onDestroy() {
+        collector.stop()
+        super.onDestroy()
     }
 }
 
-data class DeviceState(
-    val battery: Int,
-    val charging: Boolean,
-    val ramUsedMb: Long,
-    val ramTotalMb: Long,
-    val network: String,
-    val uptime: String,
-    val shizuku: String
-)
-
 @Composable
-private fun SentinelScreen(context: Context) {
-    var state by remember { mutableStateOf(readDeviceState(context)) }
+private fun SoulCockpit(context: Context, bus: SoulEventBus) {
+    var battery by remember { mutableStateOf(readBattery(context)) }
+    var charging by remember { mutableStateOf(false) }
+    var network by remember { mutableStateOf("Detecting…") }
+    var screen by remember { mutableStateOf("ON") }
+    var shizuku by remember { mutableStateOf(shizukuStatus()) }
+    var events by remember { mutableStateOf(0) }
+    var lastEvent by remember { mutableStateOf("Soul started") }
+    var uptime by remember { mutableStateOf("00:00:00") }
+    var ram by remember { mutableStateOf("—") }
+
+    LaunchedEffect(Unit) {
+        bus.events.collectLatest { event ->
+            events++
+            lastEvent = eventLabel(event)
+            when (event) {
+                is SoulEvent.BatteryChanged -> { battery = event.level; charging = event.charging }
+                is SoulEvent.NetworkChanged -> network = event.transport
+                is SoulEvent.ScreenChanged -> screen = if (event.on) "ON" else "OFF"
+                is SoulEvent.ShizukuChanged -> shizuku = event.status
+                else -> Unit
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
-            state = readDeviceState(context)
-            kotlinx.coroutines.delay(1000)
+            uptime = formatUptime(SystemClock.elapsedRealtime())
+            ram = readRam(context)
+            shizuku = shizukuStatus()
+            delay(1000)
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("SOUL", style = MaterialTheme.typography.headlineLarge)
-        Text("SENTINEL v0.2", style = MaterialTheme.typography.titleMedium)
-        Text("● CORE                 ONLINE")
-        Text("● DIAGNOSTICS          LIVE")
-        Text("● CAPABILITY ENGINE    READY")
-        Text("● EVENT BUS            READY")
-        Text("")
-        Text("DEVICE")
-        Text("${Build.MANUFACTURER} ${Build.MODEL}")
-        Text("Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-        Text("")
-        Text("LIVE SYSTEM STATE")
-        Text("Battery       ${state.battery}%${if (state.charging) "  ⚡ CHARGING" else ""}")
-        Text("RAM           ${state.ramUsedMb} / ${state.ramTotalMb} MB")
-        Text("Network       ${state.network}")
-        Text("Uptime        ${state.uptime}")
-        Text("")
-        Text("SHIZUKU")
-        Text(state.shizuku)
-        Text("")
-        Text("Milestone 002 — Living Sentinel")
+        Text("SOUL", style = MaterialTheme.typography.displaySmall)
+        Text("CORE • SENTINEL", style = MaterialTheme.typography.titleMedium)
+        Text("Milestone 002 — Living Core", style = MaterialTheme.typography.bodyMedium)
+
+        Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("ORGANISM", style = MaterialTheme.typography.titleLarge)
+            Status("Core", "ONLINE")
+            Status("Event Bus", "ONLINE • $events events")
+            Status("Guardian", "ARMED / OBSERVE")
+            Status("Shizuku", shizuku)
+        }}
+
+        Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("LIVE STATE", style = MaterialTheme.typography.titleLarge)
+            Status("Battery", "$battery%${if (charging) " • CHARGING" else ""}")
+            Status("RAM", ram)
+            Status("Network", network)
+            Status("Screen", screen)
+            Status("Uptime", uptime)
+        }}
+
+        Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("EVENT STREAM", style = MaterialTheme.typography.titleLarge)
+            Text("Last: $lastEvent")
+            Text("Events received: $events")
+            Text("Sense → Event → State → Guardian → Action")
+        }}
+
+        Text("Android ${Build.VERSION.RELEASE} • API ${Build.VERSION.SDK_INT}")
+        Text("No privileged action is executed automatically.")
     }
 }
 
-private fun readDeviceState(context: Context): DeviceState {
-    val batteryManager = context.getSystemService(BatteryManager::class.java)
-    val battery = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).coerceIn(0, 100)
-    val charging = batteryManager.isCharging
-
-    val activityManager = context.getSystemService(ActivityManager::class.java)
-    val memory = ActivityManager.MemoryInfo()
-    activityManager.getMemoryInfo(memory)
-    val totalMb = memory.totalMem / 1024 / 1024
-    val availableMb = memory.availMem / 1024 / 1024
-
-    val connectivity = context.getSystemService(ConnectivityManager::class.java)
-    val network = connectivity.activeNetwork
-    val caps = network?.let { connectivity.getNetworkCapabilities(it) }
-    val networkLabel = when {
-        caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true -> "Wi-Fi"
-        caps?.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) == true -> "Mobile data"
-        caps?.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) == true -> "Ethernet"
-        else -> "Offline"
+@Composable
+private fun Status(label: String, value: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(label, modifier = Modifier.weight(1f))
+        Text(value)
     }
+}
 
-    val uptimeMs = SystemClock.elapsedRealtime()
-    val hours = uptimeMs / 3_600_000
-    val minutes = (uptimeMs / 60_000) % 60
-    val seconds = (uptimeMs / 1_000) % 60
+private fun readBattery(context: Context): Int = context.getSystemService(BatteryManager::class.java)
+    .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).coerceIn(0, 100)
 
-    return DeviceState(
-        battery = battery,
-        charging = charging,
-        ramUsedMb = totalMb - availableMb,
-        ramTotalMb = totalMb,
-        network = networkLabel,
-        uptime = "%02dh %02dm %02ds".format(hours, minutes, seconds),
-        shizuku = shizukuStatus()
-    )
+private fun readRam(context: Context): String {
+    val info = ActivityManager.MemoryInfo()
+    context.getSystemService(ActivityManager::class.java).getMemoryInfo(info)
+    val used = (info.totalMem - info.availMem) / 1024 / 1024
+    val total = info.totalMem / 1024 / 1024
+    return "$used / $total MB"
 }
 
 private fun shizukuStatus(): String = try {
     when {
         !Shizuku.pingBinder() -> "UNAVAILABLE"
-        Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED -> "AVAILABLE / AUTHORIZED"
-        else -> "AVAILABLE / NOT AUTHORIZED"
+        Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED -> "AUTHORIZED"
+        else -> "NOT AUTHORIZED"
     }
-} catch (_: Throwable) {
-    "UNAVAILABLE / ERROR"
+} catch (_: Throwable) { "ERROR" }
+
+private fun eventLabel(event: SoulEvent): String = when (event) {
+    is SoulEvent.BatteryChanged -> "Battery ${event.level}%"
+    is SoulEvent.NetworkChanged -> "Network ${event.transport}"
+    is SoulEvent.ScreenChanged -> "Screen ${if (event.on) "ON" else "OFF"}"
+    is SoulEvent.AppForeground -> "App ${event.packageName}"
+    is SoulEvent.ShizukuChanged -> "Shizuku ${event.status}"
+    is SoulEvent.Tick -> "Tick"
+}
+
+private fun formatUptime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val h = totalSeconds / 3600
+    val m = (totalSeconds % 3600) / 60
+    val s = totalSeconds % 60
+    return "%02d:%02d:%02d".format(h, m, s)
 }
