@@ -1,4 +1,4 @@
-import type { SoulMeshMessage, SoulMeshNucleus, SoulMeshTransport } from './SoulMeshProtocol';
+import type { SoulMeshMessage, SoulNucleus, SoulMeshTransport } from './SoulMeshProtocol';
 import { EventBus } from '../EventBus';
 
 /** Bidirectional nucleus router. It correlates requests/responses and forwards unsolicited events. */
@@ -6,11 +6,11 @@ export class SoulMeshRouter {
   private readonly pending = new Map<string, { resolve: (message: SoulMeshMessage) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   private readonly unsubscribe: () => void;
 
-  constructor(private readonly transport: SoulMeshTransport, private readonly local: SoulMeshNucleus, private readonly timeoutMs = 30000) {
+  constructor(private readonly transport: SoulMeshTransport, private readonly local: SoulNucleus, private readonly timeoutMs = 30000) {
     this.unsubscribe = transport.onMessage(async (message) => this.handle(message));
   }
 
-  async request<T = unknown>(target: SoulMeshNucleus, capability: string, payload: T): Promise<SoulMeshMessage> {
+  async request<T = unknown>(target: SoulNucleus, capability: string, payload: T): Promise<SoulMeshMessage> {
     const correlationId = crypto.randomUUID();
     const message: SoulMeshMessage<T> = {
       protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId,
@@ -23,7 +23,7 @@ export class SoulMeshRouter {
     });
   }
 
-  async sendEvent(target: SoulMeshNucleus, capability: string, payload: unknown): Promise<void> {
+  async sendEvent(target: SoulNucleus, capability: string, payload: unknown): Promise<void> {
     await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: crypto.randomUUID(), source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() });
   }
 
