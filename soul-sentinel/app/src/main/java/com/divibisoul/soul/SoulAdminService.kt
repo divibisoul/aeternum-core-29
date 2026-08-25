@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.os.BatteryManager
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -28,6 +29,7 @@ class SoulAdminService : Service() {
         actions = SoulActions(this)
         createChannel()
         startForeground(NOTIFICATION_ID, notification("Soul Admin active — observing Android"))
+        SoulBridgeRegistry.emitReady()
 
         scope.launch {
             while (isActive) {
@@ -40,9 +42,17 @@ class SoulAdminService : Service() {
     private fun runCycle() {
         cortex.evaluate().forEach { decision ->
             Log.i("SoulAdmin", "${decision.action}: ${decision.reason}")
-            // Android moderno impede várias alterações administrativas silenciosas.
-            // O Cortex registra a decisão; a camada de ações trata apenas capacidades permitidas.
         }
+
+        val batteryManager = getSystemService(BatteryManager::class.java)
+        val batteryPercent = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        SoulBridgeRegistry.emitContext(
+            mapOf(
+                "batteryPercent" to batteryPercent,
+                "service" to "soul-sentinel",
+                "observing" to true
+            )
+        )
     }
 
     private fun createChannel() {
@@ -64,10 +74,7 @@ class SoulAdminService : Service() {
             .setOngoing(true)
             .build()
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // O ciclo já foi iniciado em onCreate. Não criar um segundo loop aqui.
-        return START_STICKY
-    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
         scope.cancel()
