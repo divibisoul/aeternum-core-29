@@ -11,8 +11,8 @@ android {
         applicationId = "com.divibisoul.soul"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
     }
     buildTypes { release { isMinifyEnabled = false } }
 }
@@ -24,6 +24,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.webkit:webkit:1.12.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("com.jakewharton.timber:timber:5.0.1")
