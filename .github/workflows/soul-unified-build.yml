@@ -8,51 +8,71 @@ on:
 permissions:
   contents: read
 
+env:
+  PROVIDER_TOKEN: ${{ secrets.SOUL_REPO_TOKEN || github.token }}
+
 jobs:
-  android:
+  assemble:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout canonical Soul repository
+      - name: Checkout canonical Soul core
         uses: actions/checkout@v4
         with:
           path: soul
+          ref: soul-android-foundation
+          fetch-depth: 1
 
-      - name: Checkout Nexus capability provider
+      - name: Checkout Nexus provider at pinned revision
         uses: actions/checkout@v4
         with:
           repository: divibisoul/nexus-aeternum-fusion
-          path: providers/nexus-aeternum-fusion
-          token: ${{ github.token }}
+          path: soul/providers/nexus-aeternum-fusion
+          ref: da79996e6ed00d6d07da8dea447260f2d7af6d5b
+          token: ${{ env.PROVIDER_TOKEN }}
 
-      - name: Checkout Eternium AI provider
+      - name: Checkout Eternium provider at pinned revision
         uses: actions/checkout@v4
         with:
           repository: divibisoul/Eternium-
-          path: providers/eternium
-          token: ${{ github.token }}
+          path: soul/providers/eternium
+          ref: 213a5ed8e9f727fbd23322d0bbc0e0fd177a65d2
+          token: ${{ env.PROVIDER_TOKEN }}
 
-      - name: Checkout canonical AI Chatbot provider
+      - name: Checkout canonical AI Chatbot at pinned revision
         uses: actions/checkout@v4
         with:
           repository: divibisoul/nextjs-ai-chatbot
-          path: providers/nextjs-ai-chatbot
-          token: ${{ github.token }}
+          path: soul/providers/nextjs-ai-chatbot
+          ref: ba4dbd2808a37ed5ad3699fa02d488c8e0ee9c51
+          token: ${{ env.PROVIDER_TOKEN }}
 
-      - name: Checkout legacy AI Chatbot variants for audit
+      - name: Checkout AI Chatbot 2000 legacy variant
         uses: actions/checkout@v4
         with:
           repository: divibisoul/nextjs-ai-chatbot-2000
-          path: providers/nextjs-ai-chatbot-2000
-          token: ${{ github.token }}
+          path: soul/providers/nextjs-ai-chatbot-2000
+          ref: faa158f94fe50efd25ba606e7f6c8a1344b74cd0
+          token: ${{ env.PROVIDER_TOKEN }}
 
-      - name: Checkout legacy AI Chatbots variant for audit
+      - name: Checkout AI Chatbots legacy variant
         uses: actions/checkout@v4
         with:
           repository: divibisoul/nextjs-ai-chatbots
-          path: providers/nextjs-ai-chatbots
-          token: ${{ github.token }}
+          path: soul/providers/nextjs-ai-chatbots
+          ref: 35e30080c46550d24093ff213364ddcaa59f7413
+          token: ${{ env.PROVIDER_TOKEN }}
 
-      - name: Set up JDK
+      - name: Verify provider sources
+        working-directory: soul
+        run: |
+          test -f soul-system/providers.lock.json
+          test -d providers/nexus-aeternum-fusion
+          test -d providers/eternium
+          test -d providers/nextjs-ai-chatbot
+          test -d providers/nextjs-ai-chatbot-2000
+          test -d providers/nextjs-ai-chatbots
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -61,10 +81,9 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build Soul APK
+      - name: Build unified Soul APK
         working-directory: soul/soul-sentinel
-        run: |
-          gradle assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace
 
       - name: Verify APK
         run: test -s soul/soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
