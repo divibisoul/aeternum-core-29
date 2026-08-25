@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aeternum.local/soul/event.schema.json",
+  "title": "SoulEvent",
+  "type": "object",
+  "required": ["id", "type", "source", "timestamp", "payload"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "type": {
+      "type": "string",
+      "enum": ["observation", "context", "capability", "intent", "result", "health"]
+    },
+    "source": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": ["string", "null"] },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false
+}
