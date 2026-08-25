@@ -7,21 +7,11 @@ import type {
 } from '../contracts/SoulNativeEvents';
 import { isSoulNativeEvent } from '../contracts/SoulNativeEvents';
 
-export interface SoulNativeBridgeApi {
-  postMessage(message: string): void;
-}
-
-declare global {
-  interface Window {
-    SoulNativeBridge?: SoulNativeBridgeApi;
-  }
-}
-
 /**
- * Runtime adapter between the Android Sentinel WebView bridge and Aeternum.
- *
- * Android owns device APIs. Core only receives normalized events and emits
- * decisions through the explicit bridge boundary.
+ * Runtime adapter for Sentinel -> Aeternum perception.
+ * Android owns device APIs; Core consumes normalized events.
+ * Core -> Android commands are deliberately a separate contract and are not
+ * enabled by this connection.
  */
 export class AndroidSoulBridge {
   private started = false;
@@ -30,24 +20,12 @@ export class AndroidSoulBridge {
     if (this.started) return;
     this.started = true;
     window.addEventListener('soul:native:event', this.handleDomEvent as EventListener);
-    this.post({
-      event: 'android:ready',
-      payload: { core: 'aeternum', contractVersion: 1 },
-    });
   }
 
   stop(): void {
     if (!this.started) return;
     window.removeEventListener('soul:native:event', this.handleDomEvent as EventListener);
     this.started = false;
-  }
-
-  requestCapability(capability: string, correlationId = crypto.randomUUID()): void {
-    this.post({
-      event: 'android:capability:changed',
-      payload: { capability, available: true },
-      correlationId,
-    });
   }
 
   private readonly handleDomEvent = (event: Event): void => {
@@ -59,6 +37,8 @@ export class AndroidSoulBridge {
   private route(event: SoulNativeEvent): void {
     switch (event.event) {
       case 'android:ready':
+        EventBus.emit('telemetry:update', this.toTelemetry({ timestamp: event.timestamp }));
+        break;
       case 'android:context:update':
         EventBus.emit('telemetry:update', this.toTelemetry(event.payload as AndroidContextSnapshot));
         break;
@@ -71,22 +51,6 @@ export class AndroidSoulBridge {
         break;
       }
     }
-  }
-
-  private post(input: {
-    event: SoulNativeEvent['event'];
-    payload: unknown;
-    correlationId?: string;
-  }): void {
-    const message: SoulNativeEvent = {
-      version: 1,
-      source: 'soul-sentinel',
-      event: input.event,
-      timestamp: Date.now(),
-      correlationId: input.correlationId ?? crypto.randomUUID(),
-      payload: input.payload,
-    };
-    window.SoulNativeBridge?.postMessage(JSON.stringify(message));
   }
 
   private toTelemetry(snapshot: AndroidContextSnapshot) {
