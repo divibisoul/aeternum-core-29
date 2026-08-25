@@ -7,10 +7,8 @@ import androidx.core.content.ContextCompat
 
 class SoulBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED && SoulConfig(context).prefsEnabled()) {
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED && SoulConfig(context).enabled) {
             ContextCompat.startForegroundService(context, Intent(context, SoulAdminService::class.java))
         }
     }
 }
-
-private fun SoulConfig.prefsEnabled(): Boolean = false
