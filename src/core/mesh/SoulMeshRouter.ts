@@ -1,9 +1,12 @@
 import type { SoulMeshMessage, SoulNucleus, SoulMeshTransport } from './SoulMeshProtocol';
 import { EventBus } from '../EventBus';
 
-/** Bidirectional nucleus router. It correlates requests/responses and forwards unsolicited events. */
+export type SoulMeshRequestHandler = (message: SoulMeshMessage) => unknown | Promise<unknown>;
+
+/** Bidirectional nucleus router. Requests are executed locally and answered; events are published internally. */
 export class SoulMeshRouter {
   private readonly pending = new Map<string, { resolve: (message: SoulMeshMessage) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
+  private readonly handlers = new Map<string, SoulMeshRequestHandler>();
   private readonly unsubscribe: () => void;
 
   constructor(private readonly transport: SoulMeshTransport, private readonly local: SoulNucleus, private readonly timeoutMs = 30000) {
@@ -23,6 +26,11 @@ export class SoulMeshRouter {
     });
   }
 
+  onRequest(capability: string, handler: SoulMeshRequestHandler): () => void {
+    this.handlers.set(capability, handler);
+    return () => { if (this.handlers.get(capability) === handler) this.handlers.delete(capability); };
+  }
+
   async sendEvent(target: SoulNucleus, capability: string, payload: unknown): Promise<void> {
     await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: crypto.randomUUID(), source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() });
   }
@@ -37,8 +45,22 @@ export class SoulMeshRouter {
       else pending.resolve(message);
       return;
     }
+    if (message.kind === 'request') {
+      const handler = message.capability ? this.handlers.get(message.capability) : undefined;
+      if (!handler) {
+        await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: `Capability not registered: ${message.capability ?? 'unknown'}` }, timestamp: Date.now() });
+        return;
+      }
+      try {
+        const result = await handler(message);
+        await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'response', capability: message.capability, payload: result, timestamp: Date.now() });
+      } catch (error) {
+        await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: error instanceof Error ? error.message : String(error) }, timestamp: Date.now() });
+      }
+      return;
+    }
     await EventBus.emit('soul:mesh:message' as never, message as never).catch(() => undefined);
   }
 
-  close(): void { this.unsubscribe(); for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('Soul Mesh router closed')); } this.pending.clear(); }
+  close(): void { this.unsubscribe(); for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('Soul Mesh router closed')); } this.pending.clear(); this.handlers.clear(); }
 }
