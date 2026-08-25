@@ -6,8 +6,17 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class SoulAdminService : Service() {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private lateinit var config: SoulConfig
     private lateinit var cortex: SoulCortex
     private lateinit var actions: SoulActions
@@ -19,21 +28,18 @@ class SoulAdminService : Service() {
         actions = SoulActions(this)
         createChannel()
         startForeground(NOTIFICATION_ID, notification("Soul Admin active — observing Android"))
-        // Única inicialização do ciclo administrativo.
-        // A execução continua pertencendo ao serviço; onStartCommand não cria outro ciclo.
-        kotlinx.coroutines.CoroutineScope(
-            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default
-        ).launch {
-            while (kotlinx.coroutines.isActive) {
+
+        scope.launch {
+            while (isActive) {
                 runCycle()
-                kotlinx.coroutines.delay(config.checkIntervalMs)
+                delay(config.checkIntervalMs)
             }
         }
     }
 
     private fun runCycle() {
         cortex.evaluate().forEach { decision ->
-            android.util.Log.i("SoulAdmin", "${decision.action}: ${decision.reason}")
+            Log.i("SoulAdmin", "${decision.action}: ${decision.reason}")
             // Android moderno impede várias alterações administrativas silenciosas.
             // O Cortex registra a decisão; a camada de ações trata apenas capacidades permitidas.
         }
@@ -59,12 +65,12 @@ class SoulAdminService : Service() {
             .build()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // O runtime/ciclo já foi iniciado em onCreate.
+        // O ciclo já foi iniciado em onCreate. Não criar um segundo loop aqui.
         return START_STICKY
     }
 
     override fun onDestroy() {
-        // O escopo é encerrado pelo próprio processo do serviço quando destruído.
+        scope.cancel()
         super.onDestroy()
     }
 
