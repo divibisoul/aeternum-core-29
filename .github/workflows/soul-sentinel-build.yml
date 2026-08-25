@@ -1,8 +1,8 @@
-name: Soul Sentinel Android Build
+name: Soul Core Android Build
 
 on:
   push:
-    branches: [soul-sentinel-v0.1]
+    branches: [soul-core-v0.2-events-4]
   pull_request:
     branches: [main]
     paths:
@@ -33,14 +33,17 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK platform
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Android 16 SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace
 
+      - name: Verify APK
+        run: test -s app/build/outputs/apk/debug/app-debug.apk
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: soul-sentinel-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: soul-core-v0.2-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
