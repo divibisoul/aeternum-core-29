@@ -1,0 +1,44 @@
+name: Soul Sentinel Android Build
+
+on:
+  push:
+    branches: [soul-sentinel-v0.1]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'soul-sentinel/**'
+      - '.github/workflows/soul-sentinel-build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: soul-sentinel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: soul-sentinel-debug
+          path: soul-sentinel/app/build/outputs/apk/debug/*.apk
