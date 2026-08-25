@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Soul Core Bridge</title></head>
+<body>
+<main>
+<h1>SOUL CORE</h1>
+<p id="status">Waiting for Sentinel…</p>
+<pre id="events"></pre>
+</main>
+<script>
+window.__SOUL_NATIVE_EVENTS__ = [];
+window.addEventListener('soul:native:event', function (event) {
+  const detail = event.detail;
+  window.__SOUL_NATIVE_EVENTS__.push(detail);
+  document.getElementById('status').textContent = 'Sentinel connected';
+  document.getElementById('events').textContent = JSON.stringify(detail, null, 2);
+});
+window.dispatchEvent(new Event('soul:core:ready'));
+</script>
+</body>
+</html>
