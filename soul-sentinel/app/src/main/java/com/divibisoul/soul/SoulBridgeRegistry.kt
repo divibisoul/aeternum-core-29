@@ -9,7 +9,11 @@ object SoulBridgeRegistry {
 
     @Synchronized
     fun attach(webView: WebView) {
-        bridgeRef = WeakReference(SoulNativeBridge(webView).also { webView.addJavascriptInterface(it, "SoulNative") })
+        bridgeRef = WeakReference(
+            SoulNativeBridge(webView).also {
+                webView.addJavascriptInterface(it, "SoulNativeBridge")
+            }
+        )
     }
 
     @Synchronized
