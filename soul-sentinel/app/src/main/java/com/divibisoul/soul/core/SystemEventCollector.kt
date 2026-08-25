@@ -1,0 +1,77 @@
+package com.divibisoul.soul.core
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.BatteryManager
+import android.os.Build
+
+class SystemEventCollector(
+    private val context: Context,
+    private val bus: SoulEventBus
+) {
+    private var receiver: BroadcastReceiver? = null
+
+    fun start() {
+        if (receiver != null) return
+        receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                when (intent.action) {
+                    Intent.ACTION_BATTERY_CHANGED -> {
+                        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+                        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+                        val pct = (level * 100 / scale).coerceIn(0, 100)
+                        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+                        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+                        bus.publish(SoulEvent.BatteryChanged(pct, charging))
+                    }
+                    Intent.ACTION_SCREEN_ON -> bus.publish(SoulEvent.ScreenChanged(true))
+                    Intent.ACTION_SCREEN_OFF -> bus.publish(SoulEvent.ScreenChanged(false))
+                    ConnectivityManager.CONNECTIVITY_ACTION -> bus.publish(SoulEvent.NetworkChanged(readNetwork()))
+                }
+            }
+        }
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_BATTERY_CHANGED)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION") context.registerReceiver(receiver, filter)
+        }
+        bus.publish(SoulEvent.NetworkChanged(readNetwork()))
+        bus.publish(SoulEvent.ShizukuChanged(shizukuStatus()))
+    }
+
+    fun stop() {
+        receiver?.let { context.unregisterReceiver(it) }
+        receiver = null
+    }
+
+    private fun readNetwork(): String {
+        val cm = context.getSystemService(ConnectivityManager::class.java)
+        val network = cm.activeNetwork ?: return "Offline"
+        val caps = cm.getNetworkCapabilities(network) ?: return "Offline"
+        return when {
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "Wi-Fi"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> "Mobile data"
+            caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> "Ethernet"
+            else -> "Connected"
+        }
+    }
+
+    private fun shizukuStatus(): String = try {
+        when {
+            !rikka.shizuku.Shizuku.pingBinder() -> "UNAVAILABLE"
+            rikka.shizuku.Shizuku.checkSelfPermission() == android.content.pm.PackageManager.PERMISSION_GRANTED -> "AUTHORIZED"
+            else -> "NOT AUTHORIZED"
+        }
+    } catch (_: Throwable) { "ERROR" }
+}
