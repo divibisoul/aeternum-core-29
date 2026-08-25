@@ -3,6 +3,11 @@ package com.divibisoul.soul.core
 import android.os.BatteryManager
 import android.os.SystemClock
 
+enum class SemanticContext {
+    IDLE, FOCUS, COMMUNICATION, MEDIA, PERFORMANCE,
+    DRIVING_PREPARATION, NIGHT, LOW_BATTERY, UNKNOWN
+}
+
 data class SoulContext(
     val timestamp: Long,
     val batteryPercent: Int,
