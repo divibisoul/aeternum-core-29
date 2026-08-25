@@ -1,0 +1,27 @@
+{
+  "name": "Soul Unified System",
+  "version": "0.1.0-integration",
+  "canonicalRepository": "divibisoul/aeternum-core-29",
+  "androidModule": "soul-sentinel",
+  "components": [
+    {"id":"aeternum-core","repository":"divibisoul/aeternum-core-29","role":"core-orchestration"},
+    {"id":"soul-sentinel","repository":"divibisoul/aeternum-core-29","role":"android-native-perception-and-execution-boundary"},
+    {"id":"nexus-aeternum-fusion","repository":"divibisoul/nexus-aeternum-fusion","role":"web-ui-multimodal-services"},
+    {"id":"eternium","repository":"divibisoul/Eternium-","role":"gemini-ai-orchestration-and-experimentation"},
+    {"id":"ai-chatbot","repository":"divibisoul/nextjs-ai-chatbot","role":"conversation-backend-and-ai-ui"},
+    {"id":"ai-chatbot-2000","repository":"divibisoul/nextjs-ai-chatbot-2000","role":"legacy-variant"},
+    {"id":"ai-chatbots","repository":"divibisoul/nextjs-ai-chatbots","role":"legacy-variant"}
+  ],
+  "integrationRule": "The Android Soul Sentinel is the executable boundary. Other repositories provide replaceable capabilities and services; no repository is treated as an independent product runtime.",
+  "providerRule": "AI providers are connectors. They never receive direct Android privileges.",
+  "securityRule": "Secrets are injected at build/runtime and are never embedded in source or APK artifacts.",
+  "buildEntryPoint": "soul-sentinel/app",
+  "status": {
+    "repositoryUnification": 100,
+    "androidBoundary": 100,
+    "crossRepositoryContract": 100,
+    "runtimeIntegration": 35,
+    "apkBuild": 70,
+    "deviceValidation": 0
+  }
+}
