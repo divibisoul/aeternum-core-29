@@ -1,0 +1,76 @@
+name: Soul Unified Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [soul-android-foundation]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical Soul repository
+        uses: actions/checkout@v4
+        with:
+          path: soul
+
+      - name: Checkout Nexus capability provider
+        uses: actions/checkout@v4
+        with:
+          repository: divibisoul/nexus-aeternum-fusion
+          path: providers/nexus-aeternum-fusion
+          token: ${{ github.token }}
+
+      - name: Checkout Eternium AI provider
+        uses: actions/checkout@v4
+        with:
+          repository: divibisoul/Eternium-
+          path: providers/eternium
+          token: ${{ github.token }}
+
+      - name: Checkout canonical AI Chatbot provider
+        uses: actions/checkout@v4
+        with:
+          repository: divibisoul/nextjs-ai-chatbot
+          path: providers/nextjs-ai-chatbot
+          token: ${{ github.token }}
+
+      - name: Checkout legacy AI Chatbot variants for audit
+        uses: actions/checkout@v4
+        with:
+          repository: divibisoul/nextjs-ai-chatbot-2000
+          path: providers/nextjs-ai-chatbot-2000
+          token: ${{ github.token }}
+
+      - name: Checkout legacy AI Chatbots variant for audit
+        uses: actions/checkout@v4
+        with:
+          repository: divibisoul/nextjs-ai-chatbots
+          path: providers/nextjs-ai-chatbots
+          token: ${{ github.token }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Soul APK
+        working-directory: soul/soul-sentinel
+        run: |
+          gradle assembleDebug --stacktrace
+
+      - name: Verify APK
+        run: test -s soul/soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload unified Soul APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: soul-unified-debug
+          path: soul/soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
