@@ -19,4 +19,7 @@ class SoulConfig(context: Context) {
     var lowBatteryRule: Boolean
         get() = prefs.getBoolean("lowBatteryRule", true)
         set(v) = prefs.edit().putBoolean("lowBatteryRule", v).apply()
+    var enabled: Boolean
+        get() = prefs.getBoolean("enabled", false)
+        set(v) = prefs.edit().putBoolean("enabled", v).apply()
 }
