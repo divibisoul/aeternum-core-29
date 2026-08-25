@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Soul bridge contract test</title></head>
+<body>
+<script>
+  // Minimal harness for the Sentinel <-> Core contract.
+  // The production page will be the Aeternum Core bundle.
+  window.soulBridgeEvents = [];
+  window.addEventListener('soul:native:event', function (event) {
+    window.soulBridgeEvents.push(event.detail);
+    document.title = 'SOUL_BRIDGE_EVENT:' + event.detail.event;
+  });
+
+  window.SoulNativeBridge = {
+    postMessage: function (message) {
+      const envelope = JSON.parse(message);
+      if (envelope.source === 'soul-sentinel') {
+        window.dispatchEvent(new CustomEvent('soul:native:event', { detail: envelope }));
+      }
+    }
+  };
+</script>
+</body>
+</html>
