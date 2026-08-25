@@ -1,10 +1,12 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { androidSoulBridge } from "./core/bridges/AndroidSoulBridge";
+import { nexusSoulBridge } from "./core/bridges/NexusSoulBridge";
 import "./index.css";
 
-// The Core owns orchestration; Sentinel owns Android perception.
-// Start the bridge once the Web runtime exists inside the Android shell.
+// Core owns orchestration. Android Sentinel owns Android perception.
 androidSoulBridge.start();
+// Nexus owns interaction/multimodal capabilities; Core only transports/orchestrates them.
+nexusSoulBridge.start();
 
 createRoot(document.getElementById("root")!).render(<App />);
