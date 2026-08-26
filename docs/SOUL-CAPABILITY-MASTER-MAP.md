@@ -1,34 +1,56 @@
 # SOUL — Capability Master Map
 
-Status: architecture inventory only. No capability implementation is duplicated by this document.
+Status: architecture inventory with N01 runtime integration.
 
 ## Ownership rule
-Each capability has one owning provider. Other nuclei consume it through the Soul Mesh/Capability Router instead of copying its implementation.
+Each capability has one owning nucleus. Other nuclei consume it through the Soul Mesh/Capability Router instead of copying its implementation.
 
-## Confirmed providers
+## N01 confirmed implementation domains
 
-| Provider | Role | Confirmed capabilities |
-|---|---|---|
-| N01 / Android Sentinel | Native Android capability layer | android.device_info, android.battery, android.memory, android.network, android.events, shizuku.bridge, brightness, Wi-Fi panel/state, Bluetooth request/state, airplane settings, background-process request |
-| N03 / Eternium | Specialized knowledge/context and existing domain tools | inventory pending final six-nucleus audit |
-| N04 / nextjs-ai-chatbots | AI/tool/document/context/streaming layer | tool execution, artifacts, documents, context orchestration, streaming, mesh communication, AI Pilot boundary |
-| N05 / nextjs-ai-chatbot-2000 | AI/tool/artifact/chat infrastructure | AI Pilot boundary, tool execution, artifacts, documents, context orchestration, streaming, mesh communication; existing request_suggestions and document/weather tools |
-| N02 | Pending repository audit | Do not duplicate until audited |
-| N06 | Pending repository audit | Do not duplicate until audited |
+N01 is both an AI nucleus and the native Android/APK host. Its inspected implementation includes:
 
-## N01 native capability contract
+- AeternumAGI and its cognitive/safety/integrity/resource engines;
+- IntentAnalyzer;
+- multi-hemispheric cognitive modules;
+- PromptCrafter;
+- PrecisionEngine;
+- CodeVault;
+- SelfLoop;
+- ProjetoClareira;
+- ConscienciaAlgoritmica;
+- Chat Engine;
+- Supabase-backed chat execution;
+- native Android device/context observation;
+- Android user-mediated actions;
+- WebView hybrid bridge;
+- Soul Mesh protocol/router/transports;
+- capability registry and ownership catalog.
 
-N01 is the original Android APK/native layer. Its registry reports:
+## N01 Mesh capabilities exposed by the upgrade
 
-- android.device_info
-- android.battery
-- android.memory
-- android.network
-- android.events
-- shizuku.bridge
-- ai.request_suggestions (consumer route to N05)
+| Capability | Owner | Execution | Risk | Status |
+|---|---|---|---|---|
+| mesh.handshake | N01 | LOCAL | LOW | implemented |
+| mesh.health | N01 | LOCAL | LOW | implemented |
+| mesh.capabilities | N01 | LOCAL | LOW | implemented |
+| cognitive.intent | N01 | LOCAL/Web | LOW | implemented |
+| agi.process | N01 | LOCAL/Web | LOW | implemented |
+| ai.reasoning | N01 | attached AI session | MEDIUM | adapter implemented; provider/session must be available |
+| android.device_info | N01 | LOCAL | LOW | implemented |
+| android.battery | N01 | LOCAL | LOW | implemented |
+| android.memory | N01 | LOCAL | LOW | implemented |
+| android.network | N01 | LOCAL | LOW | implemented |
+| android.wifi.state | N01 | LOCAL | LOW | implemented |
+| android.bluetooth.state | N01 | LOCAL | LOW | implemented |
+| android.brightness.set | N01 | LOCAL | MEDIUM | implemented behind authorization |
+| android.wifi.panel | N01 | LOCAL | MEDIUM | implemented behind authorization |
+| android.bluetooth.request_enable | N01 | LOCAL | MEDIUM | implemented behind authorization |
+| android.airplane.settings | N01 | LOCAL | MEDIUM | implemented behind authorization |
+| android.background.stop | N01 | LOCAL | HIGH | implemented behind authorization |
 
-N01 also owns Android actions such as brightness, Wi-Fi panel/state, Bluetooth request/state, airplane settings and background-process requests.
+## Remote ownership
+
+Capabilities owned by N02–N06 remain remote contracts until their repositories are independently audited and their handlers are verified. N01 does not invent implementations for them.
 
 ## Routing model
 
@@ -36,19 +58,13 @@ N01 also owns Android actions such as brightness, Wi-Fi panel/state, Bluetooth r
 User / AI Pilot
       |
       v
-Global Capability Router
+N01 AI + Capability Router
       |
-      +--> N01 Android Sentinel ----> Android OS
+      +--> N01 native Android capabilities ----> Android OS
       |
-      +--> N03 specialized/domain capabilities
+      +--> N01 cognitive/AGI pipeline
       |
-      +--> N04 AI/tools/documents/context/streaming
-      |
-      +--> N05 AI/tools/artifacts/context
-      |
-      +--> N02 (pending)
-      |
-      +--> N06 (pending)
+      +--> N02..N06 through Soul Mesh
 ```
 
 ## Anti-duplication rule
@@ -60,18 +76,16 @@ Before adding a new capability to any nucleus:
 3. Reuse the owner's interface through Mesh.
 4. Add a new implementation only when no existing owner satisfies the contract.
 
-## Connection contract
+## Connection proof
 
-Each nucleus is intended to expose five inbound and five outbound peer routes. Logical route declarations are not treated as proof of live E2E connectivity. Live connectivity requires transport, endpoint availability, correlation, acknowledgement/response validation and health checks.
+Each nucleus is intended to expose five inbound and five outbound peer routes. Logical declarations are not proof of live connectivity.
 
-## Current verified status
+A directed link becomes `CONNECTED` only after:
 
-- N01 native capabilities: implemented in Android code.
-- N04 capability/process/mesh layers: implemented; E2E contract exists.
-- N05 capability/process/tool/mesh layers: implemented; E2E contract exists.
-- N03: existing project audited; integration map remains subject to final six-nucleus inventory.
-- N02/N06: not yet inventoried in this document.
+`source endpoint -> transport -> target endpoint -> validation -> dispatch -> real handler -> correlated response`
+
+No endpoint placeholder or ping-only response qualifies as E2E proof.
 
 ## Important architectural decision
 
-The Android/Web project in N01 is not discarded. The Android side remains the native execution layer. Web/chat functionality is consumed as an AI capability where appropriate rather than duplicated as a second independent chatbot subsystem.
+The N01 Android/Web implementation is preserved. Native Android remains the execution layer, the existing web application remains an AI/cognitive runtime, and Mesh is the interoperability layer. Existing tools and functions are consumed through adapters rather than duplicated.
