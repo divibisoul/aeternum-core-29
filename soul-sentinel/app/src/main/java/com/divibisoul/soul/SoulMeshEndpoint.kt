@@ -13,18 +13,16 @@ class SoulMeshEndpoint(
         require(message.target == nucleusId) { "Message target does not match endpoint" }
         if (message.kind != "request") return message
 
+        if (message.capability == "mesh.ping") {
+            return reply(message, "response", JSONObject().put("ok", true).put("nucleus", nucleusId))
+        }
+
         val handler = handlers[message.capability]
             ?: return reply(message, "error", JSONObject().put("code", "CAPABILITY_NOT_FOUND"))
         return try {
             reply(message, "response", handler(message.payload))
         } catch (t: Throwable) {
-            reply(
-                message,
-                "error",
-                JSONObject()
-                    .put("code", "CAPABILITY_EXECUTION_ERROR")
-                    .put("detail", t.message ?: "Unknown capability error")
-            )
+            reply(message, "error", JSONObject().put("code", "CAPABILITY_EXECUTION_ERROR").put("detail", t.message ?: "Unknown capability error"))
         }
     }
 
