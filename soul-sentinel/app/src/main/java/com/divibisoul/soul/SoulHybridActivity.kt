@@ -24,6 +24,7 @@ class SoulHybridActivity : ComponentActivity() {
     private lateinit var pilot: SoulPilot
     private lateinit var mesh60: SoulMesh60ConnectionMatrix
     private lateinit var aiProviderRegistry: SoulAiProviderRegistry
+    private lateinit var cockpit: SoulCockpitSnapshot
     private var pendingMediaRequest: android.webkit.PermissionRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +47,7 @@ class SoulHybridActivity : ComponentActivity() {
         registry = SoulCapabilityRegistry()
         pilot = SoulPilot(registry, mesh)
         mesh60 = SoulMesh60ConnectionMatrix(mesh)
+        cockpit = SoulCockpitSnapshot(pilot, mesh60, aiProviderRegistry)
 
         setContentView(R.layout.activity_soul_shell)
         status = findViewById(R.id.soul_status)
@@ -66,7 +68,7 @@ class SoulHybridActivity : ComponentActivity() {
 
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message -> mesh.send(message.source, message.target, message.capability, message.payload) }, { completion ->
             webView.post { webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive&&window.SoulHybridRuntime.receive(${JSONObject.quote(completion.toJson().toString())});", null) }
-        }, pilot = pilot, probe60 = { mesh60.probeAll() }, aiProviders = aiProviderRegistry))
+        }, pilot = pilot, probe60 = { mesh60.probeAll() }, aiProviders = aiProviderRegistry, cockpit = cockpit))
         webView.loadUrl(SoulSecureWebView.localUrl())
 
         bindAi(R.id.button_ai_1, "chatgpt")
