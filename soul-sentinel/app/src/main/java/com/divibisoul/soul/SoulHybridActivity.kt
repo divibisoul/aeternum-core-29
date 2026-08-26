@@ -14,6 +14,7 @@ import androidx.core.app.ActivityCompat
 class SoulHybridActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var permissionCoordinator: SoulPermissionCoordinator
+    private lateinit var deviceCapabilities: SoulDeviceCapabilities
     private lateinit var status: TextView
     private lateinit var mesh: SoulMeshRuntime
     private var pendingMediaRequest: android.webkit.PermissionRequest? = null
@@ -21,6 +22,7 @@ class SoulHybridActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         permissionCoordinator = SoulPermissionCoordinator(this)
+        deviceCapabilities = SoulDeviceCapabilities(this)
         val config = SoulConfig(this)
         mesh = SoulMeshBootstrap.create(
             webDelegate = SoulMeshBootstrap::delegateToWeb,
@@ -38,10 +40,7 @@ class SoulHybridActivity : ComponentActivity() {
                         it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE ||
                             it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
                     }.toTypedArray()
-                    if (allowed.isEmpty()) {
-                        request.deny()
-                        return@runOnUiThread
-                    }
+                    if (allowed.isEmpty()) { request.deny(); return@runOnUiThread }
                     val missing = mutableListOf<String>()
                     if (allowed.contains(android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE) && !permissionCoordinator.hasCamera()) missing += android.Manifest.permission.CAMERA
                     if (allowed.contains(android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE) && !permissionCoordinator.hasMicrophone()) missing += android.Manifest.permission.RECORD_AUDIO
@@ -73,6 +72,16 @@ class SoulHybridActivity : ComponentActivity() {
         findViewById<Button>(R.id.button_cockpit).setOnClickListener { focusBrowser("cockpit") }
         findViewById<Button>(R.id.button_capabilities).setOnClickListener { focusBrowser("capabilities") }
         findViewById<Button>(R.id.button_device).setOnClickListener { showDeviceAccess() }
+        findViewById<Button>(R.id.button_files).setOnClickListener { deviceCapabilities.openFilePicker(true) }
+        findViewById<Button>(R.id.button_media).setOnClickListener { deviceCapabilities.openMediaPicker() }
+        findViewById<Button>(R.id.button_camera).setOnClickListener {
+            status.text = "Camera capability requested"
+            if (permissionCoordinator.hasCamera()) focusBrowser("camera") else permissionCoordinator.requestCaptureAccess()
+        }
+        findViewById<Button>(R.id.button_mic).setOnClickListener {
+            status.text = "Microphone capability requested"
+            if (permissionCoordinator.hasMicrophone()) focusBrowser("microphone") else permissionCoordinator.requestCaptureAccess()
+        }
         status.text = "Hybrid AGI ready • browser + Pilot + Cockpit + capabilities"
     }
 
@@ -87,10 +96,7 @@ class SoulHybridActivity : ComponentActivity() {
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != SoulPermissionCoordinator.REQUEST_MEDIA_CAPTURE && requestCode != SoulPermissionCoordinator.REQUEST_DEVICE_ACCESS) return
-        pendingMediaRequest?.let { request ->
-            pendingMediaRequest = null
-            grantWebMediaRequest(request)
-        }
+        pendingMediaRequest?.let { request -> pendingMediaRequest = null; grantWebMediaRequest(request) }
     }
 
     private fun bindAi(buttonId: Int, provider: SoulAiProvider) {
