@@ -4,11 +4,7 @@ import org.json.JSONObject
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Lightweight execution planner for N01. The Pilot resolves a capability to its
- * owning nucleus, dispatches through the real Mesh runtime, and retains correlated results.
- * UI and Cockpit remain separate from orchestration.
- */
+/** Native orchestration layer. UI and Cockpit remain separate from execution. */
 class SoulPilot(
     private val registry: SoulCapabilityRegistry,
     private val mesh: SoulMeshRuntime,
@@ -34,7 +30,7 @@ class SoulPilot(
             owner = capability.owner,
             correlationId = response.correlationId,
             request = SoulMeshMessage(
-                id = response.id,
+                id = UUID.randomUUID().toString(),
                 correlationId = response.correlationId,
                 source = "N01",
                 target = capability.owner,
@@ -51,4 +47,5 @@ class SoulPilot(
 
     fun task(taskId: String): Task? = tasks[taskId]
     fun activeTasks(): List<Task> = tasks.values.toList()
+    fun registrySnapshot(): JSONObject = registry.toJson()
 }
