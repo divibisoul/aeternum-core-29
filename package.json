@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test:soul-mesh:e2e": "node scripts/soul-mesh-e2e.mjs",
+    "mesh:server": "node scripts/soul-mesh-server.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -51,7 +52,6 @@
     "framer-motion": "^12.23.26",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
-    "next-themes": "^0.3.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
