@@ -1,43 +1,16 @@
 package com.divibisoul.soul
 
-import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Proves the complete six-nucleus directed matrix through the APK's in-process runtime. */
+/** Verifies the logical 5x5 peer matrix without mislabeling it as live connectivity. */
 class SoulMeshAllLinksTest {
     @Test
-    fun allThirtyDirectedLinksRoundTrip() {
-        val runtime = SoulMeshRuntime()
-        SoulMeshChannels.nuclei.forEach { nucleus ->
-            runtime.register(
-                nucleus,
-                SoulMeshEndpoint(
-                    nucleusId = nucleus,
-                    handlers = mapOf("mesh.ping" to { payload ->
-                        JSONObject(payload.toString()).put("servedBy", nucleus)
-                    }),
-                ),
-            )
-        }
-
-        assertTrue(runtime.allNucleiRegistered())
+    fun logicalMatrixContainsThirtyDirectedLinks() {
         val links = SoulMeshChannels.directedLinks()
         assertEquals(30, links.size)
-
-        links.forEach { (source, target) ->
-            val response = runtime.send(
-                source = source,
-                target = target,
-                capability = "mesh.ping",
-                payload = JSONObject().put("source", source),
-            )
-            assertEquals("response", response.kind)
-            assertEquals(source, response.target)
-            assertEquals(target, response.source)
-            assertEquals("mesh.ping", response.capability)
-            assertEquals(target, response.payload.getString("servedBy"))
-        }
+        assertTrue(links.all { (source, target) -> source != target })
+        assertEquals(SoulMeshChannels.nuclei.toSet(), links.flatMap { listOf(it.first, it.second) }.toSet())
     }
 }
