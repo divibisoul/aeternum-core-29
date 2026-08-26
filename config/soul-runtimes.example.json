@@ -1,0 +1,8 @@
+{
+  "N01": { "transports": ["IN_PROCESS", "WEBVIEW_BRIDGE", "LOOPBACK_HTTP"] },
+  "N02": { "endpoint": "https://N02.example/api/soul-mesh", "transports": ["HTTP", "REALTIME"] },
+  "N03": { "endpoint": "https://N03.example/api/soul-mesh", "transports": ["HTTP", "REALTIME"] },
+  "N04": { "endpoint": "https://N04.example/api/soul-mesh", "transports": ["HTTP", "REALTIME"] },
+  "N05": { "endpoint": "https://N05.example/api/soul-mesh", "transports": ["HTTP", "REALTIME"] },
+  "N06": { "endpoint": "https://N06.example/api/soul-mesh", "transports": ["HTTP", "REALTIME"] }
+}
