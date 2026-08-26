@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { SoulMeshDirectAccess, type SoulChannelProbe } from '@/core/soul-mesh/SoulMeshDirectAccess';
 
 type Nucleus = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06';
 type ProbeState = 'LOCAL' | 'READY' | 'OFFLINE' | 'UNCONFIGURED';
-
 type Runtime = { nucleus: Nucleus; endpoint?: string; state: ProbeState; capabilities: string[]; latencyMs?: number };
 const nuclei: Nucleus[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const cockpitMesh = new SoulMeshDirectAccess('COCKPIT');
 
 function endpointFor(nucleus: Nucleus): string | undefined {
   if (nucleus === 'N01') return undefined;
@@ -27,21 +28,21 @@ async function probe(nucleus: Nucleus): Promise<Runtime> {
   const timeout = window.setTimeout(() => controller.abort(), 5000);
   try {
     const id = crypto.randomUUID();
-    const response = await fetch(endpoint, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
-      body: JSON.stringify({ protocol: 'soul-mesh/1', id, correlationId: id, source: 'N01', target: nucleus, kind: 'request', capability: 'mesh.capabilities', payload: {}, timestamp: new Date().toISOString(), channelId: `${nucleus}.IN.N01` }),
-    });
+    const response = await fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: controller.signal,
+      body: JSON.stringify({ protocol: 'soul-mesh/1', id, correlationId: id, source: 'N01', target: nucleus, kind: 'request', capability: 'mesh.capabilities', payload: {}, timestamp: Date.now(), channelId: `${nucleus}.IN.1.N01` }) });
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data?.proof !== 'EXECUTED' || data?.correlationId !== id) return { nucleus, endpoint, state: 'OFFLINE', capabilities: [], latencyMs: Math.round(performance.now() - started) };
-    return { nucleus, endpoint, state: 'READY', capabilities: Array.isArray(data?.payload?.capabilities) ? data.payload.capabilities : [], latencyMs: Math.round(performance.now() - started) };
-  } catch {
-    return { nucleus, endpoint, state: 'OFFLINE', capabilities: [], latencyMs: Math.round(performance.now() - started) };
-  } finally { window.clearTimeout(timeout); }
+    const capabilities = Array.isArray(data?.payload?.capabilities) ? data.payload.capabilities : Array.isArray(data?.capabilities) ? data.capabilities : [];
+    return { nucleus, endpoint, state: 'READY', capabilities, latencyMs: Math.round(performance.now() - started) };
+  } catch { return { nucleus, endpoint, state: 'OFFLINE', capabilities: [], latencyMs: Math.round(performance.now() - started) }; }
+  finally { window.clearTimeout(timeout); }
 }
 
 export function SoulPilotCockpit() {
   const [runtimes, setRuntimes] = useState<Runtime[]>([]);
+  const [channels, setChannels] = useState<SoulChannelProbe[]>([]);
   const [busy, setBusy] = useState(false);
+  const [channelBusy, setChannelBusy] = useState(false);
   const [target, setTarget] = useState<Nucleus>('N02');
   const [capability, setCapability] = useState('');
   const [payload, setPayload] = useState('{}');
@@ -52,24 +53,28 @@ export function SoulPilotCockpit() {
     try { setRuntimes(await Promise.all(nuclei.map(probe))); } finally { setBusy(false); }
   }, []);
 
+  const verify60 = useCallback(async () => {
+    setChannelBusy(true);
+    try { setChannels(await cockpitMesh.probeAll()); } finally { setChannelBusy(false); }
+  }, []);
+
   useEffect(() => { void refresh(); }, [refresh]);
 
-  const totals = useMemo(() => ({ ready: runtimes.filter(r => r.state === 'READY' || r.state === 'LOCAL').length, capabilities: runtimes.reduce((sum, r) => sum + r.capabilities.length, 0) }), [runtimes]);
+  const totals = useMemo(() => ({
+    ready: runtimes.filter(r => r.state === 'READY' || r.state === 'LOCAL').length,
+    capabilities: runtimes.reduce((sum, r) => sum + r.capabilities.length, 0),
+    verifiedChannels: channels.filter(c => c.reachable && c.proof === 'EXECUTED').length,
+  }), [runtimes, channels]);
   const selected = runtimes.find(r => r.nucleus === target);
 
   async function executeCapability() {
-    if (!capability || !selected?.endpoint || selected.state !== 'READY') {
-      setExecution('EXECUTION_BLOCKED: runtime/capability is not live and verified');
-      return;
-    }
+    if (!capability || !selected?.endpoint || selected.state !== 'READY') { setExecution('EXECUTION_BLOCKED: runtime/capability is not live and verified'); return; }
     let parsed: unknown;
     try { parsed = JSON.parse(payload); } catch { setExecution('INVALID_JSON_PAYLOAD'); return; }
     const id = crypto.randomUUID();
     try {
-      const response = await fetch(selected.endpoint, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ protocol: 'soul-mesh/1', id, correlationId: id, source: 'N01', target, kind: 'request', capability, payload: parsed, timestamp: new Date().toISOString(), channelId: `${target}.IN.N01` }),
-      });
+      const response = await fetch(selected.endpoint, { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ protocol: 'soul-mesh/1', id, correlationId: id, source: 'N01', target, kind: 'request', capability, payload: parsed, timestamp: Date.now(), channelId: `${target}.IN.1.N01` }) });
       const data = await response.json().catch(() => ({}));
       setExecution(JSON.stringify({ http: response.status, proof: data?.proof ?? null, correlated: data?.correlationId === id, response: data?.payload ?? data?.error ?? null }, null, 2));
     } catch (error) { setExecution(`TRANSPORT_ERROR: ${error instanceof Error ? error.message : String(error)}`); }
@@ -81,10 +86,18 @@ export function SoulPilotCockpit() {
         <Card className="border-primary/30 bg-primary/5">
           <CardHeader className="p-3 pb-2"><CardTitle className="text-xs flex items-center gap-2 font-mono"><Brain className="h-4 w-4 text-primary" /> SOUL PILOT / GPU COCKPIT<Button variant="ghost" size="icon" className="ml-auto h-7 w-7" onClick={() => void refresh()} disabled={busy}><RefreshCw className={cn('h-3.5 w-3.5', busy && 'animate-spin')} /></Button></CardTitle></CardHeader>
           <CardContent className="p-3 pt-0 grid grid-cols-2 gap-2 text-[9px] font-mono">
-            <div className="glass rounded p-2"><Network className="h-3 w-3 inline mr-1" />60 directional channels</div>
+            <div className="glass rounded p-2"><Network className="h-3 w-3 inline mr-1" />{totals.verifiedChannels}/60 verified channels</div>
             <div className="glass rounded p-2"><Zap className="h-3 w-3 inline mr-1" />{totals.capabilities} discovered capabilities</div>
-            <div className="glass rounded p-2"><Activity className="h-3 w-3 inline mr-1" />{totals.ready}/6 live/ local</div>
+            <div className="glass rounded p-2"><Activity className="h-3 w-3 inline mr-1" />{totals.ready}/6 live/local</div>
             <div className="glass rounded p-2">Affinity + parallel fabric</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/20 bg-card/50">
+          <CardHeader className="p-3 pb-2"><CardTitle className="text-[10px] font-mono flex items-center gap-2">60-CHANNEL FABRIC <Button size="sm" variant="outline" className="ml-auto h-7 text-[9px]" onClick={() => void verify60()} disabled={channelBusy}>{channelBusy ? 'VERIFYING…' : 'VERIFY 60'}</Button></CardTitle></CardHeader>
+          <CardContent className="p-3 pt-0 text-[9px] font-mono">
+            <div>APK/Cockpit direct access: <strong>{channels.length ? `${totals.verifiedChannels}/60` : 'not yet probed'}</strong></div>
+            <div className="text-muted-foreground mt-1">A channel is verified only after a live correlated response with EXECUTED proof. Unconfigured endpoints remain unverified.</div>
           </CardContent>
         </Card>
 
