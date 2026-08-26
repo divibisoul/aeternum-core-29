@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent">
-    <LinearLayout android:id="@+id/soul_topbar" android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
-        <TextView android:id="@+id/soul_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOUL" android:textSize="24sp" android:textStyle="bold" />
-        <TextView android:id="@+id/soul_status" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hybrid fabric: initializing" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-            <Button android:id="@+id/button_pilot" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pilot" />
-            <Button android:id="@+id/button_cockpit" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Cockpit" />
-            <Button android:id="@+id/button_settings" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Aparelho" />
+    <ScrollView android:id="@+id/soul_navigation" android:layout_width="0dp" android:layout_height="wrap_content" android:fillViewport="false" app:layout_constraintTop_toTopOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
+        <LinearLayout android:id="@+id/soul_topbar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="12dp">
+            <TextView android:id="@+id/soul_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="SOUL • HYBRID AGI" android:textSize="24sp" android:textStyle="bold" />
+            <TextView android:id="@+id/soul_status" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fabric: initializing" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <Button android:id="@+id/button_pilot" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Pilot" />
+                <Button android:id="@+id/button_cockpit" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Cockpit" />
+                <Button android:id="@+id/button_capabilities" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Funções" />
+                <Button android:id="@+id/button_device" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Aparelho" />
+            </LinearLayout>
         </LinearLayout>
-    </LinearLayout>
-    <WebView android:id="@+id/soul_browser" android:layout_width="0dp" android:layout_height="0dp" android:layout_marginTop="4dp" app:layout_constraintTop_toBottomOf="@id/soul_topbar" app:layout_constraintBottom_toTopOf="@id/soul_ai_bar" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+    </ScrollView>
+    <WebView android:id="@+id/soul_browser" android:layout_width="0dp" android:layout_height="0dp" android:layout_marginTop="4dp" app:layout_constraintTop_toBottomOf="@id/soul_navigation" app:layout_constraintBottom_toTopOf="@id/soul_ai_bar" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent" />
     <LinearLayout android:id="@+id/soul_ai_bar" android:layout_width="0dp" android:layout_height="wrap_content" android:orientation="vertical" android:padding="8dp" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintStart_toStartOf="parent" app:layout_constraintEnd_toEndOf="parent">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="IA conectadas" android:textStyle="bold" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Inteligências conectadas" android:textStyle="bold" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
             <Button android:id="@+id/button_ai_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="IA 1" />
             <Button android:id="@+id/button_ai_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="IA 2" />
