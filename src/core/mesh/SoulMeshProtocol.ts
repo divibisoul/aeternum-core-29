@@ -1,5 +1,5 @@
-/** Soul Mesh v1: common wire contract shared by all six Soul nuclei. */
-export type SoulNucleus = 'aeternum' | 'nexus' | 'eternium' | 'chatbot' | 'chatbots' | 'chatbot-2000';
+/** Soul Mesh v1: canonical wire contract shared by all six Soul nuclei. */
+export type SoulNucleus = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06';
 
 export interface SoulMeshMessage<T = unknown> {
   protocol: 'soul-mesh/1';
