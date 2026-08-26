@@ -1,6 +1,7 @@
 package com.divibisoul.soul.core
 
 import android.content.Context
+import com.divibisoul.soul.SoulAiTools
 import rikka.shizuku.Shizuku
 
 enum class CapabilityAvailability { AVAILABLE, UNAVAILABLE, NOT_AUTHORIZED, UNKNOWN }
@@ -21,6 +22,13 @@ class SoulCapabilityRegistry(private val context: Context) {
         Capability("android.memory", "Android", CapabilityAvailability.AVAILABLE, CapabilityRisk.LOW),
         Capability("android.network", "Android", CapabilityAvailability.AVAILABLE, CapabilityRisk.LOW),
         Capability("android.events", "Android", CapabilityAvailability.AVAILABLE, CapabilityRisk.LOW),
+        Capability(
+            SoulAiTools.REQUEST_SUGGESTIONS,
+            "Nucleus05",
+            CapabilityAvailability.AVAILABLE,
+            CapabilityRisk.MEDIUM,
+            "1"
+        ),
         shizukuCapability()
     )
 
