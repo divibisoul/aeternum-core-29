@@ -35,6 +35,17 @@ class SoulHybridBridge(
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "Pilot execution error").toString() }
 
     @JavascriptInterface
+    fun executePlan(rawJson: String): String = runCatching {
+        requireNotNull(pilot) { "PILOT_NOT_CONFIGURED" }
+        val request = JSONObject(rawJson)
+        val steps = request.getJSONArray("capabilities")
+        val capabilities = buildList { for (i in 0 until steps.length()) add(steps.getString(i)) }
+        val payload = request.optJSONObject("payload") ?: JSONObject()
+        val results = SoulPilotPlan(pilot).execute(capabilities, payload)
+        JSONObject().put("accepted", true).put("steps", SoulPilotPlan(pilot).toJson(results)).toString()
+    }.getOrElse { error -> JSONObject().put("error", error.message ?: "Pilot plan execution error").toString() }
+
+    @JavascriptInterface
     fun capabilities(): String = runCatching {
         requireNotNull(pilot) { "PILOT_NOT_CONFIGURED" }
         pilot.registrySnapshot().toString()
@@ -46,11 +57,8 @@ class SoulHybridBridge(
         JSONArray().apply {
             registry.allEnabled().forEach { provider ->
                 put(JSONObject().apply {
-                    put("id", provider.id)
-                    put("displayName", provider.displayName)
-                    put("role", provider.role)
-                    put("loginUrl", provider.loginUrl)
-                    put("hosts", JSONArray(provider.hosts.toList()))
+                    put("id", provider.id); put("displayName", provider.displayName); put("role", provider.role)
+                    put("loginUrl", provider.loginUrl); put("hosts", JSONArray(provider.hosts.toList()))
                 })
             }
         }.toString()
