@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test:soul-mesh:e2e": "node scripts/soul-mesh-e2e.mjs",
+    "test:soul-mesh:60": "node scripts/soul-mesh-60-channel-e2e.mjs",
     "mesh:server": "node scripts/soul-mesh-server.mjs",
     "preview": "vite preview"
   },
