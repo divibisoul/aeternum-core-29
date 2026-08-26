@@ -2,8 +2,15 @@ name: Soul N01 Full Build
 
 on:
   push:
+    branches:
+      - main
+      - 'upgrade/**'
+  pull_request:
     branches: [ main ]
   workflow_dispatch:
+
+env:
+  SOUL_MESH_N02_URL: ${{ vars.SOUL_MESH_N02_URL }}
 
 jobs:
   web:
