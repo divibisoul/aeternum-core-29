@@ -4,10 +4,7 @@ import org.json.JSONObject
 import java.util.UUID
 
 /** Outbound RPC client from N01 to an independently deployed nucleus. */
-class SoulMeshRemoteClient(
-    private val sourceNucleus: String = "N01",
-    private val transport: SoulMeshTransport = SoulMeshTransport(emptyMap()),
-) {
+class SoulMeshRemoteClient(private val sourceNucleus: String = "N01") {
     fun request(target: String, capability: String, payload: JSONObject): Result<SoulMeshMessage> {
         require(sourceNucleus == "N01") { "This client is reserved for N01" }
         require(target in SoulMeshContract.nucleusIds && target != sourceNucleus) { "Invalid Mesh target: $target" }
@@ -26,7 +23,7 @@ class SoulMeshRemoteClient(
             payload = payload,
             timestamp = System.currentTimeMillis(),
         )
-        return transport.send(endpoint, request)
+        return SoulMeshTransport(mapOf(target to endpoint)).send(request)
     }
 
     fun pingN02(): Result<SoulMeshMessage> = request("N02", "mesh.ping", JSONObject())
