@@ -9,7 +9,7 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
 
-/** First production-oriented Soul shell: browser + AI sessions + Pilot/Cockpit + device capabilities. */
+/** First production-oriented Soul shell: AGI browser + AI sessions + Pilot/Cockpit + capabilities + device access. */
 class SoulHybridActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var permissionCoordinator: SoulPermissionCoordinator
@@ -33,10 +33,13 @@ class SoulHybridActivity : ComponentActivity() {
             override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
                 runOnUiThread {
                     permissionCoordinator.requestCaptureAccess()
-                    request.grant(request.resources.filter {
+                    val allowed = request.resources.filter {
                         it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE ||
-                        it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
-                    }.toTypedArray())
+                            it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
+                    }.toTypedArray()
+                    if (allowed.isNotEmpty() && permissionCoordinator.hasCamera() && permissionCoordinator.hasMicrophone()) {
+                        request.grant(allowed)
+                    }
                 }
             }
         }
@@ -46,8 +49,8 @@ class SoulHybridActivity : ComponentActivity() {
             mesh.send(message.source, message.target, message.capability ?: "", message.payload)
         }, { completion ->
             webView.post {
-                val json = android.text.TextUtils.htmlEncode(completion.toJson().toString())
-                webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive(JSON.parse(document.createElement('textarea').innerHTML='" + json + "'.value));", null)
+                val json = org.json.JSONObject.quote(completion.toJson().toString())
+                webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive&&window.SoulHybridRuntime.receive($json);", null)
             }
         }, probe60 = { mesh60.probeAll() }))
         webView.loadUrl(SoulSecureWebView.localUrl())
@@ -58,8 +61,9 @@ class SoulHybridActivity : ComponentActivity() {
         findViewById<Button>(R.id.button_chat).setOnClickListener { focusBrowser("chat") }
         findViewById<Button>(R.id.button_pilot).setOnClickListener { focusBrowser("pilot") }
         findViewById<Button>(R.id.button_cockpit).setOnClickListener { focusBrowser("cockpit") }
-        findViewById<Button>(R.id.button_settings).setOnClickListener { showDeviceAccess() }
-        status.text = "Hybrid fabric ready • browser + Pilot + Cockpit"
+        findViewById<Button>(R.id.button_capabilities).setOnClickListener { focusBrowser("capabilities") }
+        findViewById<Button>(R.id.button_device).setOnClickListener { showDeviceAccess() }
+        status.text = "Hybrid AGI ready • browser + Pilot + Cockpit + capabilities"
     }
 
     private fun bindAi(buttonId: Int, provider: SoulAiProvider) {
@@ -78,6 +82,6 @@ class SoulHybridActivity : ComponentActivity() {
 
     private fun showDeviceAccess() {
         permissionCoordinator.requestCaptureAccess()
-        startActivity(Intent(android.provider.Settings.ACTION_WIFI_SETTINGS))
+        permissionCoordinator.openWifiSettings()
     }
 }
