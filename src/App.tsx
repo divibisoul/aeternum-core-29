@@ -1,8 +1,9 @@
 /**
  * AETERNUM - App Chassis (QUADRANGULAR ARCHITECTURE + 13 AGI ENGINES)
- * 
- * All engines run in CONTINUOUS FOREGROUND mode.
- * No modals - everything is embedded as active modules.
+ *
+ * N01 is the Android/Soul host and also a complete AI nucleus. The Mesh is
+ * initialized beside the existing engines so remote nuclei can consume real
+ * N01 capabilities without replacing the existing pipeline.
  */
 
 import { useEffect, useState, useCallback } from 'react';
@@ -19,6 +20,11 @@ import { useGlobalStore, selectIsAuthenticated } from '@/stores/globalStore';
 import { ProjetoClareira } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
 import { AeternumAGI } from '@/core/agi';
+import { N01SoulMeshRuntime } from '@/core/mesh/N01SoulMeshRuntime';
+import { SoulMeshHybridTransport } from '@/core/mesh/SoulMeshHybridTransport';
+import { configuredPeers } from '@/core/mesh/SoulMeshPeerEndpoints';
+import { PrecisionEngine } from '@/core/PrecisionEngine';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import '@fontsource/jetbrains-mono/300.css';
 import '@fontsource/jetbrains-mono/400.css';
@@ -28,14 +34,65 @@ import '@fontsource/jetbrains-mono/700.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000,
-      gcTime: 5 * 60 * 1000,
-      retry: 2,
-      refetchOnWindowFocus: false,
-    },
+    queries: { staleTime: 60 * 1000, gcTime: 5 * 60 * 1000, retry: 2, refetchOnWindowFocus: false },
   },
 });
+
+let n01MeshRuntime: N01SoulMeshRuntime | null = null;
+let n01MeshTransport: SoulMeshHybridTransport | null = null;
+
+function browserLanguage(): 'pt' | 'es' | 'en' {
+  const lang = typeof navigator !== 'undefined' ? navigator.language : 'en';
+  return lang.startsWith('pt') ? 'pt' : lang.startsWith('es') ? 'es' : 'en';
+}
+
+function initializeN01Mesh(): void {
+  if (n01MeshRuntime) return;
+  const peers = configuredPeers();
+  n01MeshTransport = new SoulMeshHybridTransport({
+    endpoints: {
+      N02: peers.N02.out,
+      N03: peers.N03.out,
+      N04: peers.N04.out,
+      N05: peers.N05.out,
+      N06: peers.N06.out,
+    },
+    channelName: 'soul-mesh-N01',
+  });
+
+  n01MeshRuntime = new N01SoulMeshRuntime(n01MeshTransport, {
+    reasoning: async ({ prompt, context }) => {
+      const lang = browserLanguage();
+      const processed = await PrecisionEngine.process(prompt, lang);
+      const params = PrecisionEngine.getApiParams(processed);
+      const response = await supabase.functions.invoke('chat', {
+        body: {
+          messages: [{ role: 'user', content: PrecisionEngine.getUserPrompt(processed) }],
+          stream: false,
+          context: {
+            browserLang: lang,
+            systemPrompt: PrecisionEngine.getSystemPrompt(processed),
+            temperature: params.temperature,
+            maxTokens: params.maxTokens,
+            executionMode: processed.interception.executionMode,
+            meshContext: context,
+          },
+        },
+      });
+      if (response.error) throw response.error;
+      return response.data;
+    },
+  });
+
+  console.log('[N01 Mesh] Runtime online; five peer routes remain unverified until real traffic succeeds.');
+}
+
+function closeN01Mesh(): void {
+  n01MeshRuntime?.close();
+  n01MeshRuntime = null;
+  n01MeshTransport?.close();
+  n01MeshTransport = null;
+}
 
 function AeternumCore() {
   const [systemReady, setSystemReady] = useState(false);
@@ -44,53 +101,53 @@ function AeternumCore() {
 
   const initializeSystems = useCallback(async () => {
     try {
-      console.log('[Aeternum] Inicializando 17 motores de primeiro plano...');
-      
+      console.log('[Aeternum] Inicializando N01 AI nucleus e motores existentes...');
+
       setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) ProjetoClareira.initialize();
       if (!ProjetoClareira.running) ProjetoClareira.start();
       await new Promise(r => setTimeout(r, 100));
-      
+
       setInitStage('Ativando consciência algorítmica...');
       const experienciaInicial = Array(10).fill(null).map(() => Math.random());
       const resultado = ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
       console.log('[Aeternum] ConscienciaAlgoritmica - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
       await new Promise(r => setTimeout(r, 100));
-      
-      setInitStage('Inicializando 17 motores AGI + GEMs...');
+
+      setInitStage('Inicializando motores AGI + GEMs...');
       const agi = AeternumAGI.getInstance();
       agi.initialize();
       agi.start();
-      console.log('[Aeternum] AeternumAGI - 17 motores de primeiro plano contínuo ativos');
+      console.log('[Aeternum] AeternumAGI ativo');
       await new Promise(r => setTimeout(r, 100));
-      
+
       setInitStage('Carregando módulos...');
       await ModuleRegistry.initialize();
       const modules = ModuleRegistry.getAll();
-      if (modules.length > 0 && !ModuleRegistry.getActiveId()) {
-        ModuleRegistry.activate(modules[0].metadata.id);
-      }
+      if (modules.length > 0 && !ModuleRegistry.getActiveId()) await ModuleRegistry.activate(modules[0].metadata.id);
       await new Promise(r => setTimeout(r, 100));
-      
+
+      setInitStage('Conectando N01 ao Soul Mesh híbrido...');
+      initializeN01Mesh();
+      await new Promise(r => setTimeout(r, 100));
+
       setInitStage('Validando integridade...');
       const testResult = ConscienciaAlgoritmicaInstance.testarSistemaCompleto();
       const agiMetrics = agi.getFullMetrics();
       const saiicMetrics = agi.saiic.getMetrics();
-      
+
       if (testResult.sucesso) {
         toast.success(
-          `17 motores online | Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
+          `N01 AI online | Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
           `AGI: ${agiMetrics.overall.activeSubsystems}/${agiMetrics.overall.subsystems} | ` +
-          `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}% | ` +
-          `GEMs: 4/4`
+          `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}%`
         );
       } else {
-        toast.warning('Sistemas parcialmente ativos');
+        toast.warning('N01 parcialmente ativo');
       }
-      
+
       setSystemReady(true);
-      console.log('[Aeternum] Todos os 17 sistemas de primeiro plano prontos');
-      
+      console.log('[Aeternum] N01 pronto; Mesh lógico inicializado, conectividade remota ainda depende de prova E2E.');
     } catch (error) {
       console.error('[Aeternum] Erro na inicialização:', error);
       toast.error('Erro ao inicializar sistemas');
@@ -101,6 +158,7 @@ function AeternumCore() {
   useEffect(() => {
     initializeSystems();
     return () => {
+      closeN01Mesh();
       ProjetoClareira.stop();
       AeternumAGI.getInstance().stop();
     };
@@ -110,9 +168,7 @@ function AeternumCore() {
     console.log(`[Aeternum] System ready with ${modules.length} modules`);
   }, []);
 
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={() => {}} />;
-  }
+  if (!isAuthenticated) return <LoginScreen onLogin={() => {}} />;
 
   if (!systemReady) {
     const agi = AeternumAGI.getInstance();
@@ -122,20 +178,15 @@ function AeternumCore() {
           <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
         </div>
-        
         <div className="relative text-center z-10">
           <div className="relative mx-auto h-24 w-24 mb-6">
             <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
             <div className="absolute inset-2 rounded-full border-2 border-primary/50 animate-pulse" />
             <div className="absolute inset-4 rounded-full border-2 border-primary animate-spin" style={{ animationDuration: '3s' }} />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="h-8 w-8 rounded-full bg-primary shadow-[0_0_30px_hsl(var(--primary))]" />
-            </div>
+            <div className="absolute inset-0 flex items-center justify-center"><div className="h-8 w-8 rounded-full bg-primary shadow-[0_0_30px_hsl(var(--primary))]" /></div>
           </div>
-          
           <h2 className="text-xl font-bold text-foreground mb-2 font-mono">AETERNUM</h2>
           <p className="text-sm text-primary font-mono mb-4">{initStage}</p>
-          
           <div className="flex justify-center gap-3 text-[10px] text-muted-foreground flex-wrap max-w-md">
             <span className={ProjetoClareira.initialized ? 'text-green-400' : ''}>● Neural</span>
             <span className={ConscienciaAlgoritmicaInstance.getMetrics().processamentosTotal > 0 ? 'text-green-400' : ''}>● Cognitive</span>
@@ -143,13 +194,13 @@ function AeternumCore() {
             <span className={agi.saiic.isRunning ? 'text-green-400' : ''}>● SAIIC</span>
             <span className={agi.resourceManager.isRunning ? 'text-green-400' : ''}>● Resources</span>
             <span className={ModuleRegistry.isInitialized() ? 'text-green-400' : ''}>● Modules</span>
+            <span className={n01MeshRuntime ? 'text-green-400' : ''}>● Mesh</span>
           </div>
         </div>
       </div>
     );
   }
 
-  // No floating modals - everything is embedded in MainLayout
   return <MainLayout />;
 }
 
@@ -158,9 +209,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster position="bottom-right" theme="dark" richColors />
-        <AuthProvider>
-          <AeternumCore />
-        </AuthProvider>
+        <AuthProvider><AeternumCore /></AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </AppErrorBoundary>
