@@ -1,4 +1,4 @@
-name: Soul Android validation
+name: Soul Android validation and APK release
 on:
   push:
     paths:
@@ -20,3 +20,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: gradle assembleDebug
       - run: gradle test
+      - name: Verify APK
+        working-directory: .
+        run: test -f soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: soul-debug-apk
+          path: soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
