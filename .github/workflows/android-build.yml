@@ -25,6 +25,14 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace
       - name: Verify APK
         run: test -s soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+      - name: Run Mesh instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          working-directory: soul-sentinel
+          script: gradle :app:connectedDebugAndroidTest --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
