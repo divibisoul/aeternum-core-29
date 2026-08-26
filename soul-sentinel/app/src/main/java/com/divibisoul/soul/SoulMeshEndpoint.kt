@@ -1,28 +1,42 @@
 package com.divibisoul.soul
 
-/** Runtime endpoint: validates and dispatches incoming Mesh requests. */
+import org.json.JSONObject
+import java.time.Instant
+
+/** Runtime endpoint: validates and dispatches every incoming Mesh request. */
 class SoulMeshEndpoint(
     private val nucleusId: String,
-    private val handlers: Map<String, (String) -> String>,
+    private val handlers: Map<String, (JSONObject) -> JSONObject>,
 ) {
     fun receive(message: SoulMeshMessage): SoulMeshMessage {
-        SoulMeshContract.validate(
-            protocol = message.protocol,
-            id = message.id,
-            correlationId = message.correlationId,
-            source = message.source,
-            target = message.target,
-            kind = message.kind,
-            capability = message.capability,
-        ).getOrThrow()
+        message.validate().getOrThrow()
         require(message.target == nucleusId) { "Message target does not match endpoint" }
         if (message.kind != "request") return message
+
         val handler = handlers[message.capability]
-            ?: return SoulMeshMessage.error(message, "CAPABILITY_NOT_FOUND", "No local handler")
+            ?: return reply(message, "error", JSONObject().put("code", "CAPABILITY_NOT_FOUND"))
         return try {
-            SoulMeshMessage.response(message, handler(message.payload))
+            reply(message, "response", handler(message.payload))
         } catch (t: Throwable) {
-            SoulMeshMessage.error(message, "CAPABILITY_EXECUTION_ERROR", t.message ?: "Unknown error")
+            reply(
+                message,
+                "error",
+                JSONObject()
+                    .put("code", "CAPABILITY_EXECUTION_ERROR")
+                    .put("detail", t.message ?: "Unknown capability error")
+            )
         }
     }
+
+    private fun reply(source: SoulMeshMessage, kind: String, payload: JSONObject): SoulMeshMessage =
+        SoulMeshMessage(
+            id = java.util.UUID.randomUUID().toString(),
+            correlationId = source.correlationId,
+            source = source.target,
+            target = source.source,
+            kind = kind,
+            capability = source.capability,
+            payload = payload,
+            timestamp = Instant.now().toString(),
+        )
 }
