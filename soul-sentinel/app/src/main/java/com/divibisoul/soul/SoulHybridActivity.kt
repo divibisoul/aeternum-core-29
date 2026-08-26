@@ -13,13 +13,15 @@ import androidx.core.app.ActivityCompat
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Hybrid AGI shell: browser, AI sessions, Pilot, Cockpit, capabilities, and reusable device access. */
+/** Hybrid AGI shell. Interface, Pilot and Cockpit remain distinct layers. */
 class SoulHybridActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var permissionCoordinator: SoulPermissionCoordinator
     private lateinit var deviceCapabilities: SoulDeviceCapabilities
     private lateinit var status: TextView
     private lateinit var mesh: SoulMeshRuntime
+    private lateinit var registry: SoulCapabilityRegistry
+    private lateinit var pilot: SoulPilot
     private var pendingMediaRequest: android.webkit.PermissionRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +30,8 @@ class SoulHybridActivity : ComponentActivity() {
         deviceCapabilities = SoulDeviceCapabilities(this)
         val config = SoulConfig(this)
         mesh = SoulMeshBootstrap.create(webDelegate = SoulMeshBootstrap::delegateToWeb, remoteEndpoints = config.meshEndpoints())
+        registry = SoulCapabilityRegistry()
+        pilot = SoulPilot(registry, mesh)
 
         setContentView(R.layout.activity_soul_shell)
         status = findViewById(R.id.soul_status)
@@ -55,7 +59,7 @@ class SoulHybridActivity : ComponentActivity() {
         val mesh60 = SoulMesh60ChannelAccess(config.meshEndpoints())
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message -> mesh.send(message.source, message.target, message.capability, message.payload) }, { completion ->
             webView.post { webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive&&window.SoulHybridRuntime.receive(${JSONObject.quote(completion.toJson().toString())});", null) }
-        }, probe60 = { mesh60.probeAll() }))
+        }, pilot = pilot, probe60 = { mesh60.probeAll() }))
         webView.loadUrl(SoulSecureWebView.localUrl())
 
         bindAi(R.id.button_ai_1, SoulAiProvider.CHATGPT)
