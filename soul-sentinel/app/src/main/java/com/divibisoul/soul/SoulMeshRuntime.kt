@@ -5,10 +5,16 @@ import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/** Hybrid in-process mesh runtime. Local nuclei are preferred; remote nuclei use the configured transporter. */
+/**
+ * Hybrid Soul mesh runtime.
+ *
+ * Physical transport is deliberately separated from the mesh protocol. A peer may
+ * be reached in-process, through Android/local IPC, loopback, or a network adapter.
+ * No transport is treated as connected merely because it is configured.
+ */
 class SoulMeshRuntime(
     private val nuclei: List<String> = SoulMeshChannels.nuclei,
-    private val remote: SoulMeshTransporter? = null,
+    private val transports: SoulMeshTransportRegistry = SoulMeshTransportRegistry(),
 ) {
     private val endpoints = ConcurrentHashMap<String, SoulMeshEndpoint>()
     private val health = ConcurrentHashMap<String, MeshHealth>()
@@ -22,9 +28,16 @@ class SoulMeshRuntime(
         health[nucleusId] = MeshHealth.HEALTHY
     }
 
+    fun bindTransport(nucleusId: String, transporter: SoulMeshTransporter) {
+        require(nucleusId in nuclei) { "Unknown nucleus: $nucleusId" }
+        require(nucleusId != "N01") { "N01 cannot bind a peer transport to itself" }
+        transports.bind(nucleusId, transporter)
+        health.putIfAbsent(nucleusId, MeshHealth.UNKNOWN)
+    }
+
     fun canRoute(target: String): Boolean {
         require(target in nuclei) { "Unknown nucleus: $target" }
-        return endpoints.containsKey(target) || remote != null
+        return endpoints.containsKey(target) || transports.hasRoute(target)
     }
 
     fun send(source: String, target: String, capability: String, payload: JSONObject): SoulMeshMessage {
@@ -40,30 +53,38 @@ class SoulMeshRuntime(
             timestamp = Instant.now().toString(),
         )
         try {
-            endpoints[target]?.let {
-                val response = it.receive(request)
-                response.validate().getOrThrow()
-                require(response.correlationId == request.correlationId) { "MESH_CORRELATION_MISMATCH" }
-                health[target] = MeshHealth.HEALTHY
-                return response
+            endpoints[target]?.let { endpoint ->
+                return acceptResponse(target, request, endpoint.receive(request))
             }
-            remote?.let {
-                val response = it.send(request)
-                response.validate().getOrThrow()
-                require(response.correlationId == request.correlationId) { "MESH_CORRELATION_MISMATCH" }
-                health[target] = MeshHealth.HEALTHY
-                return response
+            transports.transporterFor(target)?.let { transporter ->
+                return acceptResponse(target, request, transporter.send(request))
             }
         } catch (failure: Throwable) {
             health[target] = MeshHealth.FAILED
             throw failure
         }
         health[target] = MeshHealth.FAILED
-        error("NO_HYBRID_ROUTE: nucleus $target is neither locally registered nor remotely configured")
+        error("NO_HYBRID_ROUTE: nucleus $target has no bound endpoint or transport")
+    }
+
+    private fun acceptResponse(
+        target: String,
+        request: SoulMeshMessage,
+        response: SoulMeshMessage,
+    ): SoulMeshMessage {
+        response.validate().getOrThrow()
+        require(response.correlationId == request.correlationId) {
+            "MESH_CORRELATION_MISMATCH"
+        }
+        health[target] = MeshHealth.HEALTHY
+        return response
     }
 
     fun registeredNuclei(): Set<String> = endpoints.keys
-    fun allNucleiRegistered(): Boolean = endpoints.keys.containsAll(nuclei.filter { it != "N01" })
+    fun routedNuclei(): Set<String> = transports.routedNuclei()
+    fun allNucleiRouted(): Boolean =
+        nuclei.filter { it != "N01" }.all { canRoute(it) }
+
     fun health(target: String): MeshHealth = health[target] ?: MeshHealth.UNKNOWN
     fun healthSnapshot(): Map<String, MeshHealth> = health.toMap()
 }
