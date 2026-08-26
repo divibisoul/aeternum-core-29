@@ -1,5 +1,7 @@
 package com.divibisoul.soul
 
+import org.json.JSONObject
+import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -11,11 +13,22 @@ class SoulMeshRpc(
 ) {
     private val pending = ConcurrentHashMap<String, Long>()
 
-    fun request(source: String, target: String, capability: String, payload: String): String {
+    fun request(source: String, target: String, capability: String, payload: JSONObject): String {
         val id = UUID.randomUUID().toString()
         val correlationId = id
         pending[correlationId] = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs)
-        send(SoulMeshMessage.request(id, correlationId, source, target, capability, payload))
+        send(
+            SoulMeshMessage(
+                id = id,
+                correlationId = correlationId,
+                source = source,
+                target = target,
+                kind = "request",
+                capability = capability,
+                payload = payload,
+                timestamp = Instant.now().toString(),
+            )
+        )
         return correlationId
     }
 
