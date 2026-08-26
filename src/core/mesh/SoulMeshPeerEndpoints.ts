@@ -1,13 +1,13 @@
 import type { SoulNucleus } from './SoulMeshProtocol';
 
-export const SOUL_MESH_PEER_ENDPOINTS: Record<Exclude<SoulNucleus, 'aeternum'>, { in: string; out: string }> = {
-  nexus: { in: '/soul-mesh/nexus/in', out: '/soul-mesh/nexus/out' },
-  eternium: { in: '/soul-mesh/eternium/in', out: '/soul-mesh/eternium/out' },
-  chatbot: { in: '/soul-mesh/chatbot/in', out: '/soul-mesh/chatbot/out' },
-  chatbots: { in: '/soul-mesh/chatbots/in', out: '/soul-mesh/chatbots/out' },
-  'chatbot-2000': { in: '/soul-mesh/chatbot-2000/in', out: '/soul-mesh/chatbot-2000/out' },
+export const SOUL_MESH_PEER_ENDPOINTS: Record<Exclude<SoulNucleus, 'N01'>, { in: string; out: string }> = {
+  N02: { in: '/soul-mesh/N02/in', out: '/soul-mesh/N02/out' },
+  N03: { in: '/soul-mesh/N03/in', out: '/soul-mesh/N03/out' },
+  N04: { in: '/soul-mesh/N04/in', out: '/soul-mesh/N04/out' },
+  N05: { in: '/soul-mesh/N05/in', out: '/soul-mesh/N05/out' },
+  N06: { in: '/soul-mesh/N06/in', out: '/soul-mesh/N06/out' },
 };
 
-export function peerEndpoint(peer: Exclude<SoulNucleus, 'aeternum'>, direction: 'in' | 'out'): string {
+export function peerEndpoint(peer: Exclude<SoulNucleus, 'N01'>, direction: 'in' | 'out'): string {
   return SOUL_MESH_PEER_ENDPOINTS[peer][direction];
 }
