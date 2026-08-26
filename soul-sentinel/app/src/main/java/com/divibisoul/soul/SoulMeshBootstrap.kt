@@ -7,6 +7,7 @@ object SoulMeshBootstrap {
     fun create(
         webDelegate: (SoulMeshMessage) -> SoulMeshMessage,
         remoteEndpoints: Map<String, String> = emptyMap(),
+        permissionGranted: (String) -> Boolean = { true },
     ): SoulMeshRuntime {
         val remote = SoulMeshTransport(remoteEndpoints)
         val runtime = SoulMeshRuntime(remote = remote)
@@ -22,10 +23,13 @@ object SoulMeshBootstrap {
                             .put("ok", true)
                             .put("runtime", "android")
                             .put("resources", payload.optJSONArray("resources") ?: org.json.JSONArray())
-                        "device.camera", "device.microphone" -> JSONObject()
-                            .put("ok", true)
-                            .put("runtime", "android")
-                            .put("permissionGate", true)
+                        "device.camera", "device.microphone" -> {
+                            if (!permissionGranted(capability.id)) {
+                                JSONObject().put("ok", false).put("error", "PERMISSION_REQUIRED").put("capability", capability.id)
+                            } else {
+                                JSONObject().put("ok", true).put("runtime", "android").put("permissionGate", true)
+                            }
+                        }
                         else -> JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
                     }
                 }
