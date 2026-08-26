@@ -27,36 +27,26 @@ export class SoulRuntimeRegistry {
   register(runtime: SoulRuntimeDescriptor): void {
     if (!NUCLEI.includes(runtime.nucleus)) throw new Error(`INVALID_NUCLEUS:${runtime.nucleus}`);
     this.runtimes.set(runtime.nucleus, { ...runtime, transports: [...runtime.transports], capabilities: [...runtime.capabilities] });
-    for (const capability of runtime.capabilities) {
-      this.capabilities.set(capability, {
-        capability,
-        owner: runtime.nucleus,
-        transports: [...runtime.transports],
-        parallelizable: true,
-      });
-    }
+    for (const capability of runtime.capabilities) this.capabilities.set(capability, { capability, owner: runtime.nucleus, transports: [...runtime.transports], parallelizable: true });
   }
+  getRuntime(nucleus: SoulNucleusId): SoulRuntimeDescriptor | undefined { return this.runtimes.get(nucleus); }
+  resolve(capability: string): CapabilityRoute | undefined { return this.capabilities.get(capability); }
+  snapshot() { return { runtimes: [...this.runtimes.values()], capabilities: [...this.capabilities.values()] }; }
 
-  getRuntime(nucleus: SoulNucleusId): SoulRuntimeDescriptor | undefined {
-    return this.runtimes.get(nucleus);
-  }
-
-  resolve(capability: string): CapabilityRoute | undefined {
-    return this.capabilities.get(capability);
-  }
-
-  snapshot(): { runtimes: SoulRuntimeDescriptor[]; capabilities: CapabilityRoute[] } {
-    return {
-      runtimes: [...this.runtimes.values()].map((r) => ({ ...r, transports: [...r.transports], capabilities: [...r.capabilities] })),
-      capabilities: [...this.capabilities.values()].map((c) => ({ ...c, transports: [...c.transports] })),
-    };
-  }
-
-  topology(): { inChannels: number; outChannels: number; directionalChannels: number; complete: boolean } {
+  /** Structural topology only. It must never be interpreted as live connectivity. */
+  topology() {
     const n = NUCLEI.length;
-    const perNode = n - 1;
-    const outChannels = n * perNode;
-    const inChannels = n * perNode;
-    return { inChannels, outChannels, directionalChannels: inChannels + outChannels, complete: inChannels === 30 && outChannels === 30 };
+    const outChannels = n * (n - 1);
+    const inChannels = n * (n - 1);
+    const readyRuntimes = NUCLEI.filter((id) => this.runtimes.get(id)?.state === 'READY').length;
+    return {
+      inChannels,
+      outChannels,
+      directionalChannels: inChannels + outChannels,
+      structuralComplete: inChannels === 30 && outChannels === 30,
+      readyRuntimes,
+      liveRuntimeComplete: readyRuntimes === NUCLEI.length,
+      connectionProofRequired: true,
+    };
   }
 }
