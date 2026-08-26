@@ -12,7 +12,11 @@ class SoulHybridActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        mesh = SoulMeshBootstrap.create { message -> SoulMeshBootstrap.delegateToWeb(message) }
+        mesh = SoulMeshBootstrap.create(
+            context = this,
+            webDelegate = { message -> SoulMeshBootstrap.delegateToWeb(message) },
+            authorize = { _, _ -> false },
+        )
         webView = WebView(this)
         SoulSecureWebView.configure(webView)
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message ->
