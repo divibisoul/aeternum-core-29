@@ -5,11 +5,7 @@ import android.webkit.WebView
 import androidx.activity.ComponentActivity
 import org.json.JSONObject
 
-/**
- * User-facing hybrid APK host. The WebView is the UI/AI-session boundary;
- * the Mesh runtime is the system boundary. N01 can address capabilities owned
- * by any nucleus without requiring those nuclei to be packaged into the APK.
- */
+/** User-facing hybrid APK host: WebView/AI session + native Mesh/Pilot boundary. */
 class SoulHybridActivity : ComponentActivity() {
     private lateinit var mesh: SoulMeshRuntime
     private lateinit var webView: WebView
@@ -21,6 +17,7 @@ class SoulHybridActivity : ComponentActivity() {
             webDelegate = SoulMeshBootstrap::delegateToWeb,
             remoteEndpoints = config.meshEndpoints(),
         )
+        val mesh60 = SoulMesh60ChannelAccess(config.meshEndpoints())
         webView = WebView(this)
         SoulSecureWebView.configure(webView)
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message ->
@@ -30,7 +27,7 @@ class SoulHybridActivity : ComponentActivity() {
                 val json = JSONObject.quote(completion.toJson().toString())
                 webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive(JSON.parse($json));", null)
             }
-        }))
+        }, probe60 = { mesh60.probeAll() }))
         webView.loadUrl(SoulSecureWebView.localUrl())
         setContentView(webView)
     }
