@@ -23,8 +23,13 @@ jobs:
       - name: Build debug APK
         working-directory: soul-sentinel
         run: gradle :app:assembleDebug --stacktrace
-      - name: Verify APK
-        run: test -s soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+      - name: Build release APK
+        working-directory: soul-sentinel
+        run: gradle :app:assembleRelease --stacktrace
+      - name: Verify APK outputs
+        run: |
+          test -s soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+          test -s soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
       - name: Run Mesh instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -33,9 +38,11 @@ jobs:
           arch: x86_64
           working-directory: soul-sentinel
           script: gradle :app:connectedDebugAndroidTest --stacktrace
-      - name: Upload APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: soul-admin-debug
-          path: soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+          name: soul-apks
+          path: |
+            soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
+            soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
           if-no-files-found: error
