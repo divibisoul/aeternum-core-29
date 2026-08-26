@@ -1,27 +1,56 @@
 package com.divibisoul.soul
 
+import android.content.Context
 import org.json.JSONObject
 
-/** Builds the six nuclei and binds every capability to the correct execution mode. */
+/**
+ * Builds the N01 side of the hybrid Mesh.
+ *
+ * Important: remote nuclei are NOT registered as fake local endpoints. They
+ * become reachable only when a real transport endpoint is configured.
+ */
 object SoulMeshBootstrap {
-    fun create(webDelegate: (SoulMeshMessage) -> SoulMeshMessage): SoulMeshRuntime {
-        val runtime = SoulMeshRuntime()
-        val remote = SoulMeshTransport(emptyMap())
-        val executor = SoulHybridCapabilityExecutor(webDelegate, remote)
+    fun create(
+        context: Context,
+        webDelegate: (SoulMeshMessage) -> SoulMeshMessage,
+        authorize: (capability: String, payload: JSONObject) -> Boolean = { _, _ -> false },
+    ): SoulMeshRuntime {
+        val config = SoulConfig(context)
+        val remoteEndpoints = SoulMeshContract.nucleusIds
+            .filter { it != "N01" }
+            .mapNotNull { nucleus -> config.meshEndpoint(nucleus)?.let { nucleus to it } }
+            .toMap()
+        val remote = SoulMeshTransport(remoteEndpoints)
+        val executor = SoulHybridCapabilityExecutor(context, webDelegate, remote, authorize)
+        val runtime = SoulMeshRuntime(remote = remote)
 
-        SoulMeshChannels.nuclei.forEach { nucleus ->
-            val handlers = SoulCapabilityCatalog.capabilities
-                .filter { it.owner == nucleus && it.execution == Execution.LOCAL }
-                .associate { capability ->
-                    capability.id to { payload: JSONObject ->
-                        if (capability.id == "mesh.ping") JSONObject().put("ok", true).put("runtime", "android")
-                        else JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
-                    }
+        val handlers = SoulCapabilityCatalog.ownedBy("N01")
+            .filter { it.execution == Execution.LOCAL }
+            .associate { capability ->
+                capability.id to { payload: JSONObject ->
+                    val request = SoulMeshMessage(
+                        id = java.util.UUID.randomUUID().toString(),
+                        correlationId = java.util.UUID.randomUUID().toString(),
+                        source = "N02",
+                        target = "N01",
+                        kind = "request",
+                        capability = capability.id,
+                        payload = payload,
+                        timestamp = java.time.Instant.now().toString(),
+                    )
+                    val result = executor.execute(request)
+                    if (result.kind == "error") throw IllegalStateException(result.payload.toString())
+                    result.payload
                 }
-            runtime.register(nucleus, SoulMeshEndpoint(nucleus, handlers) { message -> executor.execute(message) })
-        }
+            }
+
+        runtime.register("N01", SoulMeshEndpoint("N01", handlers) { message -> executor.execute(message) })
         return runtime
     }
+
+    /** Backward-compatible factory for callers that do not yet provide Context. */
+    fun create(webDelegate: (SoulMeshMessage) -> SoulMeshMessage): SoulMeshRuntime =
+        error("N01 Mesh bootstrap now requires Android Context so remote endpoints and native capabilities are explicit")
 
     fun delegateToWeb(message: SoulMeshMessage): SoulMeshMessage =
         SoulMeshMessage(
