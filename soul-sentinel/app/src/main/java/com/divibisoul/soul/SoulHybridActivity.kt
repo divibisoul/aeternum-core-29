@@ -1,6 +1,5 @@
 package com.divibisoul.soul
 
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebChromeClient
@@ -10,7 +9,7 @@ import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.core.app.ActivityCompat
 
-/** Hybrid AGI shell: browser, AI sessions, Pilot, Cockpit, capabilities, and reusable device access. */
+/** Hybrid AGI shell: browser, AI sessions, Pilot, Cockpit, capabilities, and device access. */
 class SoulHybridActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var permissionCoordinator: SoulPermissionCoordinator
@@ -65,8 +64,7 @@ class SoulHybridActivity : ComponentActivity() {
         webView.loadUrl(SoulSecureWebView.localUrl())
 
         bindAi(R.id.button_ai_1, SoulAiProvider.CHATGPT)
-        bindAi(R.id.button_ai_2, SoulAiProvider.GEMINI)
-        bindAi(R.id.button_ai_3, SoulAiProvider.CLAUDE)
+        bindAi(R.id.button_ai_2, SoulAiProvider.CLAUDE)
         findViewById<Button>(R.id.button_chat).setOnClickListener { focusBrowser("chat") }
         findViewById<Button>(R.id.button_pilot).setOnClickListener { focusBrowser("pilot") }
         findViewById<Button>(R.id.button_cockpit).setOnClickListener { focusBrowser("cockpit") }
@@ -101,7 +99,9 @@ class SoulHybridActivity : ComponentActivity() {
 
     private fun bindAi(buttonId: Int, provider: SoulAiProvider) {
         findViewById<Button>(buttonId).setOnClickListener {
-            startActivity(Intent(this, SoulAiSessionActivity::class.java).apply { putExtra("provider", provider.name) })
+            startActivity(android.content.Intent(this, SoulAiSessionActivity::class.java).apply {
+                putExtra("provider", provider.name)
+            })
         }
     }
 
@@ -113,6 +113,6 @@ class SoulHybridActivity : ComponentActivity() {
 
     private fun showDeviceAccess() {
         permissionCoordinator.requestDeviceAccess()
-        permissionCoordinator.openWifiSettings()
+        status.text = "Device capabilities requested — user controls each permission"
     }
 }
