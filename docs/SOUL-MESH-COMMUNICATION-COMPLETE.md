@@ -1,38 +1,46 @@
-# Soul Mesh — Communication implementation baseline
+# Soul Mesh — Direct peer communication contract
 
-This document records the implemented communication boundary and the work still required for end-to-end proof.
+This is an implementation contract, not a simulation. The Soul is a hybrid GPU/fabric: nuclei remain specialized execution domains and communicate directly through the Mesh transport. N01/Cockpit/Pilot may orchestrate, but they are not a mandatory relay for nucleus-to-nucleus traffic.
 
-## Implemented in N01
+## Canonical runtime path
 
-- canonical `soul-mesh/1` contract validation;
-- `SoulMeshMessage` envelope;
-- HTTP transport;
-- runtime `SoulMeshEndpoint`;
-- capability dispatch;
-- RPC correlation/timeout layer;
-- Android Internet permission.
+`Source nucleus -> direct transport -> target nucleus /api/soul-mesh -> validation -> capability handler -> ACK/response -> source nucleus`
 
-## Runtime communication model
+The same contract is usable from Android/native, WebView and server runtimes. HTTP is the concrete inter-runtime transport today; the envelope is transport-independent so additional realtime transports can be added without changing nucleus semantics.
 
-`Nucleus -> Router -> Transport -> Target Endpoint -> Validator -> Capability Handler -> Response -> Router -> Source RPC`
+## Direct-peer invariant
 
-HTTP is currently the concrete transport. The contract/RPC layers are transport-independent.
+Each nucleus has exactly five peer identities and five outbound logical slots plus five inbound logical slots. A peer link is addressed directly to the target runtime endpoint. A Cockpit/Pilot relay is optional orchestration and must never be required for peer-to-peer communication.
 
-## Critical limitation
+For a message from `N-A` to `N-B`:
 
-Adding these components to N01 does not by itself connect N02–N06. Each target nucleus must implement/adapt the same endpoint contract and expose a real runtime receiver. Until that is done and exercised, the link is not CONNECTED.
+- `source = N-A`;
+- `target = N-B`;
+- `channelId = N-A.OUT.[1..5].N-B`;
+- target accepts only channels addressed to itself;
+- response preserves the request `correlationId`;
+- proof is `EXECUTED` only after the target handler ran.
 
-## Completion gate
+The reciprocal inbound identity is `N-B.IN.[1..5].N-A`.
 
-Communication infrastructure is complete only after:
+## 60-channel model
 
-1. N01 and N02 both run compatible endpoints;
-2. N01 sends a real request to N02;
-3. N02 validates and dispatches it;
-4. N02 returns ACK and response;
-5. N01 correlates the response;
-6. timeout/orphan/error paths pass tests;
-7. the same adapter pattern is installed and verified for N03–N06;
-8. all 15 bidirectional peer pairs pass the connection proof.
+Six nuclei × five outbound slots = 30 outbound logical channels. Six nuclei × five inbound slots = 30 inbound logical channels. Total = 60 directional channels.
 
-No repository directory merge is required. The final APK integrates the runtime modules into one Soul application.
+There are 15 unordered peer pairs and 30 directed peer links. Each directed peer link owns five logical slots, producing 150 slot-level request paths when all five slots are exercised per directed link. The 60 figure therefore refers to the six-nucleus port/channel contract, not to 60 unique unordered network edges.
+
+## Proof gate
+
+A channel is LIVE only after real runtime traffic proves:
+
+`request -> direct transport -> target receiver -> validation -> handler -> response/ACK -> matching correlationId -> EXECUTED proof`.
+
+Configuration, route declarations, documentation, capability names, or a successful local mock do not satisfy this gate.
+
+## Hybrid APK and Cockpit
+
+The APK is the user/device boundary and can access all 60 channels directly through the native/Web hybrid Mesh layer. The Cockpit/Pilot can inspect and command all channels directly. Neither component replaces peer-to-peer nucleus communication.
+
+## No false-positive rule
+
+Never report `60/60`, `CONNECTED`, or `SYNERGY VERIFIED` from topology counts. Those states require runtime evidence. Missing deployment endpoints are a deployment problem, not permission to emulate the result.
