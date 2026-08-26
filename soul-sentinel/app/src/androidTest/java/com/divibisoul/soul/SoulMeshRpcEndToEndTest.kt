@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
@@ -20,14 +19,14 @@ class SoulMeshRpcEndToEndTest {
         )
         assertTrue(receiver.startWithResponse { endpoint.receive(it) }.isSuccess)
         try {
-            val sender = SoulMeshHttpTransport(sourceNucleus = "N01")
+            val sender = SoulMeshTransport(mapOf("N02" to "http://127.0.0.1:18767/soul/mesh/v1"))
             val correlationId = UUID.randomUUID().toString()
             val request = SoulMeshMessage(
                 id = UUID.randomUUID().toString(), correlationId = correlationId,
                 source = "N01", target = "N02", kind = "request", capability = "context.read",
-                payload = JSONObject().put("probe", true), timestamp = Instant.now().toString()
+                payload = JSONObject().put("probe", true), timestamp = System.currentTimeMillis()
             )
-            val result = sender.send("http://127.0.0.1:18767/soul/mesh/v1", request)
+            val result = runCatching { sender.send(request) }
             assertTrue(result.isSuccess)
             val response = result.getOrThrow()
             assertEquals("response", response.kind)
