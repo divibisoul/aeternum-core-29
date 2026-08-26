@@ -13,6 +13,7 @@ class SoulExecutionScheduler(private val pilot: SoulPilot) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     fun executeParallel(capabilities: List<String>, payload: JSONObject = JSONObject(), onComplete: (List<SoulPilot.Task>) -> Unit) {
+        require(capabilities.isNotEmpty()) { "PARALLEL_PLAN_EMPTY" }
         scope.async {
             coroutineScope {
                 capabilities.map { capability -> async(Dispatchers.Default) { pilot.execute(capability, payload) } }.awaitAll()
@@ -20,12 +21,15 @@ class SoulExecutionScheduler(private val pilot: SoulPilot) {
         }.invokeOnCompletion { cause ->
             if (cause == null) {
                 scope.async(Dispatchers.Default) {
-                    capabilities.map { pilot.allTasks().last { it.capability == it.capability } }
+                    capabilities.map { capability -> pilot.allTasks().lastOrNull { it.capability == capability } }
+                        .filterNotNull()
                 }.invokeOnCompletion { }
             }
         }
         scope.async(Dispatchers.Default) {
-            val tasks = coroutineScope { capabilities.map { capability -> async { pilot.execute(capability, payload) } }.awaitAll() }
+            val tasks = coroutineScope {
+                capabilities.map { capability -> async(Dispatchers.Default) { pilot.execute(capability, payload) } }.awaitAll()
+            }
             onComplete(tasks)
         }
     }
