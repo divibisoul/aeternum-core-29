@@ -12,15 +12,22 @@ object SoulMeshBootstrap {
         val runtime = SoulMeshRuntime(remote = remote)
         val executor = SoulHybridCapabilityExecutor(webDelegate, remote)
 
-        // N01 is the native APK runtime. Other nuclei are registered only when
-        // their actual local handlers are present; otherwise runtime.send()
-        // falls through to the configured hybrid network transport.
         val localHandlers = SoulCapabilityCatalog.capabilities
             .filter { it.owner == "N01" && it.execution == Execution.LOCAL }
             .associate { capability ->
                 capability.id to { payload: JSONObject ->
-                    if (capability.id == "mesh.ping") JSONObject().put("ok", true).put("runtime", "android")
-                    else JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
+                    when (capability.id) {
+                        "mesh.ping" -> JSONObject().put("ok", true).put("runtime", "android")
+                        "files.pick", "media.pick" -> JSONObject()
+                            .put("ok", true)
+                            .put("runtime", "android")
+                            .put("resources", payload.optJSONArray("resources") ?: org.json.JSONArray())
+                        "device.camera", "device.microphone" -> JSONObject()
+                            .put("ok", true)
+                            .put("runtime", "android")
+                            .put("permissionGate", true)
+                        else -> JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
+                    }
                 }
             }
         runtime.register("N01", SoulMeshEndpoint("N01", localHandlers) { message -> executor.execute(message) })
