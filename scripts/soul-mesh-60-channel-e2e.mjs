@@ -1,17 +1,15 @@
 const nuclei = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
-const peers = nuclei.filter((n) => n !== 'N01');
-const endpoint = (nucleus) => process.env[`SOUL_${nucleus}_ENDPOINT`];
+const endpoint = (nucleus) => nucleus === 'N01' ? process.env.SOUL_N01_ENDPOINT : process.env[`SOUL_${nucleus}_ENDPOINT`];
 const id = () => crypto.randomUUID();
 
 function channels() {
-  return nuclei.flatMap((source) => nuclei.filter((target) => target !== source).flatMap((target) =>
-    [1, 2, 3, 4, 5].flatMap((slot) => [`${source}.OUT.${slot}.${target}`, `${source}.IN.${slot}.${target}`])
+  return nuclei.flatMap((owner) => nuclei.filter((peer) => peer !== owner).flatMap((peer) =>
+    [1, 2, 3, 4, 5].flatMap((slot) => [`${owner}.OUT.${slot}.${peer}`, `${owner}.IN.${slot}.${peer}`])
   ));
 }
 
 async function probe(channelId) {
-  const [, direction, , target] = channelId.split('.');
-  const peer = direction === 'OUT' ? target : channelId.split('.')[0];
+  const [, , , peer] = channelId.split('.');
   const url = endpoint(peer);
   const correlationId = id();
   if (!url) return { channelId, peer, status: 'CONFIG_MISSING', executed: false };
