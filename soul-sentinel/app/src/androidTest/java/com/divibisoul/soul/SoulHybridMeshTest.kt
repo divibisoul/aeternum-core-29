@@ -1,31 +1,34 @@
 package com.divibisoul.soul
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SoulHybridMeshTest {
+    private val context: Context = ApplicationProvider.getApplicationContext()
+
     @Test
-    fun allThirtyDirectedLinksRespondToPing() {
-        val mesh = SoulMeshBootstrap.create { SoulMeshBootstrap.delegateToWeb(it) }
-        for (source in SoulMeshChannels.nuclei) {
-            for (target in SoulMeshChannels.out(source)) {
-                val response = mesh.send(source, target, "mesh.ping", JSONObject())
-                assertEquals("response", response.kind)
-                assertEquals(source, response.target)
-                assertEquals(target, response.source)
-                assertEquals("mesh.ping", response.capability)
-            }
-        }
+    fun bootstrapRegistersOnlyTheRealN01Endpoint() {
+        val mesh = SoulMeshBootstrap.create(context) { SoulMeshBootstrap.delegateToWeb(it) }
+        assertEquals(setOf("N01"), mesh.registeredNuclei())
+        assertFalse(mesh.allNucleiRegistered())
+        val response = mesh.send("N02", "N01", "mesh.health", JSONObject())
+        assertEquals("response", response.kind)
+        assertEquals("N01", response.source)
+        assertEquals("N02", response.target)
     }
 
     @Test
-    fun webSessionCapabilityIsDelegatedToHybridRuntime() {
-        val mesh = SoulMeshBootstrap.create { SoulMeshBootstrap.delegateToWeb(it) }
-        val response = mesh.send("N01", "N02", "chat.orchestrate", JSONObject().put("text", "ping"))
-        assertEquals("event", response.kind)
-        assertEquals("WEB_SESSION", response.payload.getString("execution"))
-        assertTrue(response.correlationId.isNotBlank())
+    fun remotePeerRequiresRealTransportConfiguration() {
+        val mesh = SoulMeshBootstrap.create(context) { SoulMeshBootstrap.delegateToWeb(it) }
+        val failure = runCatching {
+            mesh.send("N01", "N02", "mesh.health", JSONObject())
+        }.exceptionOrNull()
+        assertTrue(failure != null)
+        assertTrue(failure!!.message!!.contains("not registered") || failure.message!!.contains("No transport endpoint"))
     }
 }
