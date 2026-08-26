@@ -1,32 +1,31 @@
-# Soul / Aeternum Integration Status
+# SOUL Integration Status — 2026-08-26
 
-This document tracks the recovery and integration work toward an Android APK.
+## Verified repository-level changes on `soul-reconstruction-2026-08-26`
 
-## Current baseline
-- Repository: `divibisoul/aeternum-core-29`
-- Stack: Vite + React + TypeScript
-- Android project: not present in the current repository baseline
-- Capacitor: not present in the current repository baseline
-- Native Android bridge: not present in the current repository baseline
+- Canonical nucleus IDs are N01..N06 in the N01 TypeScript Mesh protocol.
+- N01 peer endpoint names are canonicalized to N02..N06.
+- N01 has a transport-neutral hybrid channel contract.
+- N01 has a universal capability gateway abstraction for user-facing APK access to capabilities owned by any nucleus.
+- N01 Android runtime has a local-first / remote-fallback Mesh path.
+- N01 Android configuration now supports explicit N02-N06 remote endpoint configuration; empty configuration is treated as unavailable, not as connected.
+- N01 has a 60-channel Kotlin topology model and tests for exactly 5 IN + 5 OUT per nucleus.
+- N01 has a supervisory Pilot Cockpit state model whose initial channel state is UNVERIFIED.
+- N02, N03, N04, N05 and N06 have transport-neutral hybrid channel contracts.
+- N06 TypeScript Mesh protocol and peer endpoints are canonicalized to N01..N06.
 
-## Integration targets
-1. Consolidate reusable Aeternum/Nexus/Eternium capabilities.
-2. Establish a canonical Soul application shell.
-3. Add an Android build layer without exposing secrets in the APK.
-4. Add native perception capabilities only through explicit Android bridges.
-5. Produce and validate a signed/debug APK build.
+## Important non-claims
 
-## Status
-- Repository ownership/access: 100%
-- Initial repository inventory: 100%
-- Cross-repository architectural mapping: 25%
-- Duplicate/obsolete code classification: 15%
-- Soul canonical core: 10%
-- Android project/build layer: 0%
-- Native Android perception layer: 0%
-- Secret/configuration hardening: 10%
-- APK build pipeline: 0%
-- Device installation validation: 0%
+These changes do NOT claim that the six deployed runtimes are already live-connected. The repositories do not provide evidence of six deployed endpoints or a successful end-to-end exchange across all 60 channels.
 
-## Rule
-Do not delete legacy implementations until their functionality has been mapped and a replacement has been validated.
+They establish the common contract and the APK-side hybrid routing machinery needed to make that connectivity testable.
+
+## Next verification gates
+
+1. Inventory every capability in all six repositories and assign one canonical owner.
+2. Replace any remaining legacy nucleus identifiers in executable code.
+3. Bind every real capability handler to the canonical registry.
+4. Connect N01's Web Session/Pilot completion path to asynchronous Mesh correlation.
+5. Replace provider-specific AI calls at capability boundaries with the provider-neutral Web Session boundary where technically possible.
+6. Configure actual N02-N06 runtime endpoints without inventing URLs.
+7. Run true E2E request -> transport -> target -> handler -> correlated response tests.
+8. Mark each of the 60 directional channels only from live evidence.
