@@ -3,9 +3,9 @@ package com.divibisoul.soul
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Concrete Android transport for Mesh messages. */
-class SoulMeshTransport(private val endpoints: Map<String, String>) {
-    fun send(message: SoulMeshMessage): SoulMeshMessage {
+/** Concrete Android HTTP transport for server-backed Mesh messages. */
+class SoulMeshTransport(private val endpoints: Map<String, String>) : SoulMeshTransporter {
+    override fun send(message: SoulMeshMessage): SoulMeshMessage {
         message.validate().getOrThrow()
         val endpoint = endpoints[message.target] ?: error("No transport endpoint for ${message.target}")
         val connection = (URL(endpoint).openConnection() as HttpURLConnection).apply {
