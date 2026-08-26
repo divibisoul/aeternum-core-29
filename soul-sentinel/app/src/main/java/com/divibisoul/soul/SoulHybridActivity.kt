@@ -32,7 +32,17 @@ class SoulHybridActivity : ComponentActivity() {
         deviceCapabilities = SoulDeviceCapabilities(this)
         aiProviderRegistry = SoulAiProviderRegistry()
         val config = SoulConfig(this)
-        mesh = SoulMeshBootstrap.create(webDelegate = SoulMeshBootstrap::delegateToWeb, remoteEndpoints = config.meshEndpoints())
+        mesh = SoulMeshBootstrap.create(
+            webDelegate = SoulMeshBootstrap::delegateToWeb,
+            remoteEndpoints = config.meshEndpoints(),
+            permissionGranted = { capability ->
+                when (capability) {
+                    SoulDevicePermissionMatrix.CAMERA -> permissionCoordinator.hasCamera()
+                    SoulDevicePermissionMatrix.MICROPHONE -> permissionCoordinator.hasMicrophone()
+                    else -> true
+                }
+            },
+        )
         registry = SoulCapabilityRegistry()
         pilot = SoulPilot(registry, mesh)
         mesh60 = SoulMesh60ConnectionMatrix(mesh)
