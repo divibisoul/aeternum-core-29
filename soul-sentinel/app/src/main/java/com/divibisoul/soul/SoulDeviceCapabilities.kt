@@ -17,13 +17,23 @@ class SoulDeviceCapabilities(private val activity: Activity) {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "*/*"
             putExtra(Intent.EXTRA_ALLOW_MULTIPLE, allowMultiple)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }, REQUEST_FILES)
     }
 
     fun openMediaPicker() {
-        activity.startActivityForResult(Intent(Intent.ACTION_PICK).apply {
+        activity.startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
             type = "image/*"
+            putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
         }, REQUEST_MEDIA)
+    }
+
+    fun persistReadAccess(uri: Uri) {
+        runCatching {
+            activity.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
     }
 
     fun openAppSettings() {
