@@ -31,24 +31,24 @@ export const SOUL_MESH_CORE_CAPABILITIES: Record<SoulNucleus, SoulMeshCapability
   N06: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N06', execution: 'observability' }],
 };
 
-/** Runtime registry: N01 records what peers actually advertise instead of guessing. */
 export class SoulMeshCapabilityRegistry {
   private readonly registry = new Map<SoulNucleus, Map<string, SoulMeshCapability>>();
 
   register(nucleus: SoulNucleus, capabilities: readonly SoulMeshCapability[]): void {
-    const map = new Map<string, SoulMeshCapability>();
-    for (const capability of capabilities) {
-      if (capability.owner === nucleus && capability.id && capability.version) map.set(capability.id, capability);
-    }
-    this.registry.set(nucleus, map);
+    this.registry.set(nucleus, this.toMap(nucleus, capabilities));
   }
 
   merge(nucleus: SoulNucleus, capabilities: readonly SoulMeshCapability[]): void {
     const map = this.registry.get(nucleus) ?? new Map<string, SoulMeshCapability>();
     for (const capability of capabilities) {
-      if (capability.owner === nucleus && capability.id && capability.version) map.set(capability.id, capability);
+      if (this.isOwnedCapability(nucleus, capability)) map.set(capability.id, capability);
     }
     this.registry.set(nucleus, map);
+  }
+
+  /** Atomically replace a peer's advertised snapshot; stale capabilities disappear. */
+  sync(nucleus: SoulNucleus, capabilities: readonly SoulMeshCapability[]): void {
+    this.register(nucleus, capabilities);
   }
 
   list(nucleus: SoulNucleus): SoulMeshCapability[] {
@@ -63,9 +63,25 @@ export class SoulMeshCapabilityRegistry {
     return this.get(nucleus, capabilityId)?.request === true;
   }
 
+  has(nucleus: SoulNucleus): boolean {
+    return this.registry.has(nucleus);
+  }
+
   clear(nucleus?: SoulNucleus): void {
     if (nucleus) this.registry.delete(nucleus);
     else this.registry.clear();
+  }
+
+  private toMap(nucleus: SoulNucleus, capabilities: readonly SoulMeshCapability[]): Map<string, SoulMeshCapability> {
+    const map = new Map<string, SoulMeshCapability>();
+    for (const capability of capabilities) {
+      if (this.isOwnedCapability(nucleus, capability)) map.set(capability.id, capability);
+    }
+    return map;
+  }
+
+  private isOwnedCapability(nucleus: SoulNucleus, capability: SoulMeshCapability): boolean {
+    return capability.owner === nucleus && Boolean(capability.id) && Boolean(capability.version);
   }
 }
 
