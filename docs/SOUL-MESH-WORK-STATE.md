@@ -2,6 +2,6 @@
 
 Status: implementation work started.
 
-This file is a marker for the current GitHub-backed implementation state. It is intentionally minimal and does not claim E2E completion.
+This file is a marker for the current GitHub-backed implementation state. It intentionally does not claim E2E completion.
 
-Verified target architecture: N01-N06 are distinct nuclei connected through Soul Mesh. The authoritative completion criterion is functional bidirectional communication and capability execution, not endpoint/file presence.
+Authoritative completion criterion: N01-N06 must communicate bidirectionally through Soul Mesh and execute real remote capabilities. Endpoint/file presence alone is not completion.
