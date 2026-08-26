@@ -12,8 +12,7 @@ class SoulAiSessionActivity : ComponentActivity() {
             SoulAiProvider.valueOf(intent.getStringExtra("provider") ?: SoulAiProvider.CHATGPT.name)
         }.getOrDefault(SoulAiProvider.CHATGPT)
         val webView = WebView(this)
-        SoulSecureWebView.configure(webView)
-        SoulAiWebSession(setOf(provider.host, "www.${provider.host}")).attach(webView)
+        SoulAiWebSession(provider.hosts).attach(webView)
         webView.loadUrl(provider.loginUrl)
         setContentView(webView)
     }
