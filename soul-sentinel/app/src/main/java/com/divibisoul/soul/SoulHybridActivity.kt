@@ -23,12 +23,14 @@ class SoulHybridActivity : ComponentActivity() {
     private lateinit var registry: SoulCapabilityRegistry
     private lateinit var pilot: SoulPilot
     private lateinit var mesh60: SoulMesh60ConnectionMatrix
+    private lateinit var aiProviderRegistry: SoulAiProviderRegistry
     private var pendingMediaRequest: android.webkit.PermissionRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         permissionCoordinator = SoulPermissionCoordinator(this)
         deviceCapabilities = SoulDeviceCapabilities(this)
+        aiProviderRegistry = SoulAiProviderRegistry()
         val config = SoulConfig(this)
         mesh = SoulMeshBootstrap.create(webDelegate = SoulMeshBootstrap::delegateToWeb, remoteEndpoints = config.meshEndpoints())
         registry = SoulCapabilityRegistry()
@@ -54,11 +56,11 @@ class SoulHybridActivity : ComponentActivity() {
 
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message -> mesh.send(message.source, message.target, message.capability, message.payload) }, { completion ->
             webView.post { webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive&&window.SoulHybridRuntime.receive(${JSONObject.quote(completion.toJson().toString())});", null) }
-        }, pilot = pilot, probe60 = { mesh60.probeAll() }))
+        }, pilot = pilot, probe60 = { mesh60.probeAll() }, aiProviders = aiProviderRegistry))
         webView.loadUrl(SoulSecureWebView.localUrl())
 
-        bindAi(R.id.button_ai_1, SoulAiProvider.CHATGPT)
-        bindAi(R.id.button_ai_2, SoulAiProvider.CLAUDE)
+        bindAi(R.id.button_ai_1, "chatgpt")
+        bindAi(R.id.button_ai_2, "claude")
         findViewById<Button>(R.id.button_chat).setOnClickListener { focusBrowser("chat") }
         findViewById<Button>(R.id.button_pilot).setOnClickListener { focusBrowser("pilot") }
         findViewById<Button>(R.id.button_cockpit).setOnClickListener { focusBrowser("cockpit") }
@@ -106,7 +108,13 @@ class SoulHybridActivity : ComponentActivity() {
         pendingMediaRequest?.let { request -> pendingMediaRequest = null; grantWebMediaRequest(request) }
     }
 
-    private fun bindAi(buttonId: Int, provider: SoulAiProvider) { findViewById<Button>(buttonId).setOnClickListener { startActivity(Intent(this, SoulAiSessionActivity::class.java).apply { putExtra("provider", provider.name) }) } }
+    private fun bindAi(buttonId: Int, providerId: String) {
+        findViewById<Button>(buttonId).setOnClickListener {
+            val provider = aiProviderRegistry.get(providerId) ?: return@setOnClickListener
+            startActivity(Intent(this, SoulAiSessionActivity::class.java).apply { putExtra("provider", provider.id) })
+        }
+    }
+
     private fun focusBrowser(area: String) { status.text = "Soul area: ${area.replaceFirstChar { it.uppercase() }}"; webView.visibility = View.VISIBLE; webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.openArea&&window.SoulHybridRuntime.openArea(${JSONObject.quote(area)});", null) }
     private fun showDeviceAccess() { permissionCoordinator.requestDeviceAccess(); status.text = "Device capabilities requested — user controls each permission" }
 }
