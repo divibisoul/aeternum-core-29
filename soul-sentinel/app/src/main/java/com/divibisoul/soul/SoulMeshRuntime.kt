@@ -7,12 +7,12 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Hybrid in-process mesh runtime. Local nuclei are preferred; when a nucleus
- * is not hosted by the APK, the same message is handed to the configured
- * network transport. No route is reported as successful without a response.
+ * is not hosted by the APK, the same message is handed to a configured hybrid
+ * transporter. The runtime never converts an unavailable route into success.
  */
 class SoulMeshRuntime(
     private val nuclei: List<String> = SoulMeshChannels.nuclei,
-    private val remote: SoulMeshTransport? = null,
+    private val remote: SoulMeshTransporter? = null,
 ) {
     private val endpoints = ConcurrentHashMap<String, SoulMeshEndpoint>()
 
