@@ -7,13 +7,27 @@ export type SoulMeshCapability = {
   request: boolean;
   response: boolean;
   events: boolean;
+  /** True when this capability is backed by an observed local handler. */
+  implemented?: boolean;
 };
 
+/**
+ * N01's canonical mesh capabilities. This is an inventory of real interfaces,
+ * not a claim that remote nuclei already implement them.
+ */
 export const SOUL_MESH_CORE_CAPABILITIES: Record<SoulNucleus, SoulMeshCapability[]> = {
-  aeternum: [{ id: 'orchestration', version: '1.0', description: 'Soul orchestration and routing', request: true, response: true, events: true }],
-  nexus: [{ id: 'cognitive-ui', version: '1.0', description: 'Cognitive interaction and UI services', request: true, response: true, events: true }],
-  eternium: [{ id: 'cognitive-processing', version: '1.0', description: 'Cognitive processing services', request: true, response: true, events: true }],
-  chatbot: [{ id: 'conversation', version: '1.0', description: 'Conversational services', request: true, response: true, events: true }],
-  chatbots: [{ id: 'conversation', version: '1.0', description: 'Conversational services', request: true, response: true, events: true }],
-  'chatbot-2000': [{ id: 'conversation', version: '1.0', description: 'Conversational services', request: true, response: true, events: true }],
+  N01: [
+    { id: 'mesh.handshake', version: '2.0', description: 'Protocol and nucleus negotiation', request: true, response: true, events: false, implemented: true },
+    { id: 'mesh.health', version: '2.0', description: 'Live health and transport state', request: true, response: true, events: true, implemented: true },
+    { id: 'mesh.capabilities', version: '2.0', description: 'Observed local capability inventory', request: true, response: true, events: true, implemented: true },
+    { id: 'ai.reasoning', version: '2.0', description: 'N01 cognitive pipeline entry point', request: true, response: true, events: true, implemented: true },
+    { id: 'cognitive.intent', version: '2.0', description: 'Intent analysis through N01 IntentAnalyzer', request: true, response: true, events: false, implemented: true },
+    { id: 'agi.process', version: '2.0', description: 'N01 AeternumAGI processing and metrics', request: true, response: true, events: true, implemented: true },
+    { id: 'android.state', version: '2.0', description: 'Android/native state supplied by the host bridge when available', request: true, response: true, events: true, implemented: false },
+  ],
+  N02: [],
+  N03: [],
+  N04: [],
+  N05: [],
+  N06: [],
 };
