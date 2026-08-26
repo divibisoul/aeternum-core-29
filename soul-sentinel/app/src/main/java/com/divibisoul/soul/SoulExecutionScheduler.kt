@@ -20,17 +20,9 @@ class SoulExecutionScheduler(private val pilot: SoulPilot) {
             }
         }.invokeOnCompletion { cause ->
             if (cause == null) {
-                scope.async(Dispatchers.Default) {
-                    capabilities.map { capability -> pilot.allTasks().lastOrNull { it.capability == capability } }
-                        .filterNotNull()
-                }.invokeOnCompletion { }
+                val tasks = capabilities.map { capability -> pilot.allTasks().lastOrNull { it.capability == capability } }.filterNotNull()
+                onComplete(tasks)
             }
-        }
-        scope.async(Dispatchers.Default) {
-            val tasks = coroutineScope {
-                capabilities.map { capability -> async(Dispatchers.Default) { pilot.execute(capability, payload) } }.awaitAll()
-            }
-            onComplete(tasks)
         }
     }
 }
