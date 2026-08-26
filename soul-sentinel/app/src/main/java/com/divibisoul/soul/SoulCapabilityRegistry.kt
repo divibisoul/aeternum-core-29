@@ -14,10 +14,14 @@ data class SoulRegisteredCapability(
     val dependencies: Set<String> = emptySet(),
 )
 
-class SoulCapabilityRegistry(private val nuclei: Set<String> = SoulMeshChannels.nuclei) {
+data class SoulRegistryIssue(val capability: String, val reason: String)
+
+class SoulCapabilityRegistry(private val nuclei: Set<String> = SoulMeshChannels.nuclei.toSet()) {
     private val capabilities = ConcurrentHashMap<String, SoulRegisteredCapability>()
 
     init {
+        val duplicateIds = SoulCapabilityCatalog.capabilities.groupingBy { it.id }.eachCount().filterValues { it > 1 }.keys
+        require(duplicateIds.isEmpty()) { "DUPLICATE_CAPABILITIES: $duplicateIds" }
         SoulCapabilityCatalog.capabilities.forEach { catalogEntry ->
             register(
                 SoulRegisteredCapability(
@@ -46,6 +50,16 @@ class SoulCapabilityRegistry(private val nuclei: Set<String> = SoulMeshChannels.
     fun registerAll(items: Iterable<SoulRegisteredCapability>) { items.forEach(::register) }
     fun resolve(id: String): SoulRegisteredCapability? = capabilities[id]
     fun all(): List<SoulRegisteredCapability> = capabilities.values.sortedBy { it.id }
+
+    fun integrityIssues(): List<SoulRegistryIssue> = buildList {
+        SoulCapabilityCatalog.capabilities.forEach { entry ->
+            val runtime = resolve(entry.id)
+            if (runtime == null) add(SoulRegistryIssue(entry.id, "NOT_REGISTERED"))
+            else if (runtime.owner != entry.owner) add(SoulRegistryIssue(entry.id, "OWNER_MISMATCH"))
+        }
+    }
+
+    fun isReady(): Boolean = integrityIssues().isEmpty() && all().isNotEmpty()
 
     fun toJson(): JSONObject = JSONObject().put("capabilities", all().map {
         JSONObject().apply {
