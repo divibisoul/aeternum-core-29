@@ -33,17 +33,21 @@ class SoulMesh60ConnectionMatrix(
         )
     }
 
-    /** Executes a real request through the runtime for one directed channel. */
+    /** Executes a real request through the runtime. N01 is the physical caller; the target's correlated response proves the return direction. */
     fun probe(source: String, target: String): Channel {
-        require(source in SoulMeshChannels.nuclei && target in SoulMeshChannels.nuclei && source != target)
+        require(source == "N01") { "N01 can directly originate only N01.OUT channels; remote-origin probes must execute in the remote runtime." }
+        require(target in SoulMeshChannels.nuclei && target != "N01")
         val id = "$source.OUT.$target.IN"
         return runCatching {
             val response = runtime.send(source, target, "mesh.ping", org.json.JSONObject().put("probe", id).put("nonce", UUID.randomUUID().toString()))
-            Channel(id, source, target, true, response.payload.optBoolean("ok", true), response.correlationId)
-        }.getOrElse { error ->
-            Channel(id, source, target, runtime.canRoute(target), false, error = error.message ?: "PROBE_FAILED")
-        }
+            val ok = response.kind == "response" && response.correlationId.isNotBlank() && response.source == target && response.target == source && response.payload.optBoolean("ok", false)
+            Channel(id, source, target, true, ok, response.correlationId, if (ok) null else "INVALID_PROBE_RESPONSE")
+        }.getOrElse { error -> Channel(id, source, target, runtime.canRoute(target), false, error = error.message ?: "PROBE_FAILED") }
     }
 
-    fun probeAll(): List<Channel> = SoulMeshChannels.directedLinks().map { (source, target) -> probe(source, target) }
+    /** Probes the five physical N01 peer connections. The returned response also exercises the reverse message direction. */
+    fun probeN01Peers(): List<Channel> = SoulMeshChannels.nuclei.filter { it != "N01" }.map { target -> probe("N01", target) }
+
+    /** Full 60-channel certification is distributed: each remote runtime must originate its own OUT probes. */
+    fun probeAll(): List<Channel> = probeN01Peers()
 }
