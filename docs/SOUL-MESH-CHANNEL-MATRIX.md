@@ -1,10 +1,15 @@
-# Soul Mesh — Complete Channel Matrix
+# Soul Mesh — Complete 60-Channel Matrix
 
-The six nuclei now have an explicit complete logical channel matrix.
+The six nuclei expose exactly five logical OUT ports and five logical IN ports each.
 
-Each nucleus has exactly 5 outbound peers and 5 inbound peers:
+That produces:
 
-| Nucleus | OUT | IN |
+- 30 logical OUT channels;
+- 30 logical IN channels;
+- 60 directional logical channels;
+- 15 bidirectional nucleus pairs.
+
+| Nucleus | OUT peers | IN peers |
 |---|---|---|
 | N01 | N02,N03,N04,N05,N06 | N02,N03,N04,N05,N06 |
 | N02 | N01,N03,N04,N05,N06 | N01,N03,N04,N05,N06 |
@@ -13,20 +18,30 @@ Each nucleus has exactly 5 outbound peers and 5 inbound peers:
 | N05 | N01,N02,N03,N04,N06 | N01,N02,N03,N04,N06 |
 | N06 | N01,N02,N03,N04,N05 | N01,N02,N03,N04,N05 |
 
-Totals:
+## Hybrid transport requirement
 
-- 30 logical OUT links;
-- 30 logical IN links;
-- 15 bidirectional peer pairs.
+Every logical IN/OUT channel is transport-neutral. At runtime a channel may negotiate one of:
 
-A logical channel is not automatically a live connection. Each channel must bind to a runtime endpoint and pass the connection proof sequence.
+- `WEBVIEW_BRIDGE` — Android APK ↔ WebView;
+- `LOOPBACK_HTTP` — same-device runtime;
+- `HTTP` — network/server-backed runtime;
+- `REALTIME` — realtime/event transport;
+- `IN_PROCESS` — nuclei co-hosted in one runtime.
 
-## Required live proof
+A transport is a mechanism, not a second channel. The same message contract, nucleus identity and correlation ID are retained across transport changes.
 
-For every directed link:
+## Universal APK gateway
 
-`source endpoint -> transport -> target endpoint -> validation -> dispatch -> ACK/response -> correlation`
+N01 is the user-facing hybrid APK/host. A capability may be owned and executed by any nucleus, while the user reaches it through N01. The APK gateway must therefore resolve capability ownership and select an available hybrid transport instead of assuming that every capability is local to N01.
 
-Only then is that directed link `CONNECTED`.
+The gateway is a control/access point, not a CPU bottleneck. Independent work may be dispatched in parallel when dependencies permit.
 
-The matrix is deliberately generated from the six canonical nucleus IDs rather than manually duplicating 60 declarations, preventing mismatched or missing peers.
+## Live connection proof
+
+A matrix entry is only a logical channel. It is **not** evidence of connectivity.
+
+A directed channel becomes `CONNECTED` only after:
+
+`source -> channel -> negotiated transport -> target endpoint -> validation -> real capability handler -> correlated response/error`
+
+A registry entry without an executable handler is `UNVERIFIED`, not `CONNECTED`.
