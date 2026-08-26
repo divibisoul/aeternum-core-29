@@ -1,5 +1,6 @@
 import { SOUL_NUCLEI, SOUL_MESH_PEERS, type SoulNucleusId } from './SoulMeshTopology';
 import { rankPeersForIntent, type SoulPilotIntent } from './SoulPilotRouting';
+import { SoulMeshDirectAccess, type SoulChannelProbe } from './SoulMeshDirectAccess';
 
 export type SoulChannelState = 'UNVERIFIED' | 'CONNECTING' | 'CONNECTED' | 'DEGRADED' | 'FAILED';
 
@@ -23,6 +24,7 @@ export interface SoulCockpitDispatch {
 /** Supervisory cockpit state. It observes and dispatches; it is not a CPU scheduler. */
 export class SoulPilotCockpit {
   private readonly channels = new Map<string, SoulCockpitChannel>();
+  private readonly access = new SoulMeshDirectAccess('COCKPIT');
 
   constructor() {
     for (const source of SOUL_NUCLEI) {
@@ -47,11 +49,26 @@ export class SoulPilotCockpit {
   }
 
   dispatch(owner: SoulNucleusId, intents: SoulPilotIntent[]): SoulCockpitDispatch[] {
-    return intents.map((intent) => ({
-      intent,
-      candidates: rankPeersForIntent(owner, intent),
-      parallelizable: true,
-    }));
+    return intents.map((intent) => ({ intent, candidates: rankPeersForIntent(owner, intent), parallelizable: true }));
+  }
+
+  async verifyAllChannels(): Promise<SoulChannelProbe[]> {
+    const results = await this.access.probeAll();
+    const now = Date.now();
+    for (const result of results) {
+      const c = result.channel;
+      this.setChannel({
+        source: c.source,
+        target: c.target,
+        direction: c.direction,
+        slot: c.slot,
+        state: result.reachable ? 'CONNECTED' : result.configured ? 'FAILED' : 'UNVERIFIED',
+        transport: 'HTTP',
+        lastVerifiedAt: result.reachable ? now : undefined,
+        error: result.error,
+      });
+    }
+    return results;
   }
 
   snapshot(): SoulCockpitChannel[] {
