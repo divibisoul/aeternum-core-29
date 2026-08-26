@@ -13,6 +13,7 @@ class SoulHybridBridge(
     private val pilot: SoulPilot? = null,
     private val probe60: (() -> List<SoulMesh60ConnectionMatrix.Channel>)? = null,
     private val aiProviders: SoulAiProviderRegistry? = null,
+    private val cockpit: SoulCockpitSnapshot? = null,
 ) {
     @JavascriptInterface
     fun dispatch(rawJson: String): String = runCatching {
@@ -29,8 +30,9 @@ class SoulHybridBridge(
         val payload = request.optJSONObject("payload") ?: JSONObject()
         val task = pilot.execute(capability, payload)
         JSONObject().apply {
-            put("accepted", true); put("taskId", task.taskId); put("capability", task.capability)
-            put("owner", task.owner); put("correlationId", task.correlationId); put("response", task.response.toJson())
+            put("accepted", task.state != SoulPilot.TaskState.FAILED); put("taskId", task.taskId); put("capability", task.capability)
+            put("owner", task.owner); put("correlationId", task.correlationId); put("state", task.state.name); put("response", task.response.toJson())
+            task.error?.let { put("error", it) }
         }.toString()
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "Pilot execution error").toString() }
 
@@ -54,15 +56,18 @@ class SoulHybridBridge(
     @JavascriptInterface
     fun aiProviders(): String = runCatching {
         val registry = requireNotNull(aiProviders) { "AI_PROVIDER_REGISTRY_NOT_CONFIGURED" }
-        JSONArray().apply {
-            registry.allEnabled().forEach { provider ->
-                put(JSONObject().apply {
-                    put("id", provider.id); put("displayName", provider.displayName); put("role", provider.role)
-                    put("loginUrl", provider.loginUrl); put("hosts", JSONArray(provider.hosts.toList()))
-                })
-            }
-        }.toString()
+        JSONArray().apply { registry.allEnabled().forEach { provider ->
+            put(JSONObject().apply {
+                put("id", provider.id); put("displayName", provider.displayName); put("role", provider.role)
+                put("loginUrl", provider.loginUrl); put("hosts", JSONArray(provider.hosts.toList()))
+            })
+        } }.toString()
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "AI provider registry error").toString() }
+
+    @JavascriptInterface
+    fun cockpitSnapshot(): String = runCatching {
+        requireNotNull(cockpit) { "COCKPIT_NOT_CONFIGURED" }.toJson().toString()
+    }.getOrElse { error -> JSONObject().put("error", error.message ?: "Cockpit snapshot error").toString() }
 
     @JavascriptInterface
     fun complete(rawJson: String): String = runCatching {
@@ -75,16 +80,12 @@ class SoulHybridBridge(
     @JavascriptInterface
     fun probe60(): String = runCatching {
         val results = requireNotNull(probe60) { "MESH_60_PROBE_NOT_CONFIGURED" }.invoke()
-        JSONArray().apply {
-            results.forEach { result ->
-                put(JSONObject().apply {
-                    put("channelId", result.id); put("source", result.source); put("target", result.target)
-                    put("configured", result.configured); put("reachable", result.reachable)
-                    result.correlationId?.let { put("correlationId", it) }; result.error?.let { put("error", it) }
-                    put("checkedAt", result.checkedAt)
-                })
-            }
-        }.toString()
+        JSONArray().apply { results.forEach { result -> put(JSONObject().apply {
+            put("channelId", result.id); put("source", result.source); put("target", result.target)
+            put("configured", result.configured); put("reachable", result.reachable)
+            result.correlationId?.let { put("correlationId", it) }; result.error?.let { put("error", it) }
+            put("checkedAt", result.checkedAt)
+        }) } }.toString()
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "60-channel probe error").toString() }
 
     companion object {
