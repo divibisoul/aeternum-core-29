@@ -22,4 +22,14 @@ class SoulConfig(context: Context) {
     var enabled: Boolean
         get() = prefs.getBoolean("enabled", false)
         set(v) = prefs.edit().putBoolean("enabled", v).apply()
+
+    fun meshEndpoint(nucleus: String): String? = prefs.getString("mesh_endpoint_$nucleus", null)?.takeIf { it.isNotBlank() }
+
+    fun setMeshEndpoint(nucleus: String, endpoint: String?) {
+        require(nucleus in setOf("N02", "N03", "N04", "N05", "N06")) { "Invalid remote nucleus: $nucleus" }
+        val editor = prefs.edit()
+        if (endpoint.isNullOrBlank()) editor.remove("mesh_endpoint_$nucleus")
+        else editor.putString("mesh_endpoint_$nucleus", endpoint.trim())
+        editor.apply()
+    }
 }
