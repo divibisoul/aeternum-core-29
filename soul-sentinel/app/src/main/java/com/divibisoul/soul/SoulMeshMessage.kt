@@ -13,6 +13,7 @@ data class SoulMeshMessage(
     val capability: String,
     val payload: JSONObject,
     val timestamp: String,
+    val channelId: String? = null,
 ) {
     fun validate(): Result<Unit> = SoulMeshContract.validate(
         protocol, id, correlationId, source, target, kind, capability
@@ -28,6 +29,7 @@ data class SoulMeshMessage(
         put("capability", capability)
         put("payload", payload)
         put("timestamp", timestamp)
+        channelId?.let { put("channelId", it) }
     }
 
     companion object {
@@ -42,6 +44,7 @@ data class SoulMeshMessage(
                 capability = json.optString("capability"),
                 payload = json.optJSONObject("payload") ?: JSONObject(),
                 timestamp = json.optString("timestamp"),
+                channelId = json.optString("channelId").takeIf { it.isNotBlank() },
             )
             message.validate().getOrThrow()
             return message
