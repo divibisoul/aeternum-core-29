@@ -22,6 +22,7 @@ class SoulHybridActivity : ComponentActivity() {
     private lateinit var mesh: SoulMeshRuntime
     private lateinit var registry: SoulCapabilityRegistry
     private lateinit var pilot: SoulPilot
+    private lateinit var mesh60: SoulMesh60ConnectionMatrix
     private var pendingMediaRequest: android.webkit.PermissionRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +33,7 @@ class SoulHybridActivity : ComponentActivity() {
         mesh = SoulMeshBootstrap.create(webDelegate = SoulMeshBootstrap::delegateToWeb, remoteEndpoints = config.meshEndpoints())
         registry = SoulCapabilityRegistry()
         pilot = SoulPilot(registry, mesh)
+        mesh60 = SoulMesh60ConnectionMatrix(mesh)
 
         setContentView(R.layout.activity_soul_shell)
         status = findViewById(R.id.soul_status)
@@ -56,10 +58,9 @@ class SoulHybridActivity : ComponentActivity() {
             }
         }
 
-        val mesh60 = SoulMesh60ChannelAccess(config.meshEndpoints())
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message -> mesh.send(message.source, message.target, message.capability, message.payload) }, { completion ->
             webView.post { webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive&&window.SoulHybridRuntime.receive(${JSONObject.quote(completion.toJson().toString())});", null) }
-        }, pilot = pilot, probe60 = { mesh60.probeAll() }))
+        }, pilot = pilot, probe60 = { mesh60.probeAll().map { result -> SoulMesh60ChannelAccess.Result(result.id, result.target, result.configured, result.reachable, result.correlationId, result.error) } }))
         webView.loadUrl(SoulSecureWebView.localUrl())
 
         bindAi(R.id.button_ai_1, SoulAiProvider.CHATGPT)
@@ -91,8 +92,12 @@ class SoulHybridActivity : ComponentActivity() {
     }
 
     private fun deliverDeviceResources(requestCode: Int, uris: List<Uri>) {
-        val resources = JSONArray().apply { uris.forEach { put(JSONObject().put("uri", it.toString()).put("capability", if (requestCode == SoulDeviceCapabilities.REQUEST_MEDIA) "media.pick" else "files.pick")) } }
-        val event = JSONObject().put("type", "device.resource.selected").put("resources", resources).put("source", "N01")
+        val capability = if (requestCode == SoulDeviceCapabilities.REQUEST_MEDIA) "media.pick" else "files.pick"
+        val resources = JSONArray().apply { uris.forEach { put(JSONObject().put("uri", it.toString())) } }
+        val payload = JSONObject().put("resources", resources)
+        val task = runCatching { pilot.execute(capability, payload) }.getOrNull()
+        val event = JSONObject().put("type", "device.resource.selected").put("resources", resources).put("source", "N01").put("capability", capability)
+        task?.let { event.put("taskId", it.taskId).put("correlationId", it.correlationId) }
         webView.post { webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receiveDeviceResource&&window.SoulHybridRuntime.receiveDeviceResource(${JSONObject.quote(event.toString())});", null) }
     }
 
