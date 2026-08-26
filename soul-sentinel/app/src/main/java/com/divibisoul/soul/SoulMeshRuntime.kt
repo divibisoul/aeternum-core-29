@@ -21,6 +21,11 @@ class SoulMeshRuntime(
         endpoints[nucleusId] = endpoint
     }
 
+    fun canRoute(target: String): Boolean {
+        require(target in nuclei) { "Unknown nucleus: $target" }
+        return endpoints.containsKey(target) || remote != null
+    }
+
     fun send(source: String, target: String, capability: String, payload: JSONObject): SoulMeshMessage {
         require(source in nuclei && target in nuclei && source != target)
         val request = SoulMeshMessage(
