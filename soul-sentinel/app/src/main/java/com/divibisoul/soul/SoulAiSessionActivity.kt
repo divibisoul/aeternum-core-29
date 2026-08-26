@@ -16,7 +16,18 @@ class SoulAiSessionActivity : ComponentActivity() {
             ?: error("AI_PROVIDER_NOT_REGISTERED: $providerId")
 
         val webView = WebView(this)
+        SoulSecureWebView.configure(webView)
         SoulAiWebSession(registration.hosts).attach(webView)
+
+        val config = SoulConfig(this)
+        val mesh = SoulMeshBootstrap.create(
+            webDelegate = SoulMeshBootstrap::delegateToWeb,
+            remoteEndpoints = config.meshEndpoints(),
+        )
+        val capabilityRegistry = SoulCapabilityRegistry()
+        val pilot = SoulPilot(capabilityRegistry, mesh)
+        webView.addJavascriptInterface(SoulAiSessionBridge(registration.id, pilot), "SoulAI")
+
         webView.loadUrl(registration.loginUrl)
         setContentView(webView)
     }
