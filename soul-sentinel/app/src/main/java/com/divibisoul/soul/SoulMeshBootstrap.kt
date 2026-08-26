@@ -2,24 +2,28 @@ package com.divibisoul.soul
 
 import org.json.JSONObject
 
-/** Builds the six nuclei and binds every capability to the correct execution mode. */
+/** Builds the APK runtime without claiming that remote nuclei are local. */
 object SoulMeshBootstrap {
-    fun create(webDelegate: (SoulMeshMessage) -> SoulMeshMessage): SoulMeshRuntime {
-        val runtime = SoulMeshRuntime()
-        val remote = SoulMeshTransport(emptyMap())
+    fun create(
+        webDelegate: (SoulMeshMessage) -> SoulMeshMessage,
+        remoteEndpoints: Map<String, String> = emptyMap(),
+    ): SoulMeshRuntime {
+        val remote = SoulMeshTransport(remoteEndpoints)
+        val runtime = SoulMeshRuntime(remote = remote)
         val executor = SoulHybridCapabilityExecutor(webDelegate, remote)
 
-        SoulMeshChannels.nuclei.forEach { nucleus ->
-            val handlers = SoulCapabilityCatalog.capabilities
-                .filter { it.owner == nucleus && it.execution == Execution.LOCAL }
-                .associate { capability ->
-                    capability.id to { payload: JSONObject ->
-                        if (capability.id == "mesh.ping") JSONObject().put("ok", true).put("runtime", "android")
-                        else JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
-                    }
+        // N01 is the native APK runtime. Other nuclei are registered only when
+        // their actual local handlers are present; otherwise runtime.send()
+        // falls through to the configured hybrid network transport.
+        val localHandlers = SoulCapabilityCatalog.capabilities
+            .filter { it.owner == "N01" && it.execution == Execution.LOCAL }
+            .associate { capability ->
+                capability.id to { payload: JSONObject ->
+                    if (capability.id == "mesh.ping") JSONObject().put("ok", true).put("runtime", "android")
+                    else JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
                 }
-            runtime.register(nucleus, SoulMeshEndpoint(nucleus, handlers) { message -> executor.execute(message) })
-        }
+            }
+        runtime.register("N01", SoulMeshEndpoint("N01", localHandlers) { message -> executor.execute(message) })
         return runtime
     }
 
