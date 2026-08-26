@@ -1,6 +1,7 @@
 package com.divibisoul.soul
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
 import android.webkit.WebChromeClient
@@ -8,6 +9,7 @@ import android.webkit.WebView
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.core.app.ActivityCompat
 
 /** First production-oriented Soul shell: AGI browser + AI sessions + Pilot/Cockpit + capabilities + device access. */
 class SoulHybridActivity : ComponentActivity() {
@@ -15,6 +17,7 @@ class SoulHybridActivity : ComponentActivity() {
     private lateinit var permissionCoordinator: SoulPermissionCoordinator
     private lateinit var status: TextView
     private lateinit var mesh: SoulMeshRuntime
+    private var pendingMediaRequest: android.webkit.PermissionRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,13 +35,28 @@ class SoulHybridActivity : ComponentActivity() {
         webView.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
                 runOnUiThread {
-                    permissionCoordinator.requestCaptureAccess()
                     val allowed = request.resources.filter {
                         it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE ||
                             it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
                     }.toTypedArray()
-                    if (allowed.isNotEmpty() && permissionCoordinator.hasCamera() && permissionCoordinator.hasMicrophone()) {
-                        request.grant(allowed)
+                    if (allowed.isEmpty()) {
+                        request.deny()
+                        return@runOnUiThread
+                    }
+
+                    val missing = mutableListOf<String>()
+                    if (allowed.contains(android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE) && !permissionCoordinator.hasCamera()) {
+                        missing += android.Manifest.permission.CAMERA
+                    }
+                    if (allowed.contains(android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE) && !permissionCoordinator.hasMicrophone()) {
+                        missing += android.Manifest.permission.RECORD_AUDIO
+                    }
+
+                    if (missing.isEmpty()) {
+                        grantWebMediaRequest(request)
+                    } else {
+                        pendingMediaRequest = request
+                        ActivityCompat.requestPermissions(this@SoulHybridActivity, missing.toTypedArray(), SoulPermissionCoordinator.REQUEST_MEDIA_CAPTURE)
                     }
                 }
             }
@@ -64,6 +82,23 @@ class SoulHybridActivity : ComponentActivity() {
         findViewById<Button>(R.id.button_capabilities).setOnClickListener { focusBrowser("capabilities") }
         findViewById<Button>(R.id.button_device).setOnClickListener { showDeviceAccess() }
         status.text = "Hybrid AGI ready • browser + Pilot + Cockpit + capabilities"
+    }
+
+    private fun grantWebMediaRequest(request: android.webkit.PermissionRequest) {
+        val allowed = request.resources.filter {
+            (it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE && permissionCoordinator.hasCamera()) ||
+                (it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE && permissionCoordinator.hasMicrophone())
+        }.toTypedArray()
+        if (allowed.isNotEmpty()) request.grant(allowed) else request.deny()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != SoulPermissionCoordinator.REQUEST_MEDIA_CAPTURE) return
+        pendingMediaRequest?.let { request ->
+            pendingMediaRequest = null
+            grantWebMediaRequest(request)
+        }
     }
 
     private fun bindAi(buttonId: Int, provider: SoulAiProvider) {
