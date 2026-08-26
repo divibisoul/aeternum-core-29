@@ -30,3 +30,43 @@ export const SOUL_MESH_CORE_CAPABILITIES: Record<SoulNucleus, SoulMeshCapability
   N05: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N05', execution: 'observability' }],
   N06: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N06', execution: 'observability' }],
 };
+
+/** Runtime registry: N01 records what peers actually advertise instead of guessing. */
+export class SoulMeshCapabilityRegistry {
+  private readonly registry = new Map<SoulNucleus, Map<string, SoulMeshCapability>>();
+
+  register(nucleus: SoulNucleus, capabilities: readonly SoulMeshCapability[]): void {
+    const map = new Map<string, SoulMeshCapability>();
+    for (const capability of capabilities) {
+      if (capability.owner === nucleus && capability.id && capability.version) map.set(capability.id, capability);
+    }
+    this.registry.set(nucleus, map);
+  }
+
+  merge(nucleus: SoulNucleus, capabilities: readonly SoulMeshCapability[]): void {
+    const map = this.registry.get(nucleus) ?? new Map<string, SoulMeshCapability>();
+    for (const capability of capabilities) {
+      if (capability.owner === nucleus && capability.id && capability.version) map.set(capability.id, capability);
+    }
+    this.registry.set(nucleus, map);
+  }
+
+  list(nucleus: SoulNucleus): SoulMeshCapability[] {
+    return [...(this.registry.get(nucleus)?.values() ?? [])];
+  }
+
+  get(nucleus: SoulNucleus, capabilityId: string): SoulMeshCapability | undefined {
+    return this.registry.get(nucleus)?.get(capabilityId);
+  }
+
+  canRequest(nucleus: SoulNucleus, capabilityId: string): boolean {
+    return this.get(nucleus, capabilityId)?.request === true;
+  }
+
+  clear(nucleus?: SoulNucleus): void {
+    if (nucleus) this.registry.delete(nucleus);
+    else this.registry.clear();
+  }
+}
+
+export const soulMeshCapabilityRegistry = new SoulMeshCapabilityRegistry();
