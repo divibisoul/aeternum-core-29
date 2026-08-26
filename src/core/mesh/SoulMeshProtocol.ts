@@ -9,6 +9,8 @@ export interface SoulMeshMessage<T = unknown> {
   target: SoulNucleus;
   kind: 'request' | 'response' | 'event' | 'error';
   capability?: string;
+  /** Five-slot logical channel identity, multiplexed over the selected transport. */
+  channelId?: string;
   payload: T;
   timestamp: number;
 }
