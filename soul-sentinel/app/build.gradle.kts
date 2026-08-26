@@ -16,6 +16,10 @@ android {
         versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "SOUL_MESH_N02_URL", "\"${System.getenv("SOUL_MESH_N02_URL") ?: ""}\"")
+        buildConfigField("String", "SOUL_MESH_N03_URL", "\"${System.getenv("SOUL_MESH_N03_URL") ?: ""}\"")
+        buildConfigField("String", "SOUL_MESH_N04_URL", "\"${System.getenv("SOUL_MESH_N04_URL") ?: ""}\"")
+        buildConfigField("String", "SOUL_MESH_N05_URL", "\"${System.getenv("SOUL_MESH_N05_URL") ?: ""}\"")
+        buildConfigField("String", "SOUL_MESH_N06_URL", "\"${System.getenv("SOUL_MESH_N06_URL") ?: ""}\"")
     }
     buildTypes {
         debug { isMinifyEnabled = false }
