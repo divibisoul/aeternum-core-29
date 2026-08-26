@@ -1,0 +1,3 @@
+-keep class com.divibisoul.soul.SoulHybridBridge { *; }
+-keepclassmembers class com.divibisoul.soul.SoulHybridBridge { @android.webkit.JavascriptInterface <methods>; }
+-keep class com.divibisoul.soul.SoulMeshMessage { *; }
