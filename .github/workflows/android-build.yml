@@ -1,4 +1,4 @@
-name: Soul Android Build
+name: Soul N01 Full Build
 
 on:
   push:
@@ -6,7 +6,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  web:
+    name: Web TypeScript / Vite validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install web dependencies
+        run: bun install --frozen-lockfile
+      - name: Lint
+        run: bun run lint
+      - name: Production build
+        run: bun run build
+
+  android:
+    name: Android APK + Mesh instrumentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
