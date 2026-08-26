@@ -1,7 +1,7 @@
 package com.divibisoul.soul
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,7 +9,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SoulHybridMeshTest {
-    private val context: Context = ApplicationProvider.getApplicationContext()
+    private val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
     fun bootstrapRegistersOnlyTheRealN01Endpoint() {
