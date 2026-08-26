@@ -11,7 +11,7 @@ class SoulHybridBridge(
     private val sendToMesh: (SoulMeshMessage) -> SoulMeshMessage,
     private val onCompletion: (SoulMeshMessage) -> Unit,
     private val pilot: SoulPilot? = null,
-    private val probe60: (() -> List<SoulMesh60ChannelAccess.Result>)? = null,
+    private val probe60: (() -> List<SoulMesh60ConnectionMatrix.Channel>)? = null,
 ) {
     @JavascriptInterface
     fun dispatch(rawJson: String): String = runCatching {
@@ -20,7 +20,6 @@ class SoulHybridBridge(
         sendToMesh(message).toJson().toString()
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "Hybrid bridge error").toString() }
 
-    /** Lets the browser request a registered capability through the native Pilot. */
     @JavascriptInterface
     fun executeCapability(rawJson: String): String = runCatching {
         requireNotNull(pilot) { "PILOT_NOT_CONFIGURED" }
@@ -29,12 +28,8 @@ class SoulHybridBridge(
         val payload = request.optJSONObject("payload") ?: JSONObject()
         val task = pilot.execute(capability, payload)
         JSONObject().apply {
-            put("accepted", true)
-            put("taskId", task.taskId)
-            put("capability", task.capability)
-            put("owner", task.owner)
-            put("correlationId", task.correlationId)
-            put("response", task.response.toJson())
+            put("accepted", true); put("taskId", task.taskId); put("capability", task.capability)
+            put("owner", task.owner); put("correlationId", task.correlationId); put("response", task.response.toJson())
         }.toString()
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "Pilot execution error").toString() }
 
@@ -54,13 +49,14 @@ class SoulHybridBridge(
 
     @JavascriptInterface
     fun probe60(): String = runCatching {
-        requireNotNull(probe60) { "MESH_60_PROBE_NOT_CONFIGURED" }
+        val results = requireNotNull(probe60) { "MESH_60_PROBE_NOT_CONFIGURED" }.invoke()
         JSONArray().apply {
-            probe60().forEach { result ->
+            results.forEach { result ->
                 put(JSONObject().apply {
-                    put("channelId", result.channelId); put("target", result.target)
+                    put("channelId", result.id); put("source", result.source); put("target", result.target)
                     put("configured", result.configured); put("reachable", result.reachable)
-                    put("correlationId", result.correlationId); result.error?.let { put("error", it) }
+                    result.correlationId?.let { put("correlationId", it) }; result.error?.let { put("error", it) }
+                    put("checkedAt", result.checkedAt)
                 })
             }
         }.toString()
