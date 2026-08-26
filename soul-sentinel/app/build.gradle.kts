@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "com.divibisoul.soul"
     compileSdk = 36
+    buildFeatures { buildConfig = true }
     defaultConfig {
         applicationId = "com.divibisoul.soul"
         minSdk = 26
@@ -14,6 +15,7 @@ android {
         versionCode = 4
         versionName = "0.4.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "SOUL_MESH_N02_URL", "\"${System.getenv("SOUL_MESH_N02_URL") ?: ""}\"")
     }
     buildTypes {
         debug { isMinifyEnabled = false }
