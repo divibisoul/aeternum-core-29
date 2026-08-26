@@ -12,6 +12,7 @@ class SoulHybridBridge(
     private val onCompletion: (SoulMeshMessage) -> Unit,
     private val pilot: SoulPilot? = null,
     private val probe60: (() -> List<SoulMesh60ConnectionMatrix.Channel>)? = null,
+    private val aiProviders: SoulAiProviderRegistry? = null,
 ) {
     @JavascriptInterface
     fun dispatch(rawJson: String): String = runCatching {
@@ -38,6 +39,22 @@ class SoulHybridBridge(
         requireNotNull(pilot) { "PILOT_NOT_CONFIGURED" }
         pilot.registrySnapshot().toString()
     }.getOrElse { error -> JSONObject().put("error", error.message ?: "Capability registry error").toString() }
+
+    @JavascriptInterface
+    fun aiProviders(): String = runCatching {
+        val registry = requireNotNull(aiProviders) { "AI_PROVIDER_REGISTRY_NOT_CONFIGURED" }
+        JSONArray().apply {
+            registry.allEnabled().forEach { provider ->
+                put(JSONObject().apply {
+                    put("id", provider.id)
+                    put("displayName", provider.displayName)
+                    put("role", provider.role)
+                    put("loginUrl", provider.loginUrl)
+                    put("hosts", JSONArray(provider.hosts.toList()))
+                })
+            }
+        }.toString()
+    }.getOrElse { error -> JSONObject().put("error", error.message ?: "AI provider registry error").toString() }
 
     @JavascriptInterface
     fun complete(rawJson: String): String = runCatching {
