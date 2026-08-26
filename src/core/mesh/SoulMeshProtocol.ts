@@ -33,10 +33,9 @@ export function isSoulMeshMessage(value: unknown): value is SoulMeshMessage {
   if (!value || typeof value !== 'object') return false;
   const m = value as Record<string, unknown>;
   return m.protocol === SOUL_MESH_PROTOCOL
-    && typeof m.id === 'string'
-    && typeof m.correlationId === 'string'
-    && isSoulNucleus(m.source)
-    && isSoulNucleus(m.target)
+    && typeof m.id === 'string' && m.id.length > 0
+    && typeof m.correlationId === 'string' && m.correlationId.length > 0
+    && isSoulNucleus(m.source) && isSoulNucleus(m.target)
     && m.source !== m.target
     && typeof m.kind === 'string'
     && (m.kind === 'request' || m.kind === 'response' || m.kind === 'event' || m.kind === 'error')
