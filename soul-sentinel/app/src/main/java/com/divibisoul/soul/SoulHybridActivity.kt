@@ -42,25 +42,19 @@ class SoulHybridActivity : ComponentActivity() {
         webView.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: android.webkit.PermissionRequest) {
                 runOnUiThread {
-                    val allowed = request.resources.filter {
-                        it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE || it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE
-                    }.toTypedArray()
+                    val allowed = request.resources.filter { it == android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE || it == android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE }.toTypedArray()
                     if (allowed.isEmpty()) { request.deny(); return@runOnUiThread }
                     val missing = mutableListOf<String>()
                     if (allowed.contains(android.webkit.PermissionRequest.RESOURCE_VIDEO_CAPTURE) && !permissionCoordinator.hasCamera()) missing += android.Manifest.permission.CAMERA
                     if (allowed.contains(android.webkit.PermissionRequest.RESOURCE_AUDIO_CAPTURE) && !permissionCoordinator.hasMicrophone()) missing += android.Manifest.permission.RECORD_AUDIO
-                    if (missing.isEmpty()) grantWebMediaRequest(request)
-                    else {
-                        pendingMediaRequest = request
-                        ActivityCompat.requestPermissions(this@SoulHybridActivity, missing.toTypedArray(), SoulPermissionCoordinator.REQUEST_MEDIA_CAPTURE)
-                    }
+                    if (missing.isEmpty()) grantWebMediaRequest(request) else { pendingMediaRequest = request; ActivityCompat.requestPermissions(this@SoulHybridActivity, missing.toTypedArray(), SoulPermissionCoordinator.REQUEST_MEDIA_CAPTURE) }
                 }
             }
         }
 
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message -> mesh.send(message.source, message.target, message.capability, message.payload) }, { completion ->
             webView.post { webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive&&window.SoulHybridRuntime.receive(${JSONObject.quote(completion.toJson().toString())});", null) }
-        }, pilot = pilot, probe60 = { mesh60.probeAll().map { result -> SoulMesh60ChannelAccess.Result(result.id, result.target, result.configured, result.reachable, result.correlationId, result.error) } }))
+        }, pilot = pilot, probe60 = { mesh60.probeAll() }))
         webView.loadUrl(SoulSecureWebView.localUrl())
 
         bindAi(R.id.button_ai_1, SoulAiProvider.CHATGPT)
