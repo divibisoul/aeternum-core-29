@@ -2,7 +2,7 @@ package com.divibisoul.soul
 
 import org.json.JSONObject
 
-/** Canonical wire message for Soul Mesh v1. */
+/** Canonical wire message for Soul Mesh v1. JSON-compatible with N02 and the other nuclei. */
 data class SoulMeshMessage(
     val protocol: String = SoulMeshContract.PROTOCOL,
     val id: String,
@@ -12,10 +12,10 @@ data class SoulMeshMessage(
     val kind: String,
     val capability: String,
     val payload: JSONObject,
-    val timestamp: String,
+    val timestamp: Long,
 ) {
     fun validate(): Result<Unit> = SoulMeshContract.validate(
-        protocol, id, correlationId, source, target, kind, capability
+        protocol, id, correlationId, source, target, kind, capability, payload, timestamp
     )
 
     fun toJson(): JSONObject = JSONObject().apply {
@@ -32,6 +32,13 @@ data class SoulMeshMessage(
 
     companion object {
         fun fromJson(json: JSONObject): SoulMeshMessage {
+            val rawTimestamp = json.opt("timestamp")
+            val timestamp = when (rawTimestamp) {
+                is Number -> rawTimestamp.toLong()
+                is String -> rawTimestamp.toLongOrNull()
+                else -> null
+            } ?: throw IllegalArgumentException("Invalid Mesh timestamp")
+
             val message = SoulMeshMessage(
                 protocol = json.optString("protocol"),
                 id = json.optString("id"),
@@ -41,7 +48,7 @@ data class SoulMeshMessage(
                 kind = json.optString("kind"),
                 capability = json.optString("capability"),
                 payload = json.optJSONObject("payload") ?: JSONObject(),
-                timestamp = json.optString("timestamp"),
+                timestamp = timestamp,
             )
             message.validate().getOrThrow()
             return message
