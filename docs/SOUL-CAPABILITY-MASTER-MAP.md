@@ -1,77 +1,76 @@
 # SOUL — Capability Master Map
 
-Status: architecture inventory only. No capability implementation is duplicated by this document.
+Status: live architecture inventory baseline. This document describes ownership and routing; it does not by itself prove E2E connectivity.
+
+## Canonical nucleus mapping
+
+| Nucleus | Repository | Role |
+|---|---|---|
+| N01 | `aeternum-core-29` | Android Sentinel / hybrid APK gateway |
+| N02 | `nextjs-ai-chatbots` | AI/chat/tools/documents/context/streaming |
+| N03 | `nexus-aeternum-fusion` | Nexus specialized/domain interface and context layer |
+| N04 | `Eternium-` | Eternium AGI/tool/operations interface |
+| N05 | `nextjs-ai-chatbot` | AI/chat/tools/artifacts/context/streaming |
+| N06 | `nextjs-ai-chatbot-2000` | AI/chat/tools/artifacts/context/streaming |
 
 ## Ownership rule
+
 Each capability has one owning provider. Other nuclei consume it through the Soul Mesh/Capability Router instead of copying its implementation.
 
-## Confirmed providers
+## Confirmed capability families
 
-| Provider | Role | Confirmed capabilities |
-|---|---|---|
-| N01 / Android Sentinel | Native Android capability layer | android.device_info, android.battery, android.memory, android.network, android.events, shizuku.bridge, brightness, Wi-Fi panel/state, Bluetooth request/state, airplane settings, background-process request |
-| N03 / Eternium | Specialized knowledge/context and existing domain tools | inventory pending final six-nucleus audit |
-| N04 / nextjs-ai-chatbots | AI/tool/document/context/streaming layer | tool execution, artifacts, documents, context orchestration, streaming, mesh communication, AI Pilot boundary |
-| N05 / nextjs-ai-chatbot-2000 | AI/tool/artifact/chat infrastructure | AI Pilot boundary, tool execution, artifacts, documents, context orchestration, streaming, mesh communication; existing request_suggestions and document/weather tools |
-| N02 | Pending repository audit | Do not duplicate until audited |
-| N06 | Pending repository audit | Do not duplicate until audited |
+- **N01:** native Android capabilities including device information, battery, memory, network/events, Shizuku bridge, brightness, Wi-Fi/Bluetooth/system controls and native device actions.
+- **N02:** chat/AI streaming, documents, file upload, history/context and application-level tool infrastructure.
+- **N03:** Nexus domain/context/UI capabilities and the Soul Mesh endpoint.
+- **N04:** Eternium operational/AGI interface, tool panels, monitoring and Soul Mesh endpoint.
+- **N05:** chat/AI streaming, documents, artifacts, context and tool infrastructure; Soul Mesh endpoint.
+- **N06:** chat/AI streaming, documents, artifacts, context and tool infrastructure; Soul Mesh endpoint.
 
-## N01 native capability contract
+Capability ownership must be confirmed against executable handlers before being marked `CONNECTED`.
 
-N01 is the original Android APK/native layer. Its registry reports:
-
-- android.device_info
-- android.battery
-- android.memory
-- android.network
-- android.events
-- shizuku.bridge
-- ai.request_suggestions (consumer route to N05)
-
-N01 also owns Android actions such as brightness, Wi-Fi panel/state, Bluetooth request/state, airplane settings and background-process requests.
-
-## Routing model
+## Six-nucleus routing model
 
 ```text
-User / AI Pilot
-      |
-      v
-Global Capability Router
-      |
-      +--> N01 Android Sentinel ----> Android OS
-      |
-      +--> N03 specialized/domain capabilities
-      |
-      +--> N04 AI/tools/documents/context/streaming
-      |
-      +--> N05 AI/tools/artifacts/context
-      |
-      +--> N02 (pending)
-      |
-      +--> N06 (pending)
+User / AI Provider
+       |
+       v
+N01 Pilot / Global Capability Router
+       |
+       +--> N01 Android native execution
+       +--> N02 AI/chat/tools/documents/context
+       +--> N03 Nexus domain/context
+       +--> N04 Eternium operations/AGI tools
+       +--> N05 AI/chat/tools/artifacts/context
+       +--> N06 AI/chat/tools/artifacts/context
 ```
+
+## Mesh topology
+
+Each nucleus exposes exactly five logical OUT ports and five logical IN ports: 30 OUT ports + 30 IN ports = 60 directional channels across 15 bidirectional nucleus pairs.
+
+A logical channel is not proof of connectivity. A directed channel is `CONNECTED` only after:
+
+`source -> transport -> target endpoint -> message validation -> real handler/dispatch -> correlated response/error`
+
+An endpoint that merely acknowledges receipt without dispatching to a real registered handler remains `UNVERIFIED`.
 
 ## Anti-duplication rule
 
-Before adding a new capability to any nucleus:
+Before adding a capability:
 
 1. Search this registry.
-2. Identify the existing owner.
+2. Identify the owning nucleus.
 3. Reuse the owner's interface through Mesh.
 4. Add a new implementation only when no existing owner satisfies the contract.
 
-## Connection contract
+## Current audit state
 
-Each nucleus is intended to expose five inbound and five outbound peer routes. Logical route declarations are not treated as proof of live E2E connectivity. Live connectivity requires transport, endpoint availability, correlation, acknowledgement/response validation and health checks.
+- N01 native capability layer: implemented.
+- N01 global Pilot/Registry/Mesh bridge: implemented in the APK architecture.
+- N02/N03/N04/N05/N06 Mesh endpoints: present in repository source and require deployed runtime URLs for live network E2E.
+- N02/N06 capability inventories: must be reconciled against their actual executable handlers before final E2E certification.
+- 60-channel live certification: not claimed until real request/response traffic has been observed for all 60 directions.
 
-## Current verified status
+## Architectural invariant
 
-- N01 native capabilities: implemented in Android code.
-- N04 capability/process/mesh layers: implemented; E2E contract exists.
-- N05 capability/process/tool/mesh layers: implemented; E2E contract exists.
-- N03: existing project audited; integration map remains subject to final six-nucleus inventory.
-- N02/N06: not yet inventoried in this document.
-
-## Important architectural decision
-
-The Android/Web project in N01 is not discarded. The Android side remains the native execution layer. Web/chat functionality is consumed as an AI capability where appropriate rather than duplicated as a second independent chatbot subsystem.
+The Android/Web project in N01 remains the hybrid native execution and user-access layer. The Soul is not reduced to a CPU-style bottleneck: the Pilot/Cockpit coordinates distributed capabilities and permits independent work to execute in parallel when dependencies allow.
