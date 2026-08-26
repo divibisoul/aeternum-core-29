@@ -1,6 +1,8 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
+import java.time.Instant
+import java.util.UUID
 
 /** Executes a capability in the runtime that actually owns it. */
 class SoulHybridCapabilityExecutor(
@@ -17,7 +19,18 @@ class SoulHybridCapabilityExecutor(
     }
 
     private fun local(message: SoulMeshMessage, capability: String): SoulMeshMessage = when (capability) {
-        "mesh.ping" -> SoulMeshMessage.response(message, JSONObject().put("ok", true).put("runtime", "android"))
-        else -> SoulMeshMessage.error(message, "LOCAL_CAPABILITY_NOT_IMPLEMENTED", capability)
+        "mesh.ping" -> response(message, JSONObject().put("ok", true).put("runtime", "android"))
+        else -> error(message, "LOCAL_CAPABILITY_NOT_IMPLEMENTED", capability)
     }
+
+    private fun response(source: SoulMeshMessage, payload: JSONObject) = source.copy(
+        id = UUID.randomUUID().toString(), source = source.target, target = source.source,
+        kind = "response", payload = payload, timestamp = Instant.now().toString()
+    )
+
+    private fun error(source: SoulMeshMessage, code: String, detail: String) = source.copy(
+        id = UUID.randomUUID().toString(), source = source.target, target = source.source,
+        kind = "error", payload = JSONObject().put("code", code).put("detail", detail),
+        timestamp = Instant.now().toString()
+    )
 }
