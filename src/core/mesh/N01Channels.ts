@@ -1,5 +1,3 @@
-import type { SoulNucleusId } from './types/SoulNucleusId';
-
 export const N01_PEERS = ['N02', 'N03', 'N04', 'N05', 'N06'] as const;
 export type N01PeerId = typeof N01_PEERS[number];
 
