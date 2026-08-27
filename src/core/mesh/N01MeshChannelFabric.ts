@@ -22,6 +22,7 @@ export class DefaultN01OutboundChannelFactory implements N01OutboundChannelFacto
 /** Five independent channels sharing one canonical SoulMeshRouter. */
 export class N01MeshChannelFabric implements N01InboundChannelHandler {
   private readonly outbound = new Map<N01PeerId, SoulMeshTransport>();
+  private readonly responseUnsubscribers = new Map<N01PeerId, () => void>();
 
   constructor(
     private readonly router: SoulMeshRouter,
@@ -42,6 +43,7 @@ export class N01MeshChannelFabric implements N01InboundChannelHandler {
       const registration = this.discovery.resolve(peerId);
       if (!registration) throw new Error(`PEER_NOT_REGISTERED:${peerId}`);
       transport = this.factory.create(peerId, registration.url, registration.authToken);
+      this.responseUnsubscribers.set(peerId, transport.onMessage((response) => this.router.ingest(response)));
       this.outbound.set(peerId, transport);
     }
     await transport.send(message);
@@ -57,6 +59,8 @@ export class N01MeshChannelFabric implements N01InboundChannelHandler {
   async close(): Promise<void> {
     const transports = [...this.outbound.values()];
     this.outbound.clear();
+    for (const unsubscribe of this.responseUnsubscribers.values()) unsubscribe();
+    this.responseUnsubscribers.clear();
     await Promise.all(transports.map((transport) => transport.close?.()));
   }
 }
