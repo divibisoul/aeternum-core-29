@@ -12,7 +12,6 @@ const DB_NAME = 'soul-mesh-discovery';
 const DB_VERSION = 1;
 const STORE_NAME = 'peers';
 
-/** Browser-safe persistence. It deliberately stores topology metadata, never shared secrets. */
 export class IndexedDBDiscoveryAdapter implements DiscoveryAdapter {
   private dbPromise?: Promise<IDBDatabase>;
 
@@ -36,7 +35,7 @@ export class IndexedDBDiscoveryAdapter implements DiscoveryAdapter {
 
   async register(peer: MeshPeerRegistration): Promise<void> {
     const db = await this.open();
-    await this.transaction(db, 'readwrite', store => store.put(this.sanitize(peer)));
+    await this.transaction(db, 'readwrite', store => store.put(peer));
   }
 
   async resolve(nucleus: Exclude<SoulNucleus, 'N01'>): Promise<MeshPeerRegistration | undefined> {
@@ -54,11 +53,6 @@ export class IndexedDBDiscoveryAdapter implements DiscoveryAdapter {
   async list(): Promise<MeshPeerRegistration[]> {
     const db = await this.open();
     return this.transaction(db, 'readonly', store => store.getAll());
-  }
-
-  private sanitize(peer: MeshPeerRegistration): MeshPeerRegistration {
-    const { authToken: _authToken, ...safePeer } = peer;
-    return safePeer as MeshPeerRegistration;
   }
 
   private transaction<T>(db: IDBDatabase, mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
