@@ -1,0 +1,38 @@
+name: N01 Mesh validation
+
+on:
+  push:
+    branches:
+      - upgrade/n01-5x5-channels-v2
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Start Vite dev host
+        run: |
+          npm run dev -- --host 127.0.0.1 > /tmp/n01-vite.log 2>&1 &
+          echo $! > /tmp/n01-vite.pid
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8080/mesh/dev/status && break; sleep 1; done
+      - name: Validate five HTTP IN endpoints and authentication
+        run: |
+          for peer in N02 N03 N04 N05 N06; do
+            token=$(curl -fsS -X POST http://127.0.0.1:8080/mesh/dev/register/$peer | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(JSON.parse(s).token))")
+            id=$(node -e "console.log(crypto.randomUUID())")
+            payload=$(node -e "const id=process.argv[1],p=process.argv[2]; console.log(JSON.stringify({protocol:'soul-mesh/1',contractVersion:'1.1.0',id,correlationId:id,source:p,target:'N01',kind:'request',capability:'mesh.echo',payload:{ci:true},timestamp:Date.now()}))" "$id" "$peer")
+            curl -fsS -X POST http://127.0.0.1:8080/mesh/in/$peer -H "content-type: application/json" -H "authorization: Bearer $token" -d "$payload"
+            test "$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:8080/mesh/in/$peer -H 'content-type: application/json' -H 'authorization: Bearer invalid-token' -d "$payload")" = "401"
+          done
+      - name: Dump Vite log on failure
+        if: failure()
+        run: cat /tmp/n01-vite.log
