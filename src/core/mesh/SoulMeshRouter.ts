@@ -1,4 +1,5 @@
 import type { SoulMeshMessage, SoulNucleus, SoulMeshTransport } from './SoulMeshProtocol';
+import { SOUL_MESH_CONTRACT_VERSION, SOUL_MESH_PROTOCOL } from './SoulMeshProtocol';
 import { EventBus } from '../EventBus';
 
 export type SoulMeshRequestHandler = (message: SoulMeshMessage) => unknown | Promise<unknown>;
@@ -16,8 +17,9 @@ export class SoulMeshRouter {
   async request<T = unknown>(target: SoulNucleus, capability: string, payload: T): Promise<SoulMeshMessage> {
     const correlationId = crypto.randomUUID();
     const message: SoulMeshMessage<T> = {
-      protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId,
-      source: this.local, target, kind: 'request', capability, payload, timestamp: Date.now(),
+      protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION,
+      id: crypto.randomUUID(), correlationId, source: this.local, target,
+      kind: 'request', capability, payload, timestamp: Date.now(),
     };
     return new Promise<SoulMeshMessage>((resolve, reject) => {
       const timer = setTimeout(() => { this.pending.delete(correlationId); reject(new Error(`Soul Mesh request timeout: ${target}/${capability}`)); }, this.timeoutMs);
@@ -32,7 +34,7 @@ export class SoulMeshRouter {
   }
 
   async sendEvent(target: SoulNucleus, capability: string, payload: unknown): Promise<void> {
-    await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: crypto.randomUUID(), source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() });
+    await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: crypto.randomUUID(), source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() });
   }
 
   private async handle(message: SoulMeshMessage): Promise<void> {
@@ -48,14 +50,14 @@ export class SoulMeshRouter {
     if (message.kind === 'request') {
       const handler = message.capability ? this.handlers.get(message.capability) : undefined;
       if (!handler) {
-        await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: `Capability not registered: ${message.capability ?? 'unknown'}` }, timestamp: Date.now() });
+        await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: `Capability not registered: ${message.capability ?? 'unknown'}` }, timestamp: Date.now() });
         return;
       }
       try {
         const result = await handler(message);
-        await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'response', capability: message.capability, payload: result, timestamp: Date.now() });
+        await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'response', capability: message.capability, payload: result, timestamp: Date.now() });
       } catch (error) {
-        await this.transport.send({ protocol: 'soul-mesh/1', id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: error instanceof Error ? error.message : String(error) }, timestamp: Date.now() });
+        await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: error instanceof Error ? error.message : String(error) }, timestamp: Date.now() });
       }
       return;
     }
