@@ -4,7 +4,7 @@ import { EventBus } from '../EventBus';
 
 export type SoulMeshRequestHandler = (message: SoulMeshMessage) => unknown | Promise<unknown>;
 
-/** Bidirectional nucleus router. Requests are executed locally and answered; events are published internally. */
+/** Bidirectional nucleus router. Requests and acknowledged diagnostic events can be handled locally. */
 export class SoulMeshRouter {
   private readonly pending = new Map<string, { resolve: (message: SoulMeshMessage) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>();
   private readonly handlers = new Map<string, SoulMeshRequestHandler>();
@@ -29,7 +29,7 @@ export class SoulMeshRouter {
     return () => { if (this.handlers.get(capability) === handler) this.handlers.delete(capability); };
   }
 
-  /** Sends an event and waits for the peer to answer with a correlated response/error. */
+  /** Sends an event and waits for a correlated response/error when the peer implements the capability. */
   async sendEventAndWait(target: SoulNucleus, capability: string, payload: unknown, timeoutMs = 3000): Promise<SoulMeshMessage> {
     const correlationId = crypto.randomUUID();
     const message: SoulMeshMessage = { protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId, source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() };
@@ -42,7 +42,6 @@ export class SoulMeshRouter {
     return correlationId;
   }
 
-  /** Public ingress for HTTP/WebSocket/native adapters. */
   async ingest(message: SoulMeshMessage): Promise<void> {
     if (message.target !== this.local) return;
     await this.handle(message);
@@ -66,8 +65,9 @@ export class SoulMeshRouter {
       else pending.resolve(message);
       return;
     }
-    if (message.kind === 'request') {
-      const handler = message.capability ? this.handlers.get(message.capability) : undefined;
+
+    const handler = message.capability ? this.handlers.get(message.capability) : undefined;
+    if (message.kind === 'request' || (message.kind === 'event' && handler)) {
       if (!handler) {
         await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: `Capability not registered: ${message.capability ?? 'unknown'}` }, timestamp: Date.now() });
         return;
@@ -80,6 +80,7 @@ export class SoulMeshRouter {
       }
       return;
     }
+
     await EventBus.emit('soul:mesh:message' as never, message as never).catch(() => undefined);
   }
 
