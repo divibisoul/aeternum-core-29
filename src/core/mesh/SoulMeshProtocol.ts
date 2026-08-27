@@ -16,6 +16,8 @@ export interface SoulMeshMessage<T = unknown> {
   capability?: string;
   payload: T;
   timestamp: number;
+  /** Optional bearer-style peer credential. Never persist this value in browser discovery storage. */
+  authToken?: string;
 }
 
 export interface SoulMeshTransport {
@@ -38,5 +40,6 @@ export function isSoulMeshMessage(value: unknown): value is SoulMeshMessage {
     && typeof m.id === 'string' && m.id.length > 0 && typeof m.correlationId === 'string' && m.correlationId.length > 0
     && isSoulNucleus(m.source) && isSoulNucleus(m.target) && m.source !== m.target
     && (m.kind === 'request' || m.kind === 'response' || m.kind === 'event' || m.kind === 'error')
-    && typeof m.timestamp === 'number' && Number.isFinite(m.timestamp);
+    && typeof m.timestamp === 'number' && Number.isFinite(m.timestamp)
+    && (m.authToken === undefined || (typeof m.authToken === 'string' && m.authToken.length > 0));
 }
