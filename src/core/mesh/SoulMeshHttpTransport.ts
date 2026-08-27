@@ -1,9 +1,10 @@
 import type { SoulMeshMessage, SoulMeshTransport } from './SoulMeshProtocol';
 import { isSoulMeshMessage } from './SoulMeshProtocol';
 
-export type SoulMeshHttpTransportOptions = { headers?: Record<string, string>; timeoutMs?: number; retries?: number; retryDelayMs?: number; requestIdFactory?: () => string };
+export type SoulMeshCircuitState = 'CLOSED' | 'OPEN' | 'HALF-OPEN';
+export type SoulMeshHttpTransportOptions = { headers?: Record<string, string>; timeoutMs?: number; retries?: number; retryDelayMs?: number; requestIdFactory?: () => string; failureThreshold?: number; openMs?: number };
 
-/** HTTP transport for deployed nuclei; preserves request correlation and supports 202 responses. */
+/** HTTP transport for deployed nuclei; preserves correlation, retries transient failures and protects unhealthy peers. */
 export class SoulMeshHttpTransport implements SoulMeshTransport {
   private readonly listeners = new Set<(message: SoulMeshMessage) => void | Promise<void>>();
   private readonly headers: Record<string, string>;
@@ -11,6 +12,11 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
   private readonly retries: number;
   private readonly retryDelayMs: number;
   private readonly requestIdFactory: () => string;
+  private readonly failureThreshold: number;
+  private readonly openMs: number;
+  private failures = 0;
+  private openedAt = 0;
+  private state: SoulMeshCircuitState = 'CLOSED';
 
   constructor(private readonly endpoint: string, options: SoulMeshHttpTransportOptions = {}) {
     if (!/^https?:\/\//i.test(endpoint)) throw new Error('Soul Mesh HTTP endpoint must be an absolute http(s) URL');
@@ -19,9 +25,24 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
     this.retries = Math.max(0, Math.min(3, options.retries ?? 1));
     this.retryDelayMs = Math.max(50, options.retryDelayMs ?? 250);
     this.requestIdFactory = options.requestIdFactory ?? (() => crypto.randomUUID());
+    this.failureThreshold = Math.max(1, options.failureThreshold ?? 3);
+    this.openMs = Math.max(1000, options.openMs ?? 30000);
   }
 
+  getCircuitState(): SoulMeshCircuitState { return this.state; }
+
+  private allowRequest(): boolean {
+    if (this.state !== 'OPEN') return true;
+    if (Date.now() - this.openedAt < this.openMs) return false;
+    this.state = 'HALF-OPEN';
+    return true;
+  }
+
+  private markSuccess(): void { this.failures = 0; this.state = 'CLOSED'; }
+  private markFailure(): void { this.failures += 1; if (this.failures >= this.failureThreshold) { this.state = 'OPEN'; this.openedAt = Date.now(); } }
+
   async send(message: SoulMeshMessage): Promise<void> {
+    if (!this.allowRequest()) throw new Error(`Soul Mesh circuit OPEN: ${this.endpoint}`);
     let lastError: unknown;
     for (let attempt = 0; attempt <= this.retries; attempt += 1) {
       const controller = new AbortController();
@@ -34,10 +55,12 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
           const contentType = response.headers.get('content-type') ?? '';
           if (contentType.includes('application/json')) { const body: unknown = await response.json(); if (isSoulMeshMessage(body)) await this.receive(body); }
         }
+        this.markSuccess();
         return;
       } catch (error) { lastError = error; if (attempt < this.retries) await new Promise(resolve => setTimeout(resolve, this.retryDelayMs * (attempt + 1))); }
       finally { clearTimeout(timer); }
     }
+    this.markFailure();
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 
