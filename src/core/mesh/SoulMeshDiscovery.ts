@@ -6,12 +6,13 @@ export type SoulMeshRegistration = {
   url: string;
   capabilities: string[];
   version?: string;
+  authToken?: string;
   lastSeen: number;
 };
 
 /**
- * N01 discovery cache. The synchronous API remains compatible with existing callers;
- * an optional adapter makes registrations durable and hydrate-able across restarts.
+ * N01 discovery cache. Durable storage is used when an adapter is available,
+ * while the in-memory Map remains the hot path for low-latency routing.
  */
 export class SoulMeshDiscoveryRegistry {
   private readonly peers = new Map<Exclude<SoulNucleus, 'N01'>, SoulMeshRegistration>();
@@ -42,7 +43,6 @@ export class SoulMeshDiscoveryRegistry {
     return [...this.peers.values()];
   }
 
-  /** Loads durable registrations into the hot cache. Call once during N01 startup. */
   async hydrate(): Promise<SoulMeshRegistration[]> {
     if (!this.adapter) return this.list();
     const persisted = await this.adapter.list();
@@ -53,6 +53,7 @@ export class SoulMeshDiscoveryRegistry {
           url: peer.endpoint.replace(/\/$/, ''),
           capabilities: peer.capabilities.map(capability => typeof capability === 'string' ? capability : capability.id),
           version: peer.contractVersion,
+          authToken: peer.authToken,
           lastSeen: peer.lastSeen,
         });
       }
@@ -77,7 +78,8 @@ export class SoulMeshDiscoveryRegistry {
       })),
       protocol: 'soul-mesh/1',
       contractVersion: registration.version ?? '1.1.0',
-      registeredAt: Date.now(),
+      authToken: registration.authToken,
+      registeredAt: registration.lastSeen,
       lastSeen: registration.lastSeen,
     });
   }
