@@ -23,6 +23,7 @@ export interface SoulMeshMessage<T = unknown> {
 export interface SoulMeshTransport {
   send(message: SoulMeshMessage): Promise<void>;
   onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void;
+  close?(): void | Promise<void>;
 }
 
 export function isSoulNucleus(value: unknown): value is SoulNucleus {
