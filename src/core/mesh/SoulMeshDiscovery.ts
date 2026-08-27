@@ -1,19 +1,18 @@
 import type { SoulNucleus } from './SoulMeshProtocol';
+import type { SoulMeshCapability } from './SoulMeshCapabilities';
 import type { DiscoveryAdapter } from './SoulMeshDiscoveryAdapter';
 
 export type SoulMeshRegistration = {
   nucleus: Exclude<SoulNucleus, 'N01'>;
   url: string;
   capabilities: string[];
+  capabilityDescriptors?: SoulMeshCapability[];
   version?: string;
   authToken?: string;
   lastSeen: number;
 };
 
-/**
- * N01 discovery cache. Durable storage is used when an adapter is available,
- * while the in-memory Map remains the hot path for low-latency routing.
- */
+/** N01 discovery cache with durable persistence and a hot in-memory path. */
 export class SoulMeshDiscoveryRegistry {
   private readonly peers = new Map<Exclude<SoulNucleus, 'N01'>, SoulMeshRegistration>();
 
@@ -39,43 +38,33 @@ export class SoulMeshDiscoveryRegistry {
     return true;
   }
 
-  list(): SoulMeshRegistration[] {
-    return [...this.peers.values()];
-  }
+  list(): SoulMeshRegistration[] { return [...this.peers.values()]; }
 
   async hydrate(): Promise<SoulMeshRegistration[]> {
     if (!this.adapter) return this.list();
     const persisted = await this.adapter.list();
     for (const peer of persisted) {
-      if (/^https?:\/\//i.test(peer.endpoint)) {
-        this.peers.set(peer.nucleus, {
-          nucleus: peer.nucleus,
-          url: peer.endpoint.replace(/\/$/, ''),
-          capabilities: peer.capabilities.map(capability => typeof capability === 'string' ? capability : capability.id),
-          version: peer.contractVersion,
-          authToken: peer.authToken,
-          lastSeen: peer.lastSeen,
-        });
-      }
+      if (!/^https?:\/\//i.test(peer.endpoint)) continue;
+      const descriptors = peer.capabilities.map((capability) => typeof capability === 'string' ? undefined : capability).filter(Boolean) as SoulMeshCapability[];
+      this.peers.set(peer.nucleus, {
+        nucleus: peer.nucleus,
+        url: peer.endpoint.replace(/\/$/, ''),
+        capabilities: descriptors.length ? descriptors.map(capability => capability.id) : [],
+        capabilityDescriptors: descriptors,
+        version: peer.contractVersion,
+        authToken: peer.authToken,
+        lastSeen: peer.lastSeen,
+      });
     }
     return this.list();
   }
 
   private async persist(registration: SoulMeshRegistration): Promise<void> {
+    const advertised = registration.capabilityDescriptors ?? [];
     await this.adapter!.register({
       nucleus: registration.nucleus,
       endpoint: registration.url,
-      capabilities: registration.capabilities.map(id => ({
-        id,
-        version: registration.version ?? 'unknown',
-        description: `Advertised by ${registration.nucleus}`,
-        request: true,
-        response: true,
-        events: false,
-        owner: registration.nucleus,
-        execution: 'observability',
-        executionPolicy: 'REMOTE_ONLY',
-      })),
+      capabilities: advertised,
       protocol: 'soul-mesh/1',
       contractVersion: registration.version ?? '1.1.0',
       authToken: registration.authToken,
