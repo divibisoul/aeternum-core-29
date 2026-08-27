@@ -33,8 +33,15 @@ export class SoulMeshRouter {
     return () => { if (this.handlers.get(capability) === handler) this.handlers.delete(capability); };
   }
 
-  async sendEvent(target: SoulNucleus, capability: string, payload: unknown): Promise<void> {
-    await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: crypto.randomUUID(), source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() });
+  async sendEvent(target: SoulNucleus, capability: string, payload: unknown): Promise<string> {
+    const correlationId = crypto.randomUUID();
+    await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId, source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() });
+    return correlationId;
+  }
+
+  /** Public ingress for HTTP/WebSocket/native adapters. The adapter remains responsible for decoding the wire body. */
+  async ingest(message: SoulMeshMessage): Promise<void> {
+    await this.handle(message);
   }
 
   private async handle(message: SoulMeshMessage): Promise<void> {
