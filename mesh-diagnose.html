@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>N01 Soul Mesh Diagnostic</title>
+  </head>
+  <body>
+    <h1>N01 — Soul Mesh 5×5 Diagnostic</h1>
+    <pre id="report">Running diagnostic…</pre>
+    <script type="module">
+      import { runN01BrowserDiagnostic } from '/src/core/mesh/N01BrowserDiagnostic.ts';
+      const output = document.getElementById('report');
+      try {
+        const report = await runN01BrowserDiagnostic();
+        output.textContent = JSON.stringify(report, null, 2);
+      } catch (error) {
+        output.textContent = JSON.stringify({ status: 'FAIL', error: error instanceof Error ? error.message : String(error) }, null, 2);
+        console.error(error);
+      }
+    </script>
+  </body>
+</html>
