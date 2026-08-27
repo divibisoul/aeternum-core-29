@@ -1,0 +1,19 @@
+N01 verification date: 2026-08-27
+Repository: divibisoul/aeternum-core-29
+Branch: upgrade/n01-5x5-channels-v2
+
+Verified directly from GitHub:
+- 5 inbound channel identities exist.
+- 5 outbound channel identities exist.
+- canonical SoulMeshRouter has public ingest().
+- per-peer session tokens have IndexedDB persistence.
+- peer registration and capability advertisement structures exist.
+- N01 ingress guard validates bearer authentication.
+- HTTP transport is isolated from channel identities.
+- manual diagnostic command is present in package.json.
+- README.md no longer contains REPLACE_WITH_PROJECT_ID.
+- N02-N06 repositories were not modified by this N01 pass.
+
+Not claimed as end-to-end verified:
+- Runtime communication with N02-N06, because their corresponding N01-facing endpoints/ACK handlers are future work in those floors.
+- Successful execution of npm run mesh:diagnose from this integration environment, because the peer endpoints are not available here.
