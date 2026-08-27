@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "mesh:diagnose": "node scripts/mesh-diagnose.mjs"
+    "mesh:diagnose": "vite --host 127.0.0.1 --open /mesh-diagnose.html"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
