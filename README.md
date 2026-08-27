@@ -1,73 +1,66 @@
-# Welcome to your Lovable project
+# N01 — Soul Mesh Host / Android AGI Core
 
-## Project info
+N01 is the host/reference nucleus of the Soul hybrid architecture. The six nuclei are independent AI runtimes that cooperate through Soul Mesh to form one distributed intelligence. N01 is designed to evolve from the current web/runtime foundation into an Android APK with HTTP, WebSocket and native transport adapters.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## N01 5 × 5 communication fabric
 
-## How can I edit this code?
+Five independent inbound channels receive traffic from the other nuclei:
 
-There are several ways of editing your application.
+- `N01_IN_N02` → `/mesh/in/N02`
+- `N01_IN_N03` → `/mesh/in/N03`
+- `N01_IN_N04` → `/mesh/in/N04`
+- `N01_IN_N05` → `/mesh/in/N05`
+- `N01_IN_N06` → `/mesh/in/N06`
 
-**Use Lovable**
+Five independent outbound channels send traffic to the same peers:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- `N01_OUT_N02` → peer N02, `/mesh/in/N01`
+- `N01_OUT_N03` → peer N03, `/mesh/in/N01`
+- `N01_OUT_N04` → peer N04, `/mesh/in/N01`
+- `N01_OUT_N05` → peer N05, `/mesh/in/N01`
+- `N01_OUT_N06` → peer N06, `/mesh/in/N01`
 
-Changes made via Lovable will be committed automatically to this repo.
+Channel identity is independent from transport technology. The current HTTP adapter is replaceable by WebSocket or Android-native transport without changing channel IDs or routing contracts.
 
-**Use your preferred IDE**
+## Mesh routing
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Every inbound message must use the `soul-mesh/1` protocol, identify the expected peer as `source`, and target `N01`. The canonical `SoulMeshRouter` now exposes an ingress method for server, WebSocket or Android adapters. Outbound routing resolves the peer through the persistent discovery registry and sends through the peer-specific transport adapter.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Registration and capabilities
 
-Follow these steps:
+A peer registration contains its peer ID, endpoint and capability advertisement. N01 validates capability ownership and records the remote capability set in its canonical capability registry. Discovery keeps the hot in-memory cache synchronized with durable browser storage.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Authentication
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Each peer receives a unique N01-issued session token. Tokens are maintained per peer and persisted by the browser foundation; Android builds should move the same records to Android Keystore/secure storage. Inbound adapters must provide `Authorization: Bearer <token>` and N01 rejects missing, invalid or expired credentials. Production deployments can later replace the session-token foundation with an asymmetric scheme such as JWT/mTLS without changing channel identities.
 
-# Step 3: Install the necessary dependencies.
-npm i
+## Manual diagnostic
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+Run:
+
+```bash
+npm run mesh:diagnose
 ```
 
-**Edit a file directly in GitHub**
+The diagnostic emits JSON for N02–N06 with `PASS`, `FAIL`, `TIMEOUT` or `NOT_REGISTERED`. It attempts `mesh.echo` and an event requiring a correlated response within 3 seconds. Set `SOUL_MESH_PEERS_JSON` to a JSON object containing each peer's `endpoint` and optional `token` when running the standalone Node diagnostic, for example:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```json
+{
+  "N02": { "endpoint": "https://peer-n02.example" },
+  "N03": { "endpoint": "https://peer-n03.example" }
+}
+```
 
-**Use GitHub Codespaces**
+The standalone diagnostic cannot inspect a browser's IndexedDB directly; the live application/Android adapter remains the authority for its persistent peer registry.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## APK readiness
 
-## What technologies are used for this project?
+The Mesh channel layer is deliberately separated from transport details. The current web runtime can use the existing Supabase/HTTP mechanisms, while a future APK can bind the same contracts to Capacitor/WebView and Android-native networking. Device integrations such as camera, microphone and Shizuku belong above the transport layer and remain isolated from the peer-channel contract.
 
-This project is built with:
+## Environment
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Keep existing application/provider credentials in the deployment environment, including `GEMINI_API_KEY` when the current AI integration requires it. Do not place long-lived Mesh secrets in public `VITE_*` variables. Peer discovery data and per-peer authentication material should be managed by the runtime's secure persistence layer.
 
-## How can I deploy this project?
+## Current integration state
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The N01 5 × 5 channel identities, canonical router ingress, discovery persistence, per-peer session-token foundation, capability registration and manual diagnostic are installed on the N01 upgrade branch. End-to-end communication with N02–N06 remains dependent on each future nucleus exposing its corresponding N01 input endpoint/adapter and diagnostic acknowledgement capability. N01 does not claim connectivity merely from static configuration.
