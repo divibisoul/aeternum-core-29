@@ -2,12 +2,22 @@ import type { SoulMeshMessage, SoulMeshTransport } from './SoulMeshProtocol';
 import { isSoulMeshMessage } from './SoulMeshProtocol';
 
 export type SoulMeshCircuitState = 'CLOSED' | 'OPEN' | 'HALF-OPEN';
-export type SoulMeshHttpTransportOptions = { headers?: Record<string, string>; timeoutMs?: number; retries?: number; retryDelayMs?: number; requestIdFactory?: () => string; failureThreshold?: number; openMs?: number };
+export type SoulMeshHttpTransportOptions = {
+  headers?: Record<string, string>;
+  authToken?: string;
+  timeoutMs?: number;
+  retries?: number;
+  retryDelayMs?: number;
+  requestIdFactory?: () => string;
+  failureThreshold?: number;
+  openMs?: number;
+};
 
 /** HTTP transport for deployed nuclei; preserves correlation, retries transient failures and protects unhealthy peers. */
 export class SoulMeshHttpTransport implements SoulMeshTransport {
   private readonly listeners = new Set<(message: SoulMeshMessage) => void | Promise<void>>();
   private readonly headers: Record<string, string>;
+  private readonly authToken?: string;
   private readonly timeoutMs: number;
   private readonly retries: number;
   private readonly retryDelayMs: number;
@@ -21,6 +31,7 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
   constructor(private readonly endpoint: string, options: SoulMeshHttpTransportOptions = {}) {
     if (!/^https?:\/\//i.test(endpoint)) throw new Error('Soul Mesh HTTP endpoint must be an absolute http(s) URL');
     this.headers = options.headers ?? {};
+    this.authToken = options.authToken;
     this.timeoutMs = Math.max(1000, options.timeoutMs ?? 15000);
     this.retries = Math.max(0, Math.min(3, options.retries ?? 1));
     this.retryDelayMs = Math.max(50, options.retryDelayMs ?? 250);
@@ -41,6 +52,12 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
   private markSuccess(): void { this.failures = 0; this.state = 'CLOSED'; }
   private markFailure(): void { this.failures += 1; if (this.failures >= this.failureThreshold) { this.state = 'OPEN'; this.openedAt = Date.now(); } }
 
+  private retryDelay(attempt: number): number {
+    const exponential = this.retryDelayMs * (2 ** attempt);
+    const jitter = Math.floor(Math.random() * Math.max(1, this.retryDelayMs / 2));
+    return Math.min(10000, exponential + jitter);
+  }
+
   async send(message: SoulMeshMessage): Promise<void> {
     if (!this.allowRequest()) throw new Error(`Soul Mesh circuit OPEN: ${this.endpoint}`);
     let lastError: unknown;
@@ -49,7 +66,19 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
       try {
         const requestId = this.headers['x-request-id'] ?? message.correlationId ?? this.requestIdFactory();
-        const response = await fetch(this.endpoint, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json', 'x-request-id': requestId, 'x-soul-mesh-contract-version': message.contractVersion, ...this.headers }, body: JSON.stringify(message), signal: controller.signal });
+        const response = await fetch(this.endpoint, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            accept: 'application/json',
+            'x-request-id': requestId,
+            'x-soul-mesh-contract-version': message.contractVersion,
+            ...(this.authToken ? { authorization: `Bearer ${this.authToken}` } : {}),
+            ...this.headers,
+          },
+          body: JSON.stringify(message),
+          signal: controller.signal,
+        });
         if (!response.ok) throw new Error(`Soul Mesh transport failed: HTTP ${response.status}`);
         if (response.status !== 204 && response.status !== 202) {
           const contentType = response.headers.get('content-type') ?? '';
@@ -57,8 +86,10 @@ export class SoulMeshHttpTransport implements SoulMeshTransport {
         }
         this.markSuccess();
         return;
-      } catch (error) { lastError = error; if (attempt < this.retries) await new Promise(resolve => setTimeout(resolve, this.retryDelayMs * (attempt + 1))); }
-      finally { clearTimeout(timer); }
+      } catch (error) {
+        lastError = error;
+        if (attempt < this.retries) await new Promise(resolve => setTimeout(resolve, this.retryDelay(attempt)));
+      } finally { clearTimeout(timer); }
     }
     this.markFailure();
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
