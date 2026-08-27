@@ -21,16 +21,19 @@ export class SoulMeshRouter {
       id: crypto.randomUUID(), correlationId, source: this.local, target,
       kind: 'request', capability, payload, timestamp: Date.now(),
     };
-    return new Promise<SoulMeshMessage>((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(correlationId); reject(new Error(`Soul Mesh request timeout: ${target}/${capability}`)); }, this.timeoutMs);
-      this.pending.set(correlationId, { resolve, reject, timer });
-      void this.transport.send(message).catch((error) => { clearTimeout(timer); this.pending.delete(correlationId); reject(error instanceof Error ? error : new Error(String(error))); });
-    });
+    return this.waitForResponse(correlationId, async () => this.transport.send(message), target, capability);
   }
 
   onRequest(capability: string, handler: SoulMeshRequestHandler): () => void {
     this.handlers.set(capability, handler);
     return () => { if (this.handlers.get(capability) === handler) this.handlers.delete(capability); };
+  }
+
+  /** Sends an event and waits for the peer to answer with a correlated response/error. */
+  async sendEventAndWait(target: SoulNucleus, capability: string, payload: unknown, timeoutMs = 3000): Promise<SoulMeshMessage> {
+    const correlationId = crypto.randomUUID();
+    const message: SoulMeshMessage = { protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId, source: this.local, target, kind: 'event', capability, payload, timestamp: Date.now() };
+    return this.waitForResponse(correlationId, async () => this.transport.send(message), target, capability, timeoutMs);
   }
 
   async sendEvent(target: SoulNucleus, capability: string, payload: unknown): Promise<string> {
@@ -39,9 +42,18 @@ export class SoulMeshRouter {
     return correlationId;
   }
 
-  /** Public ingress for HTTP/WebSocket/native adapters. The adapter remains responsible for decoding the wire body. */
+  /** Public ingress for HTTP/WebSocket/native adapters. */
   async ingest(message: SoulMeshMessage): Promise<void> {
+    if (message.target !== this.local) return;
     await this.handle(message);
+  }
+
+  private waitForResponse(correlationId: string, send: () => Promise<void>, target: SoulNucleus, capability: string, timeoutMs = this.timeoutMs): Promise<SoulMeshMessage> {
+    return new Promise<SoulMeshMessage>((resolve, reject) => {
+      const timer = setTimeout(() => { this.pending.delete(correlationId); reject(new Error(`Soul Mesh request timeout: ${target}/${capability}`)); }, timeoutMs);
+      this.pending.set(correlationId, { resolve, reject, timer });
+      void send().catch((error) => { clearTimeout(timer); this.pending.delete(correlationId); reject(error instanceof Error ? error : new Error(String(error))); });
+    });
   }
 
   private async handle(message: SoulMeshMessage): Promise<void> {
