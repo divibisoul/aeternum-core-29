@@ -21,8 +21,16 @@ export class SoulMeshCapabilityRegistry {
     this.capabilities.set(node, existing);
   }
 
+  registerPeerCapabilities(peerId: Exclude<SoulNucleus, 'N01'>, capabilities: readonly SoulMeshCapability[]): void {
+    this.register(peerId, [...capabilities]);
+  }
+
   get(node: SoulNucleus): SoulMeshCapability[] {
     return [...(this.capabilities.get(node)?.values() ?? [])];
+  }
+
+  getCombined(): SoulMeshCapability[] {
+    return [...this.capabilities.values()].flatMap((nodeCapabilities) => [...nodeCapabilities.values()]);
   }
 
   has(node: SoulNucleus, capabilityId: string): boolean {
