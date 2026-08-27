@@ -42,9 +42,9 @@ export class SoulMeshRouter {
     return correlationId;
   }
 
-  async ingest(message: SoulMeshMessage): Promise<void> {
-    if (message.target !== this.local) return;
-    await this.handle(message);
+  async ingest(message: SoulMeshMessage): Promise<SoulMeshMessage | undefined> {
+    if (message.target !== this.local) return undefined;
+    return this.handle(message);
   }
 
   private waitForResponse(correlationId: string, send: () => Promise<void>, target: SoulNucleus, capability: string, timeoutMs = this.timeoutMs): Promise<SoulMeshMessage> {
@@ -55,33 +55,38 @@ export class SoulMeshRouter {
     });
   }
 
-  private async handle(message: SoulMeshMessage): Promise<void> {
-    if (message.target !== this.local) return;
+  private async handle(message: SoulMeshMessage): Promise<SoulMeshMessage | undefined> {
+    if (message.target !== this.local) return undefined;
     if (message.kind === 'response' || message.kind === 'error') {
       const pending = this.pending.get(message.correlationId);
-      if (!pending) return;
+      if (!pending) return message;
       clearTimeout(pending.timer); this.pending.delete(message.correlationId);
       if (message.kind === 'error') pending.reject(new Error(String((message.payload as { error?: unknown })?.error ?? 'Soul Mesh error')));
       else pending.resolve(message);
-      return;
+      return message;
     }
 
     const handler = message.capability ? this.handlers.get(message.capability) : undefined;
     if (message.kind === 'request' || (message.kind === 'event' && handler)) {
       if (!handler) {
-        await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: `Capability not registered: ${message.capability ?? 'unknown'}` }, timestamp: Date.now() });
-        return;
+        const errorMessage: SoulMeshMessage = { protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: `Capability not registered: ${message.capability ?? 'unknown'}` }, timestamp: Date.now() };
+        await this.transport.send(errorMessage);
+        return errorMessage;
       }
       try {
         const result = await handler(message);
-        await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'response', capability: message.capability, payload: result, timestamp: Date.now() });
+        const response: SoulMeshMessage = { protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'response', capability: message.capability, payload: result, timestamp: Date.now() };
+        await this.transport.send(response);
+        return response;
       } catch (error) {
-        await this.transport.send({ protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: error instanceof Error ? error.message : String(error) }, timestamp: Date.now() });
+        const errorMessage: SoulMeshMessage = { protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION, id: crypto.randomUUID(), correlationId: message.correlationId, source: this.local, target: message.source, kind: 'error', capability: message.capability, payload: { error: error instanceof Error ? error.message : String(error) }, timestamp: Date.now() };
+        await this.transport.send(errorMessage);
+        return errorMessage;
       }
-      return;
     }
 
     await EventBus.emit('soul:mesh:message' as never, message as never).catch(() => undefined);
+    return undefined;
   }
 
   close(): void { this.unsubscribe(); for (const pending of this.pending.values()) { clearTimeout(pending.timer); pending.reject(new Error('Soul Mesh router closed')); } this.pending.clear(); this.handlers.clear(); }
