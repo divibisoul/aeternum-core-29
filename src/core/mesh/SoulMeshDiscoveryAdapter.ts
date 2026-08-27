@@ -36,7 +36,7 @@ export class IndexedDBDiscoveryAdapter implements DiscoveryAdapter {
 
   async register(peer: MeshPeerRegistration): Promise<void> {
     const db = await this.open();
-    await this.transaction(db, 'readwrite', store => { store.put(this.sanitize(peer)); });
+    await this.transaction(db, 'readwrite', store => store.put(this.sanitize(peer)));
   }
 
   async resolve(nucleus: Exclude<SoulNucleus, 'N01'>): Promise<MeshPeerRegistration | undefined> {
