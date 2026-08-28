@@ -35,7 +35,10 @@ export function validateCapabilityGraph(capabilities: readonly SoulCapability[] 
     ids.add(capability.id);
     if (capability.node !== 'N01') throw new Error(`Capability owned by unexpected node: ${capability.id}`);
     if (capability.version !== '1.0') throw new Error(`Unsupported capability version: ${capability.id}`);
-    if (capability.privacy !== clamp01(capability.privacy) || capability.cost !== clamp01(capability.cost)) throw new Error(`Capability score must be between 0 and 1: ${capability.id}`);
+    if (!Number.isFinite(capability.privacy) || !Number.isFinite(capability.cost) || capability.privacy !== clamp01(capability.privacy) || capability.cost !== clamp01(capability.cost)) throw new Error(`Capability score must be between 0 and 1: ${capability.id}`);
+    if (!capability.permission) throw new Error(`Capability permission is required: ${capability.id}`);
+  }
+  for (const capability of capabilities) {
     for (const dependency of capability.dependencies) {
       if (!ids.has(dependency)) throw new Error(`Unknown capability dependency: ${capability.id} -> ${dependency}`);
     }
