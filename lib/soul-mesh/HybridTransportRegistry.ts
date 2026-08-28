@@ -10,6 +10,10 @@ export const N01_TRANSPORT_REGISTRY: readonly TransportDescriptor[] = [
   {kind:'HTTP',status:'native',bidirectional:true,priority:4},
   {kind:'REALTIME',status:'native',bidirectional:true,priority:5},
 ];
+export interface EnvelopeTransport<T=unknown> { envelope: T; transport: TransportKind; }
 export function rankCompatible(local:readonly TransportKind[],remote:readonly TransportKind[]):TransportKind|null {
   return [...N01_TRANSPORT_REGISTRY].sort((a,b)=>a.priority-b.priority).find(t=>local.includes(t.kind)&&remote.includes(t.kind))?.kind ?? null;
+}
+export function supportsBidirectional(kind: TransportKind): boolean {
+  return N01_TRANSPORT_REGISTRY.some(t => t.kind === kind && t.bidirectional && t.status !== 'unavailable');
 }
