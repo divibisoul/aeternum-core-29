@@ -41,6 +41,6 @@ object SoulMeshBootstrap {
             kind = "response",
             capability = message.capability,
             payload = JSONObject().put("execution", "WEB_SESSION").put("request", message.toJson()),
-            timestamp = java.time.Instant.now().toString(),
+            timestamp = System.currentTimeMillis(),
         )
 }
