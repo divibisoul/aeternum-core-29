@@ -1,15 +1,18 @@
 import { verifyEnvelope, type SoulMeshEnvelope } from './SoulMeshEnvelope';
-import {
-  emitCanonicalEnvelope,
-  rankCompatible,
-  supportsBidirectional,
-  type TransportKind,
-} from '../../../lib/soul-mesh/HybridTransportRegistry';
+import type { TransportKind } from '../../../lib/soul-mesh/HybridTransportRegistry';
 
 export interface CanonicalTransportFrame<T = unknown> {
   envelope: SoulMeshEnvelope<T>;
   transport: TransportKind;
 }
+
+const BIDIRECTIONAL_TRANSPORTS: readonly TransportKind[] = [
+  'IN_PROCESS',
+  'WEBVIEW_BRIDGE',
+  'LOOPBACK_HTTP',
+  'HTTP',
+  'REALTIME',
+];
 
 /** Validates the existing v1.0 envelope before a transport adapter accepts it. */
 export async function acceptCanonicalEnvelope<T>(
@@ -23,16 +26,15 @@ export async function acceptCanonicalEnvelope<T>(
   return envelope;
 }
 
-/** Resolves a common bidirectional transport without replacing the existing registry. */
+/** Resolves a common bidirectional transport while leaving the existing registry intact. */
 export function resolveCanonicalTransport(
   local: readonly TransportKind[],
   remote: readonly TransportKind[],
 ): TransportKind {
-  const transport = rankCompatible(local, remote);
-  if (!transport || !supportsBidirectional(transport)) {
-    throw new Error('NO_COMPATIBLE_BIDIRECTIONAL_TRANSPORT');
+  for (const transport of BIDIRECTIONAL_TRANSPORTS) {
+    if (local.includes(transport) && remote.includes(transport)) return transport;
   }
-  return transport;
+  throw new Error('NO_COMPATIBLE_BIDIRECTIONAL_TRANSPORT');
 }
 
 /** Emits the unchanged canonical envelope through the selected transport. */
@@ -40,5 +42,8 @@ export function frameCanonicalEnvelope<T>(
   envelope: SoulMeshEnvelope<T>,
   transport: TransportKind,
 ): CanonicalTransportFrame<T> {
-  return emitCanonicalEnvelope(envelope, transport);
+  if (!BIDIRECTIONAL_TRANSPORTS.includes(transport)) {
+    throw new Error(`UNSUPPORTED_TRANSPORT:${transport}`);
+  }
+  return { envelope, transport };
 }
