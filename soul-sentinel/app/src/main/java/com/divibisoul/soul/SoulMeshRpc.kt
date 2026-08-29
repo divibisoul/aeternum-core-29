@@ -1,7 +1,6 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -26,7 +25,7 @@ class SoulMeshRpc(
                 kind = "request",
                 capability = capability,
                 payload = payload,
-                timestamp = Instant.now().toString(),
+                timestamp = System.currentTimeMillis(),
             )
         )
         return correlationId
@@ -35,7 +34,7 @@ class SoulMeshRpc(
     fun acceptResponse(message: SoulMeshMessage): Boolean {
         val deadline = pending.remove(message.correlationId) ?: return false
         if (System.nanoTime() > deadline) return false
-        return message.kind == "ack" || message.kind == "response" || message.kind == "error"
+        return message.kind == "response" || message.kind == "error"
     }
 
     fun expire(): List<String> {
