@@ -8,6 +8,10 @@ export interface FusionCapability {
   status: 'AVAILABLE' | 'DEGRADED' | 'UNAVAILABLE';
   privacy: number;
   cost: number;
+  agents?: readonly string[];
+  tools?: readonly string[];
+  functions?: readonly string[];
+  contexts?: readonly string[];
 }
 
 export interface FusionResult {
@@ -18,15 +22,34 @@ export interface FusionResult {
   bridgeCapabilities: string[];
   synergyScore: number;
   viable: boolean;
+  emergentCapabilities?: string[];
+  participatingAgents?: string[];
+  participatingTools?: string[];
+  participatingFunctions?: string[];
+}
+
+export interface CompositeFusionResult {
+  nodes: FusionNodeId[];
+  sourcePairs: FusionResult[][];
+  bridgeCapabilities: string[];
+  emergentCapabilities: string[];
+  participatingAgents: string[];
+  participatingTools: string[];
+  participatingFunctions: string[];
+  synergyScore: number;
+  viable: boolean;
 }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
-const intersection = (left: readonly string[], right: readonly string[]): string[] =>
-  [...new Set(left)].filter((value) => new Set(right).has(value));
+const unique = (values: readonly string[]): string[] => [...new Set(values)];
 
-const union = (left: readonly string[], right: readonly string[]): string[] =>
-  [...new Set([...left, ...right])];
+const intersection = (left: readonly string[], right: readonly string[]): string[] => {
+  const rightSet = new Set(right);
+  return unique(left).filter((value) => rightSet.has(value));
+};
+
+const union = (left: readonly string[], right: readonly string[]): string[] => unique([...left, ...right]);
 
 const outputToInputBridges = (
   left: FusionCapability,
@@ -39,11 +62,18 @@ function capabilityQuality(capability: FusionCapability): number {
   return availability * (0.7 + 0.3 * clamp01(capability.privacy)) * (1 - 0.25 * clamp01(capability.cost));
 }
 
-/**
- * Calculates pairwise composition without changing either nucleus' ownership.
- * A fusion is useful when one nucleus can consume an output of the other or
- * when both expose a common input that can be jointly orchestrated.
- */
+function compositionNames(left: FusionCapability, right: FusionCapability): string[] {
+  const names: string[] = [];
+  if (left.functions?.length && right.functions?.length) names.push(`${left.id}+${right.id}:composed-function`);
+  if (left.tools?.length && right.tools?.length) names.push(`${left.id}+${right.id}:composed-toolchain`);
+  if (left.agents?.length && right.agents?.length) names.push(`${left.id}+${right.id}:agent-team`);
+  if (left.contexts?.length && right.contexts?.length) names.push(`${left.id}+${right.id}:context-aware-operation`);
+  if (left.outputs.some((output) => right.inputs.includes(output)) && right.outputs.some((output) => left.inputs.includes(output))) {
+    names.push(`${left.id}+${right.id}:bidirectional-workflow`);
+  }
+  return unique(names);
+}
+
 export function evaluateFusion(
   left: FusionCapability,
   right: FusionCapability,
@@ -54,27 +84,35 @@ export function evaluateFusion(
   const reverseBridges = outputToInputBridges(right, left);
   const sharedInputs = intersection(left.inputs, right.inputs);
   const composedOutputs = union(left.outputs, right.outputs);
+  const agents = intersection(left.agents ?? [], right.agents ?? []);
+  const tools = intersection(left.tools ?? [], right.tools ?? []);
+  const functions = intersection(left.functions ?? [], right.functions ?? []);
+  const emergentCapabilities = compositionNames(left, right);
 
   const bridgeScore = Math.min(1, (bridges.length + reverseBridges.length) / 2);
-  const sharedScore = sharedInputs.length > 0 ? 0.25 : 0;
+  const sharedScore = sharedInputs.length > 0 ? 0.2 : 0;
+  const collaborationScore = Math.min(1, (agents.length + tools.length + functions.length) / 3) * 0.2;
+  const emergenceScore = emergentCapabilities.length > 0 ? 0.15 : 0;
   const quality = (capabilityQuality(left) + capabilityQuality(right)) / 2;
-  const synergyScore = clamp01(quality * (0.55 * bridgeScore + sharedScore + 0.2));
+  const synergyScore = clamp01(quality * (0.45 * bridgeScore + sharedScore + collaborationScore + emergenceScore + 0.2));
 
   return {
     leftNode: left.node,
     rightNode: right.node,
     sharedInputs,
     composedOutputs,
-    bridgeCapabilities: [...new Set([...bridges, ...reverseBridges])],
+    bridgeCapabilities: unique([...bridges, ...reverseBridges]),
     synergyScore,
-    viable: synergyScore > 0 && (bridges.length > 0 || reverseBridges.length > 0 || sharedInputs.length > 0),
+    viable: synergyScore > 0 && (
+      bridges.length > 0 || reverseBridges.length > 0 || sharedInputs.length > 0 || emergentCapabilities.length > 0
+    ),
+    emergentCapabilities,
+    participatingAgents: agents,
+    participatingTools: tools,
+    participatingFunctions: functions,
   };
 }
 
-/**
- * Evaluates all capabilities owned by two distinct nuclei and keeps the
- * highest-value composition for each cross-node capability bridge.
- */
 export function evaluatePairFusion(
   leftNode: FusionNodeId,
   leftCapabilities: readonly FusionCapability[],
@@ -92,11 +130,6 @@ export function evaluatePairFusion(
     .sort((a, b) => b.synergyScore - a.synergyScore);
 }
 
-/**
- * Produces the next-level candidate set from two already evaluated pair
- * results. This is deliberately additive: it never mutates or transfers
- * ownership of a capability between nuclei.
- */
 export function composeFusionLevels(
   first: readonly FusionResult[],
   second: readonly FusionResult[],
@@ -112,4 +145,96 @@ export function composeFusionLevels(
         item.bridgeCapabilities.join('|') === candidate.bridgeCapabilities.join('|'),
       ) === index,
     );
+}
+
+export function composeSimultaneousPairs(
+  firstPair: readonly FusionResult[],
+  secondPair: readonly FusionResult[],
+): CompositeFusionResult | null {
+  if (!firstPair.length || !secondPair.length) return null;
+
+  const viableFirst = firstPair.filter((result) => result.viable);
+  const viableSecond = secondPair.filter((result) => result.viable);
+  if (!viableFirst.length || !viableSecond.length) return null;
+
+  const bridgeCapabilities = unique([
+    ...viableFirst.flatMap((result) => result.bridgeCapabilities),
+    ...viableSecond.flatMap((result) => result.bridgeCapabilities),
+  ]);
+  const emergentCapabilities = unique([
+    ...viableFirst.flatMap((result) => result.emergentCapabilities ?? []),
+    ...viableSecond.flatMap((result) => result.emergentCapabilities ?? []),
+  ]);
+  const participatingAgents = unique([
+    ...viableFirst.flatMap((result) => result.participatingAgents ?? []),
+    ...viableSecond.flatMap((result) => result.participatingAgents ?? []),
+  ]);
+  const participatingTools = unique([
+    ...viableFirst.flatMap((result) => result.participatingTools ?? []),
+    ...viableSecond.flatMap((result) => result.participatingTools ?? []),
+  ]);
+  const participatingFunctions = unique([
+    ...viableFirst.flatMap((result) => result.participatingFunctions ?? []),
+    ...viableSecond.flatMap((result) => result.participatingFunctions ?? []),
+  ]);
+
+  const pairScore = (
+    viableFirst.reduce((sum, result) => sum + result.synergyScore, 0) / viableFirst.length +
+    viableSecond.reduce((sum, result) => sum + result.synergyScore, 0) / viableSecond.length
+  ) / 2;
+  const crossComposition = clamp01((bridgeCapabilities.length + emergentCapabilities.length + participatingFunctions.length) / 6);
+  const synergyScore = clamp01(pairScore * (0.65 + 0.35 * crossComposition));
+  const nodes = unique([...viableFirst, ...viableSecond].flatMap((result) => [result.leftNode, result.rightNode])) as FusionNodeId[];
+
+  return {
+    nodes,
+    sourcePairs: [viableFirst, viableSecond],
+    bridgeCapabilities,
+    emergentCapabilities,
+    participatingAgents,
+    participatingTools,
+    participatingFunctions,
+    synergyScore,
+    viable: nodes.length >= 4 && synergyScore > 0,
+  };
+}
+
+export function composeFourNucleusFusion(
+  firstPair: readonly FusionResult[],
+  secondPair: readonly FusionResult[],
+): CompositeFusionResult | null {
+  const composite = composeSimultaneousPairs(firstPair, secondPair);
+  if (!composite || composite.nodes.length < 4) return null;
+  return composite;
+}
+
+export function composeSixNucleusFusion(
+  firstFour: CompositeFusionResult,
+  secondPair: readonly FusionResult[],
+): CompositeFusionResult | null {
+  if (!firstFour.viable || !secondPair.length) return null;
+  const viableSecond = secondPair.filter((result) => result.viable);
+  if (!viableSecond.length) return null;
+
+  const secondScore = viableSecond.reduce((sum, result) => sum + result.synergyScore, 0) / viableSecond.length;
+  const bridgeCapabilities = unique([...firstFour.bridgeCapabilities, ...viableSecond.flatMap((result) => result.bridgeCapabilities)]);
+  const emergentCapabilities = unique([...firstFour.emergentCapabilities, ...viableSecond.flatMap((result) => result.emergentCapabilities ?? [])]);
+  const participatingAgents = unique([...firstFour.participatingAgents, ...viableSecond.flatMap((result) => result.participatingAgents ?? [])]);
+  const participatingTools = unique([...firstFour.participatingTools, ...viableSecond.flatMap((result) => result.participatingTools ?? [])]);
+  const participatingFunctions = unique([...firstFour.participatingFunctions, ...viableSecond.flatMap((result) => result.participatingFunctions ?? [])]);
+  const nodes = unique([...firstFour.nodes, ...viableSecond.flatMap((result) => [result.leftNode, result.rightNode])]) as FusionNodeId[];
+  const crossComposition = clamp01((bridgeCapabilities.length + emergentCapabilities.length + participatingFunctions.length) / 10);
+  const synergyScore = clamp01(((firstFour.synergyScore + secondScore) / 2) * (0.65 + 0.35 * crossComposition));
+
+  return {
+    nodes,
+    sourcePairs: [...firstFour.sourcePairs, viableSecond],
+    bridgeCapabilities,
+    emergentCapabilities,
+    participatingAgents,
+    participatingTools,
+    participatingFunctions,
+    synergyScore,
+    viable: nodes.length === 6 && synergyScore > 0,
+  };
 }
