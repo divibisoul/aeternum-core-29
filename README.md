@@ -14,60 +14,46 @@ Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PRO
 
 Changes made via Lovable will be committed automatically to this repo.
 
-**Use your preferred IDE**
-
 If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+The only requirement is having Node.js & npm installed.
 
-Follow these steps:
+## SOUL Mesh N01
+
+This repository contains the N01 coordination layer for the six-nucleus Soul system. Existing UI and bridge code remain intact. The executable Mesh gateway is started with:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm run mesh:n01
 ```
 
-**Edit a file directly in GitHub**
+Default listener: `0.0.0.0:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Mesh endpoints
 
-**Use GitHub Codespaces**
+- `GET /mesh/health`
+- `GET /mesh/discovery`
+- `POST /mesh/register`
+- `POST /mesh/in`
+- `POST /mesh/out`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Configure peer endpoints with `SOUL_MESH_N02_URL` through `SOUL_MESH_N06_URL`. Configure `SOUL_MESH_SECRET` to enable HMAC-SHA256 envelope authentication.
+
+N01 provides discovery, registration, delegation, retry/circuit protection and ordered `mesh.combo` workflows. Specialized capabilities remain owned by their respective nuclei; N01 orchestrates rather than replacing them.
+
+To run the N01/N06 probe:
+
+```sh
+SOUL_MESH_N06_URL=http://<n06-host>:<port> npm run mesh:health
+```
+
+The probe only reports N01↔N06 as successful when the response identity and correlation ID are correct.
+
+See `MESH_STATUS.md` for the acceptance criteria and current implementation boundary.
 
 ## What technologies are used for this project?
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This project is built with Vite, TypeScript, React, shadcn-ui and Tailwind CSS.
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Open the Lovable project and publish it using the deployment controls provided there.
