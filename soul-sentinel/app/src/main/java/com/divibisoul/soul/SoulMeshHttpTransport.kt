@@ -8,17 +8,18 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.URL
 import java.nio.charset.StandardCharsets
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-/** HTTP transport for Soul Mesh v1. Loopback is the default bind for local runtime communication. */
+/** Bidirectional HTTP transport for Soul Mesh v1. Keeps wire identity independent from deployment URLs. */
 class SoulMeshHttpTransport(
     private val sourceNucleus: String,
     private val bindHost: String = "127.0.0.1",
     private val port: Int = 8765,
     private val path: String = "/soul/mesh/v1",
+    private val connectTimeoutMs: Int = 5_000,
+    private val readTimeoutMs: Int = 10_000,
 ) {
     private val executor: ExecutorService = Executors.newCachedThreadPool()
     @Volatile private var serverSocket: ServerSocket? = null
@@ -27,7 +28,6 @@ class SoulMeshHttpTransport(
 
     fun start(onMessage: (SoulMeshMessage) -> Unit): Result<Unit> = startInternal(onMessage)
 
-    /** Starts the transport with a real endpoint response, enabling request -> ACK/response RPC. */
     fun startWithResponse(onMessage: (SoulMeshMessage) -> SoulMeshMessage): Result<Unit> {
         responseHandler = onMessage
         return startInternal({})
@@ -45,11 +45,14 @@ class SoulMeshHttpTransport(
         message.validate().getOrThrow()
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
-            connectTimeout = 5_000
-            readTimeout = 10_000
+            connectTimeout = connectTimeoutMs
+            readTimeout = readTimeoutMs
             doOutput = true
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
             setRequestProperty("Accept", "application/json")
+            setRequestProperty("X-Soul-Mesh-Protocol", SoulMeshContract.PROTOCOL)
+            setRequestProperty("X-Soul-Mesh-Contract-Version", SoulMeshContract.CONTRACT_VERSION)
+            setRequestProperty("X-Soul-Mesh-Correlation-Id", message.correlationId)
         }
         connection.outputStream.use { it.write(message.toJson().toString().toByteArray(StandardCharsets.UTF_8)) }
         val status = connection.responseCode
@@ -112,10 +115,10 @@ class SoulMeshHttpTransport(
                     correlationId = message.correlationId,
                     source = sourceNucleus,
                     target = message.source,
-                    kind = "ack",
+                    kind = "response",
                     capability = message.capability,
                     payload = JSONObject().put("accepted", true),
-                    timestamp = Instant.now().toString(),
+                    timestamp = java.time.Instant.now().toString(),
                 )
                 writeResponse(socket, 200, response.toJson())
             } catch (error: Exception) {
