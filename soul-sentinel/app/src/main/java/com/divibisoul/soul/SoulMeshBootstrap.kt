@@ -2,11 +2,14 @@ package com.divibisoul.soul
 
 import org.json.JSONObject
 
-/** Builds the six nuclei and binds every capability to the correct execution mode. */
+/** Builds the six-nucleus runtime and preserves native ownership while enabling peer routing. */
 object SoulMeshBootstrap {
-    fun create(webDelegate: (SoulMeshMessage) -> SoulMeshMessage): SoulMeshRuntime {
+    fun create(
+        webDelegate: (SoulMeshMessage) -> SoulMeshMessage,
+        peerEndpoints: Map<String, String> = emptyMap(),
+    ): SoulMeshRuntime {
         val runtime = SoulMeshRuntime()
-        val remote = SoulMeshTransport(emptyMap())
+        val remote = SoulMeshTransport(peerEndpoints)
         val executor = SoulHybridCapabilityExecutor(webDelegate, remote)
 
         SoulMeshChannels.nuclei.forEach { nucleus ->
@@ -14,8 +17,14 @@ object SoulMeshBootstrap {
                 .filter { it.owner == nucleus && it.execution == Execution.LOCAL }
                 .associate { capability ->
                     capability.id to { payload: JSONObject ->
-                        if (capability.id == "mesh.ping") JSONObject().put("ok", true).put("runtime", "android")
-                        else JSONObject().put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED").put("capability", capability.id)
+                        if (capability.id == "mesh.ping") {
+                            JSONObject().put("ok", true).put("runtime", "android").put("nucleus", nucleus)
+                        } else {
+                            JSONObject()
+                                .put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED")
+                                .put("capability", capability.id)
+                                .put("owner", nucleus)
+                        }
                     }
                 }
             runtime.register(nucleus, SoulMeshEndpoint(nucleus, handlers) { message -> executor.execute(message) })
@@ -29,7 +38,7 @@ object SoulMeshBootstrap {
             correlationId = message.correlationId,
             source = message.target,
             target = message.source,
-            kind = "event",
+            kind = "response",
             capability = message.capability,
             payload = JSONObject().put("execution", "WEB_SESSION").put("request", message.toJson()),
             timestamp = java.time.Instant.now().toString(),
