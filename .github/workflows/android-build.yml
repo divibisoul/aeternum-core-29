@@ -2,8 +2,13 @@ name: Soul N01 Full Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   web:
@@ -35,7 +40,7 @@ jobs:
           gradle-version: '8.9'
       - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;35.0.0" "platform-tools"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - name: Build debug APK
         working-directory: soul-sentinel
         run: gradle :app:assembleDebug --stacktrace
