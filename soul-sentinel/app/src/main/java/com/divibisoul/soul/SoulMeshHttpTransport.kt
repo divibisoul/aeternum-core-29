@@ -118,7 +118,7 @@ class SoulMeshHttpTransport(
                     kind = "response",
                     capability = message.capability,
                     payload = JSONObject().put("accepted", true),
-                    timestamp = java.time.Instant.now().toString(),
+                    timestamp = System.currentTimeMillis(),
                 )
                 writeResponse(socket, 200, response.toJson())
             } catch (error: Exception) {
