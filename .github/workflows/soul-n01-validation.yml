@@ -2,9 +2,12 @@ name: SOUL N01 validation
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - upgrade/soul-n01-etapa2-v1
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate:
