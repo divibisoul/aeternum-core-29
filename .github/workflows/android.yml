@@ -1,10 +1,19 @@
 name: Soul Android validation
+
 on:
   push:
     paths:
       - 'soul-sentinel/**'
       - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'soul-sentinel/**'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,5 +27,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
       - run: gradle assembleDebug
       - run: gradle test
