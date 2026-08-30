@@ -1,0 +1,18 @@
+{
+  "system": "SOUL",
+  "version": "1.0",
+  "reference": "N01",
+  "nuclei": {
+    "N01": {"role":"host-reference-gateway","repository":"divibisoul/aeternum-core-29"},
+    "N02": {"role":"conversation-interaction","repository":"divibisoul/Eternium-"},
+    "N03": {"role":"perception-voice-multimodal-context","repository":"divibisoul/nexus-aeternum-fusion"},
+    "N04": {"role":"tools-documents-artifacts","repository":"divibisoul/nextjs-ai-chatbots"},
+    "N05": {"role":"orchestration-dispatch-execution","repository":"divibisoul/nextjs-ai-chatbot"},
+    "N06": {"role":"cognition-synthesis-audit-governance","repository":"divibisoul/nextjs-ai-chatbot-2000"}
+  },
+  "peerContract": {"inChannelsPerNucleus":5,"outChannelsPerNucleus":5,"directionalChannels":60},
+  "transports":["IN_PROCESS","WEBVIEW_BRIDGE","LOOPBACK_HTTP","HTTP","REALTIME"],
+  "ownership":"native-per-nucleus",
+  "fusionMode":"federated-independent-runtimes",
+  "gatewayFlow":"user -> N01 -> owner nucleus -> native capability -> N01 -> user"
+}
