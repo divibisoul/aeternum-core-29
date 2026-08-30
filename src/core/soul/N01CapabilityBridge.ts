@@ -1,5 +1,5 @@
-import { getN01Capabilities, type SoulCapability } from './CapabilityGraph';
-import { validateCapabilityContract, type CapabilityContract } from './N01Contract';
+import { getN01Capabilities, type SoulCapability } from './CapabilityGraph.ts';
+import { validateCapabilityContract, type CapabilityContract } from './N01Contract.ts';
 
 /**
  * Adapts the N01 internal capability graph to the existing Soul Mesh contract.
