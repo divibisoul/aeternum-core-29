@@ -25,7 +25,7 @@ export type SupabaseVectorMemoryOptions = {
   timeoutMs?: number;
 };
 
-const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
+const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-2';
 const DEFAULT_DIMENSIONS = 768;
 const DEFAULT_TIMEOUT_MS = 8_000;
 
@@ -44,22 +44,28 @@ export class SupabaseVectorMemory {
     this.supabaseAnonKey = (options.supabaseAnonKey ?? process.env.SUPABASE_ANON_KEY ?? '').trim();
     this.embeddingModel = (options.embeddingModel ?? process.env.GEMINI_EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL).trim();
     this.embeddingDimensions = Number(options.embeddingDimensions ?? process.env.GEMINI_EMBEDDING_DIMENSIONS ?? DEFAULT_DIMENSIONS);
-    this.nucleusId = (options.nucleusId ?? 'N01').trim() || 'N01';
+    this.nucleusId = (options.nucleusId ?? process.env.SOUL_NUCLEUS_ID ?? 'N01').trim() || 'N01';
     this.timeoutMs = Math.max(1000, Number(options.timeoutMs ?? process.env.SOUL_MEMORY_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS));
   }
 
   private client(): SupabaseClient | null {
-    if (!this.supabaseUrl || !this.supabaseAnonKey) return null;
-    return createClient(this.supabaseUrl, this.supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(this.timeoutMs) }) },
-    });
+    try {
+      if (!this.supabaseUrl || !this.supabaseAnonKey) return null;
+      return createClient(this.supabaseUrl, this.supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+          fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(this.timeoutMs) }),
+        },
+      });
+    } catch {
+      return null;
+    }
   }
 
   private async embedding(text: string, apiKey?: string): Promise<number[] | null> {
     try {
       const key = (apiKey ?? this.apiKey).trim();
-      if (!key) return null;
+      if (!key || !text.trim()) return null;
       const ai = new GoogleGenAI({ apiKey: key });
       const response = await ai.models.embedContent({
         model: this.embeddingModel,
@@ -74,7 +80,10 @@ export class SupabaseVectorMemory {
     }
   }
 
-  async recall(text: string, options: { apiKey?: string; sessionId?: string; threshold?: number; limit?: number } = {}): Promise<SoulMemory[]> {
+  async recall(
+    text: string,
+    options: { apiKey?: string; sessionId?: string; threshold?: number; limit?: number } = {},
+  ): Promise<SoulMemory[]> {
     try {
       const input = typeof text === 'string' ? text.trim() : '';
       if (!input) return [];
@@ -96,7 +105,18 @@ export class SupabaseVectorMemory {
     }
   }
 
-  async remember(content: string, options: { apiKey?: string; agentId?: string; sessionId?: string; memoryType?: string; metadata?: Record<string, unknown>; importance?: number; confidence?: number } = {}): Promise<boolean> {
+  async remember(
+    content: string,
+    options: {
+      apiKey?: string;
+      agentId?: string;
+      sessionId?: string;
+      memoryType?: string;
+      metadata?: Record<string, unknown>;
+      importance?: number;
+      confidence?: number;
+    } = {},
+  ): Promise<boolean> {
     try {
       const input = typeof content === 'string' ? content.trim() : '';
       const client = this.client();
