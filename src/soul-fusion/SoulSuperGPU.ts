@@ -29,8 +29,28 @@ export type SuperGPUResult = {
   finishedAt: number;
 };
 
+export type PrefrontalInput = {
+  source: SoulNucleusId;
+  signal: 'GOAL' | 'CONTEXT' | 'CAPABILITY' | 'RESULT' | 'ERROR' | 'FEEDBACK';
+  activation: number;
+  features: readonly string[];
+  payload: unknown;
+  timestamp: number;
+};
+
+export type PrefrontalFeed = {
+  generatedAt: number;
+  source: 'SUPERGPU';
+  signals: readonly PrefrontalInput[];
+  results: readonly SuperGPUResult[];
+};
+
 const DEFAULT_BACKENDS: readonly ComputeBackend[] = ['IN_PROCESS', 'WEBASSEMBLY', 'WEBGPU', 'REMOTE_MESH'];
 const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+
+function clamp(value: number): number {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
 
 export class SoulSuperGPU {
   private readonly nodes = new Map<SoulNucleusId, SuperGPUNode>();
@@ -76,6 +96,8 @@ export class SoulSuperGPU {
   }
 
   async executeParallel(tasks: readonly SuperGPUTask[]): Promise<readonly SuperGPUResult[]> {
+    const ids = tasks.map((task) => task.id);
+    if (new Set(ids).size !== ids.length) throw new Error('SUPERGPU_DUPLICATE_TASK_ID');
     const byId = new Map(tasks.map((task) => [task.id, task]));
     const completed = new Map<string, SuperGPUResult>();
     const pending = new Set(tasks.map((task) => task.id));
@@ -88,8 +110,31 @@ export class SoulSuperGPU {
     return tasks.map((task) => completed.get(task.id)!);
   }
 
-  describe(): { mode: 'federated-software-fabric'; nuclei: readonly SoulNucleusId[]; backends: readonly ComputeBackend[]; nodes: readonly SuperGPUNode[]; parallel: true; hardwareGpu: false } {
-    return { mode: 'federated-software-fabric', nuclei: NUCLEI, backends: DEFAULT_BACKENDS, nodes: [...this.nodes.values()], parallel: true, hardwareGpu: false };
+  feedPrefrontalCortex(results: readonly SuperGPUResult[]): PrefrontalFeed {
+    const signals: PrefrontalInput[] = results.map((result) => ({
+      source: result.nucleus,
+      signal: 'RESULT',
+      activation: 1,
+      features: [result.taskId],
+      payload: result.output,
+      timestamp: result.finishedAt,
+    }));
+    return { generatedAt: Date.now(), source: 'SUPERGPU', signals, results };
+  }
+
+  feedCapabilityMap(): readonly PrefrontalInput[] {
+    return [...this.nodes.values()].filter((node) => node.available).map((node) => ({
+      source: node.nucleus,
+      signal: 'CAPABILITY' as const,
+      activation: clamp(node.capacity),
+      features: node.capabilities,
+      payload: { capacity: node.capacity, backends: node.backends },
+      timestamp: Date.now(),
+    }));
+  }
+
+  describe(): { mode: 'federated-software-fabric'; nuclei: readonly SoulNucleusId[]; backends: readonly ComputeBackend[]; nodes: readonly SuperGPUNode[]; parallel: true; hardwareGpu: false; feedsPrefrontalCortex: true } {
+    return { mode: 'federated-software-fabric', nuclei: NUCLEI, backends: DEFAULT_BACKENDS, nodes: [...this.nodes.values()], parallel: true, hardwareGpu: false, feedsPrefrontalCortex: true };
   }
 }
 
