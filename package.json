@@ -12,7 +12,8 @@
     "mesh:n01": "node scripts/soul-mesh-server.mjs",
     "mesh:health": "node scripts/test-n01-n06.mjs",
     "fusion:check": "node scripts/soul-fusion-contract-check.mjs",
-    "supergpu:check": "node scripts/soul-supergpu-check.mjs"
+    "supergpu:check": "node scripts/soul-supergpu-check.mjs",
+    "byok:check": "node scripts/test-n01-byok.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
