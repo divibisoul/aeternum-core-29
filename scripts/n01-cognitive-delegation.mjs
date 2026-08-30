@@ -11,9 +11,10 @@ export async function buildCognitiveDelegationPayload(input = {}, correlationId)
   const memoryContext = Array.isArray(source.memoryContext)
     ? source.memoryContext
     : await recallSoulMemories({ text: requestText, apiKey: source.apiKey, sessionId: source.sessionId });
+  const { apiKey: _apiKey, ...safeSource } = source;
 
   return {
-    ...source,
+    ...safeSource,
     memoryContext: Array.isArray(memoryContext) ? memoryContext : [],
     compositionPermission: {
       enabled: true,
