@@ -7,7 +7,7 @@ const registry = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'SOUL-FUSION
 const expected = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
 const transports = ['IN_PROCESS','WEBVIEW_BRIDGE','LOOPBACK_HTTP','HTTP','REALTIME'];
 const stages = ['identity','discovery','secure-transport','capability-ownership','bidirectional-routing','delegation','response-correlation','health-and-recovery','observability','native-capability-preservation','capability-resolution','unified-execution'];
-if (manifest.system !== 'SOUL' || manifest.fusionVersion !== '1.1' || manifest.nucleus !== 'N01') throw new Error('INVALID_N01_FUSION_MANIFEST');
+if (manifest.system !== 'SOUL' || manifest.fusionVersion !== '1.3' || manifest.nucleus !== 'N01') throw new Error('INVALID_N01_FUSION_MANIFEST');
 if (manifest.independentRuntime !== true || manifest.capabilityOwnership !== 'native' || manifest.fusionGateway !== true) throw new Error('INVALID_N01_FUSION_ROLE');
 if (registry.version !== '1.3') throw new Error('INVALID_FUSION_REGISTRY_VERSION');
 if (JSON.stringify(Object.keys(registry.nuclei)) !== JSON.stringify(expected)) throw new Error('FUSION_REGISTRY_MUST_CONTAIN_SIX_NUCLEI');
