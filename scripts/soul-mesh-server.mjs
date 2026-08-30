@@ -29,19 +29,14 @@ function verifyEnvelope(e){
   if(SECRET){ if(typeof e.hmac!=='string') throw new Error('MESH_HMAC_REQUIRED'); const expected=hmacFor(e); const actual=String(e.hmac); if(expected.length!==actual.length || !crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(actual))) throw new Error('MESH_HMAC_INVALID'); }
   seenNonces.set(e.nonce,Date.now());
 }
-function envelope({target,correlationId,type='TASK_RESULT',payload}){ const base={version:VERSION,messageId:crypto.randomUUID(),source:SELF,target,timestamp:Date.now(),nonce:crypto.randomUUID(),correlationId,type,payload}; return {...base,hmac:SECRET?hmacFor(base):''}; }
+function envelope({target,correlationId,type='TASK_RESULT',payload}) { const base={version:VERSION,messageId:crypto.randomUUID(),source:SELF,target,timestamp:Date.now(),nonce:crypto.randomUUID(),correlationId,type,payload}; return {...base,hmac:SECRET?hmacFor(base):''}; }
 function canonicalMessage(target, capability, payload, correlationId){ return {protocol:PROTOCOL,id:crypto.randomUUID(),correlationId,source:SELF,target,kind:'request',capability,payload,timestamp:Date.now()}; }
-function channelMapFor(id){ return {in:PEER_IDS.map(peer=>`${id}.IN.${peer}`),out:PEER_IDS.map(peer=>`${id}.OUT.${peer}`)}; }
+function channelsFor(id){ return {in:PEER_IDS.filter(peer=>peer!==id).map(peer=>`${id}.IN.${peer}`),out:PEER_IDS.filter(peer=>peer!==id).map(peer=>`${id}.OUT.${peer}`)}; }
 function capabilityList(){ return ['mesh.ping','mesh.health','mesh.discovery','mesh.register','mesh.heartbeat','mesh.delegate','mesh.fusion.describe','mesh.capabilities']; }
 function localFusionSnapshot(){
-  return {
-    system:'SOUL', fusionVersion:'1.0', reference:'N01', protocol:PROTOCOL,
-    nuclei:['N01',...PEER_IDS].map(id=>({id, role:id==='N01'?'host-reference-gateway':(peers.get(id)?.role||'independent-ai'), status:id==='N01'?'online':(peers.get(id)?.status||'unknown'), endpoint:id==='N01'?`http://${HOST}:${PORT}`:(peers.get(id)?.url||null), capabilities:id==='N01'?capabilityList():(peers.get(id)?.capabilities||[]), channels:id==='N01'?{in:PEER_IDS.map(p=>`N01.IN.${p}`),out:PEER_IDS.map(p=>`N01.OUT.${p}`)}: {in:['N/A'],out:['N/A']}})),
-    transports:TRANSPORTS,
-    directionalChannels:60,
-    ownership:'native-per-nucleus',
-    fusion:'federated-independent-runtimes'
-  };
+  return { system:'SOUL', fusionVersion:'1.1', reference:'N01', protocol:PROTOCOL,
+    nuclei:[SELF,...PEER_IDS].map(id=>({id,role:id===SELF?'host-reference-gateway':(peers.get(id)?.role||'independent-ai'),status:id===SELF?'online':(peers.get(id)?.status||'unknown'),endpoint:id===SELF?`http://${HOST}:${PORT}`:(peers.get(id)?.url||null),capabilities:id===SELF?capabilityList():(peers.get(id)?.capabilities||[]),channels:channelsFor(id)})),
+    transports:TRANSPORTS,directionalChannels:60,ownership:'native-per-nucleus',fusion:'federated-independent-runtimes'};
 }
 function resolveOwner(capability){
   for(const peer of peers.values()) if(Array.isArray(peer.capabilities) && peer.capabilities.includes(capability)) return peer.id;
@@ -56,68 +51,31 @@ async function forward(target,message){
   const peer=peers.get(target); if(!peer?.url) throw new Error(`PEER_NOT_DISCOVERED:${target}`);
   const until=circuitOpenUntil.get(target)||0; if(until>Date.now()) throw new Error(`PEER_CIRCUIT_OPEN:${target}`);
   const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),30_000);
-  try{
-    const response=await fetch(peer.url+'/api/soul-mesh',{method:'POST',headers:{'content-type':'application/json','x-correlation-id':message.correlationId},body:JSON.stringify(message),signal:controller.signal,cache:'no-store'});
-    const body=await response.json().catch(()=>({}));
-    if(!response.ok) throw new Error(`PEER_HTTP_${response.status}`);
-    failures.set(target,0); peer.lastSeen=Date.now(); peer.status='healthy'; return body;
-  }catch(error){ const count=(failures.get(target)||0)+1; failures.set(target,count); if(count>=5) circuitOpenUntil.set(target,Date.now()+60_000); throw error; }
+  try{ const response=await fetch(peer.url+'/api/soul-mesh',{method:'POST',headers:{'content-type':'application/json','x-correlation-id':message.correlationId},body:JSON.stringify(message),signal:controller.signal,cache:'no-store'}); const body=await response.json().catch(()=>({})); if(!response.ok) throw new Error(`PEER_HTTP_${response.status}`); failures.set(target,0); peer.lastSeen=Date.now(); peer.status='healthy'; return body; }
+  catch(error){ const count=(failures.get(target)||0)+1; failures.set(target,count); if(count>=5) circuitOpenUntil.set(target,Date.now()+60_000); throw error; }
   finally{ clearTimeout(timer); }
 }
-function canonicalToEnvelope(m){ return {version:VERSION,messageId:m.id||crypto.randomUUID(),source:m.source,target:m.target,timestamp:m.timestamp,nonce:crypto.randomUUID(),correlationId:m.correlationId,type:m.kind==='request'?'CAPABILITY_REQUEST':m.kind==='error'?'ERROR':'TASK_RESULT',payload:{capability:m.capability,payload:m.payload},hmac:''}; }
-async function handle(req,res){
-  const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
-  if(req.method==='GET' && url.pathname==='/mesh/health') return json(res,200,{ok:true,nucleus:SELF,protocol:PROTOCOL,timestamp:Date.now(),capabilities:capabilityList(),peers:[...peers.values()].map(p=>({id:p.id,url:p.url,status:p.status,lastSeen:p.lastSeen}))});
-  if(req.method==='GET' && url.pathname==='/mesh/discovery') return json(res,200,{nucleus:SELF,protocol:PROTOCOL,capabilities:capabilityList(),peers:[...peers.values()]});
-  if(req.method==='GET' && (url.pathname==='/mesh/fusion'||url.pathname==='/api/soul-fusion')) return json(res,200,localFusionSnapshot());
-  if(req.method==='POST' && url.pathname==='/mesh/register'){
-    const body=await readBody(req); if(!/^N0[2-6]$/.test(body.nucleus)||!normalizeUrl(body.endpoint)) return json(res,400,{error:'INVALID_REGISTRATION'});
-    const id=body.nucleus; const token=crypto.randomUUID(); registrationTokens.set(id,token);
-    peers.set(id,{id,url:normalizeUrl(body.endpoint),capabilities:Array.isArray(body.capabilities)?body.capabilities:[],role:typeof body.role==='string'?body.role:'independent-ai',lastSeen:Date.now(),status:'registered'});
-    return json(res,200,{ok:true,nucleus:SELF,registered:id,token,heartbeatIntervalMs:60_000,transports:TRANSPORTS});
-  }
-  if(req.method==='POST' && url.pathname==='/mesh/heartbeat'){
-    const body=await readBody(req); const id=body.nucleus; const expected=registrationTokens.get(id); const provided=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
-    if(!/^N0[2-6]$/.test(id)||!expected||provided!==expected) return json(res,401,{error:'INVALID_HEARTBEAT_AUTH'});
-    const peer=peers.get(id); if(!peer) return json(res,404,{error:'PEER_NOT_REGISTERED'});
-    peer.lastSeen=Date.now(); peer.status='healthy'; if(normalizeUrl(body.endpoint)) peer.url=normalizeUrl(body.endpoint); if(Array.isArray(body.capabilities)) peer.capabilities=body.capabilities; return json(res,200,{ok:true,nucleus:SELF,peer:id,timestamp:Date.now()});
-  }
-  if(req.method==='POST' && (url.pathname==='/mesh/in'||url.pathname==='/mesh/out'||url.pathname==='/api/soul-mesh')){
-    try{
-      const message=await readBody(req);
-      if(message.protocol===PROTOCOL){
-        if(message.target!==SELF) throw new Error('MESH_TARGET_MISMATCH');
-        if(!message.source || !/^N0[1-6]$/.test(message.source) || message.source===SELF || !message.correlationId) throw new Error('INVALID_SOUL_MESH_MESSAGE');
-        const capability=message.capability;
-        const respond=(kind,payload,status=200)=>json(res,status,{protocol:PROTOCOL,id:crypto.randomUUID(),correlationId:message.correlationId,source:SELF,target:message.source,kind,capability,payload,timestamp:Date.now()});
-        if(capability==='mesh.ping') return respond('response',{ok:true,nucleus:SELF});
-        if(capability==='mesh.health') return respond('response',{ok:true,nucleus:SELF,peers:[...peers.keys()]});
-        if(capability==='mesh.discovery'||capability==='mesh.capabilities') return respond('response',{nucleus:SELF,capabilities:capabilityList(),peers:[...peers.values()],transports:TRANSPORTS,channels:{in:PEER_IDS.map(p=>`N01.IN.${p}`),out:PEER_IDS.map(p=>`N01.OUT.${p}`)}});
-        if(capability==='mesh.fusion.describe') return respond('response',localFusionSnapshot());
-        if(capability==='mesh.register') return respond('response',{ok:true,registry:[...peers.keys()]});
-        if(capability==='mesh.heartbeat') return respond('response',{ok:true,timestamp:Date.now()});
-        if(capability==='mesh.delegate'){
-          const target=message.payload?.target;
-          if(!/^N0[2-6]$/.test(target)) return respond('error',{code:'INVALID_DELEGATION_TARGET'},400);
-          return json(res,200,await forward(target,canonicalMessage(target,message.payload?.capability||'mesh.ping',message.payload?.payload,message.correlationId)));
-        }
-        const owner=resolveOwner(capability);
-        if(owner && owner!==SELF) return json(res,200,await forward(owner,message));
-        return respond('error',{code:'CAPABILITY_NOT_IMPLEMENTED',capability},501);
-      }
-      verifyEnvelope(message);
-      const capability=message.payload?.capability;
-      if(capability==='mesh.ping'||message.type==='PING') return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF}}));
-      if(capability==='mesh.health') return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF,peers:[...peers.keys()]}}));
-      if(capability==='mesh.discovery'||capability==='mesh.capabilities'||capability==='mesh.fusion.describe') return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:localFusionSnapshot()}));
-      const owner=resolveOwner(capability);
-      if(owner && owner!==SELF) return json(res,200,await forward(owner,message));
-      return json(res,501,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_NOT_IMPLEMENTED',capability}}));
-    }catch(error){ return json(res,400,{ok:false,error:error instanceof Error?error.message:'MESH_ERROR'}); }
-  }
-  return json(res,404,{error:'NOT_FOUND'});
+function bootstrapPeers(){
+  const raw=process.env.SOUL_FUSION_PEERS || '';
+  if(!raw) return;
+  try{ const configured=JSON.parse(raw); for(const id of PEER_IDS){ const item=configured?.[id]; if(typeof item==='string'){ const url=normalizeUrl(item); if(url) peers.set(id,{id,url,capabilities:[],role:'independent-ai',lastSeen:0,status:'configured'}); } else if(item&&typeof item==='object'&&normalizeUrl(item.url)){ peers.set(id,{id,url:normalizeUrl(item.url),capabilities:Array.isArray(item.capabilities)?item.capabilities:[],role:typeof item.role==='string'?item.role:'independent-ai',lastSeen:0,status:'configured'}); } } }
+  catch{ console.error('SOUL_FUSION_PEERS_INVALID_JSON'); }
 }
-
+function handle(req,res){
+  return (async()=>{
+    const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
+    if(req.method==='GET'&&url.pathname==='/mesh/health') return json(res,200,{ok:true,nucleus:SELF,protocol:PROTOCOL,timestamp:Date.now(),capabilities:capabilityList(),peers:[...peers.values()].map(p=>({id:p.id,url:p.url,status:p.status,lastSeen:p.lastSeen}))});
+    if(req.method==='GET'&&url.pathname==='/mesh/discovery') return json(res,200,{nucleus:SELF,protocol:PROTOCOL,capabilities:capabilityList(),peers:[...peers.values()]});
+    if(req.method==='GET'&&(url.pathname==='/mesh/fusion'||url.pathname==='/api/soul-fusion')) return json(res,200,localFusionSnapshot());
+    if(req.method==='POST'&&url.pathname==='/mesh/register'){ const body=await readBody(req); if(!/^N0[2-6]$/.test(body.nucleus)||!normalizeUrl(body.endpoint)) return json(res,400,{error:'INVALID_REGISTRATION'}); const id=body.nucleus; const token=crypto.randomUUID(); registrationTokens.set(id,token); peers.set(id,{id,url:normalizeUrl(body.endpoint),capabilities:Array.isArray(body.capabilities)?body.capabilities:[],role:typeof body.role==='string'?body.role:'independent-ai',lastSeen:Date.now(),status:'registered'}); return json(res,200,{ok:true,nucleus:SELF,registered:id,token,heartbeatIntervalMs:60_000,transports:TRANSPORTS}); }
+    if(req.method==='POST'&&url.pathname==='/mesh/heartbeat'){ const body=await readBody(req); const id=body.nucleus; const expected=registrationTokens.get(id); const provided=(req.headers.authorization||'').replace(/^Bearer\s+/i,''); if(!/^N0[2-6]$/.test(id)||!expected||provided!==expected) return json(res,401,{error:'INVALID_HEARTBEAT_AUTH'}); const peer=peers.get(id); if(!peer) return json(res,404,{error:'PEER_NOT_REGISTERED'}); peer.lastSeen=Date.now(); peer.status='healthy'; if(normalizeUrl(body.endpoint)) peer.url=normalizeUrl(body.endpoint); if(Array.isArray(body.capabilities)) peer.capabilities=body.capabilities; return json(res,200,{ok:true,nucleus:SELF,peer:id,timestamp:Date.now()}); }
+    if(req.method==='POST'&&(url.pathname==='/mesh/in'||url.pathname==='/mesh/out'||url.pathname==='/api/soul-mesh')){ try{ const message=await readBody(req); if(message.protocol===PROTOCOL){ if(message.target!==SELF) throw new Error('MESH_TARGET_MISMATCH'); if(!message.source||!/^N0[1-6]$/.test(message.source)||message.source===SELF||!message.correlationId) throw new Error('INVALID_SOUL_MESH_MESSAGE'); const capability=message.capability; const respond=(kind,payload,status=200)=>json(res,status,{protocol:PROTOCOL,id:crypto.randomUUID(),correlationId:message.correlationId,source:SELF,target:message.source,kind,capability,payload,timestamp:Date.now()}); if(capability==='mesh.ping') return respond('response',{ok:true,nucleus:SELF}); if(capability==='mesh.health') return respond('response',{ok:true,nucleus:SELF,peers:[...peers.keys()]}); if(capability==='mesh.discovery'||capability==='mesh.capabilities') return respond('response',{nucleus:SELF,capabilities:capabilityList(),peers:[...peers.values()],transports:TRANSPORTS,channels:channelsFor(SELF)}); if(capability==='mesh.fusion.describe') return respond('response',localFusionSnapshot()); if(capability==='mesh.register') return respond('response',{ok:true,registry:[...peers.keys()]}); if(capability==='mesh.heartbeat') return respond('response',{ok:true,timestamp:Date.now()}); if(capability==='mesh.delegate'){ const target=message.payload?.target; if(!/^N0[2-6]$/.test(target)) return respond('error',{code:'INVALID_DELEGATION_TARGET'},400); return json(res,200,await forward(target,canonicalMessage(target,message.payload?.capability||'mesh.ping',message.payload?.payload,message.correlationId))); } const owner=resolveOwner(capability); if(owner&&owner!==SELF) return json(res,200,await forward(owner,message)); return respond('error',{code:'CAPABILITY_NOT_IMPLEMENTED',capability},501); }
+      verifyEnvelope(message); const capability=message.payload?.capability; if(capability==='mesh.ping'||message.type==='PING') return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF}})); if(capability==='mesh.health') return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF,peers:[...peers.keys()]}})); if(capability==='mesh.discovery'||capability==='mesh.capabilities'||capability==='mesh.fusion.describe') return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:localFusionSnapshot()})); const owner=resolveOwner(capability); if(owner&&owner!==SELF) return json(res,200,await forward(owner,message)); return json(res,501,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_NOT_IMPLEMENTED',capability}}));
+    }catch(error){ return json(res,400,{ok:false,error:error instanceof Error?error.message:'MESH_ERROR'}); } }
+    return json(res,404,{error:'NOT_FOUND'});
+  })();
+}
+bootstrapPeers();
 const server=http.createServer((req,res)=>handle(req,res).catch(error=>json(res,500,{ok:false,error:error instanceof Error?error.message:'INTERNAL_ERROR'})));
 server.listen(PORT,HOST,()=>console.log(`SOUL N01 Mesh/Fusion listening on ${HOST}:${PORT}`));
 process.on('SIGTERM',()=>server.close()); process.on('SIGINT',()=>server.close());
