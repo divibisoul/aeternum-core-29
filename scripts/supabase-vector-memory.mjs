@@ -8,13 +8,17 @@ const TIMEOUT_MS = Math.max(1000, Number(process.env.SOUL_MEMORY_TIMEOUT_MS || 8
 function env(name) { return typeof process.env[name] === 'string' ? process.env[name].trim() : ''; }
 function clamp(value, min = 0, max = 1) { return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min)); }
 
+function resolveSupabaseKey() {
+  return env('SUPABASE_SECRET_KEY') || env('SUPABASE_SERVICE_ROLE_KEY') || env('SUPABASE_ANON_KEY');
+}
+
 function client() {
   try {
     const url = env('SUPABASE_URL');
-    const key = env('SUPABASE_ANON_KEY');
+    const key = resolveSupabaseKey();
     if (!url || !key) return null;
     return createClient(url, key, {
-      auth: { persistSession: false, autoRefreshToken: false },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) }) },
     });
   } catch {
@@ -24,7 +28,7 @@ function client() {
 
 async function embed(text, apiKey) {
   try {
-    if (!apiKey || !text) return null;
+    if (!apiKey || !text?.trim()) return null;
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.embedContent({
       model: DEFAULT_MODEL,
@@ -56,7 +60,7 @@ export async function recallSoulMemories({ text, apiKey, sessionId, threshold = 
       filter_session_id: sessionId || null,
     });
     if (error || !Array.isArray(data)) return [];
-    return data;
+    return data.slice(0, 100);
   } catch {
     return [];
   }
