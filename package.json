@@ -14,7 +14,7 @@
     "fusion:check": "node scripts/soul-fusion-contract-check.mjs",
     "supergpu:check": "node scripts/soul-supergpu-check.mjs",
     "byok:check": "node scripts/test-n01-byok.mjs",
-    "vector-memory:check": "node scripts/test-n01-vector-memory.mjs"
+    "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
