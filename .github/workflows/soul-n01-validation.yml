@@ -15,6 +15,9 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - run: npm run build
       - run: npm run lint
+      - run: node --check scripts/n01-byok-gemini.mjs
+      - run: node --check scripts/soul-mesh-server.mjs
+      - run: npm run byok:check
