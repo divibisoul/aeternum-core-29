@@ -69,11 +69,13 @@ export class SupabaseVectorMemory {
   private readonly timeoutMs: number;
 
   constructor(options: SupabaseVectorMemoryOptions = {}) {
-    this.apiKey = (options.apiKey ?? env('GEMINI_API_KEY')).trim();
-    this.supabaseUrl = (options.supabaseUrl ?? env('SUPABASE_URL')).trim();
+    this.apiKey = (options.apiKey?.trim() || env('GEMINI_API_KEY')).trim();
+    this.supabaseUrl = (options.supabaseUrl?.trim() || env('SUPABASE_URL')).trim();
     this.supabaseKey = resolveSupabaseKey(options.supabaseKey);
     this.embeddingModel = (
-      options.embeddingModel ?? env('GEMINI_EMBEDDING_MODEL') ?? DEFAULT_EMBEDDING_MODEL
+      options.embeddingModel?.trim()
+      || env('GEMINI_EMBEDDING_MODEL')
+      || DEFAULT_EMBEDDING_MODEL
     ).trim();
 
     const requestedDimensions = Number(
@@ -83,11 +85,13 @@ export class SupabaseVectorMemory {
       ? DEFAULT_DIMENSIONS
       : DEFAULT_DIMENSIONS;
 
-    this.nucleusId = (options.nucleusId ?? 'N01').trim() || 'N01';
-    this.timeoutMs = Math.max(
-      1_000,
-      Number(options.timeoutMs ?? env('SOUL_MEMORY_TIMEOUT_MS') ?? DEFAULT_TIMEOUT_MS),
+    this.nucleusId = (options.nucleusId?.trim() || 'N01').trim();
+    const requestedTimeout = Number(
+      options.timeoutMs ?? env('SOUL_MEMORY_TIMEOUT_MS') ?? DEFAULT_TIMEOUT_MS,
     );
+    this.timeoutMs = Number.isFinite(requestedTimeout)
+      ? Math.max(1_000, requestedTimeout)
+      : DEFAULT_TIMEOUT_MS;
   }
 
   private client(): SupabaseClient | null {
@@ -113,7 +117,7 @@ export class SupabaseVectorMemory {
 
   private async embedding(text: string, apiKey?: string): Promise<number[] | null> {
     try {
-      const key = (apiKey ?? this.apiKey).trim();
+      const key = (apiKey?.trim() || this.apiKey).trim();
       if (!key || !text.trim()) return null;
 
       const ai = new GoogleGenAI({ apiKey: key });
