@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
 import { recallSoulMemories, rememberSoulMemory } from './supabase-vector-memory.mjs';
 
-const original = {
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
-  SUPABASE_URL: process.env.SUPABASE_URL,
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
-};
+const names = [
+  'GEMINI_API_KEY',
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SECRET_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+];
 
-delete process.env.GEMINI_API_KEY;
-delete process.env.SUPABASE_URL;
-delete process.env.SUPABASE_ANON_KEY;
+const original = Object.fromEntries(names.map((name) => [name, process.env[name]]));
+names.forEach((name) => delete process.env[name]);
 
 try {
   const recalled = await recallSoulMemories({ text: 'graceful degradation check' });
@@ -20,7 +21,8 @@ try {
 
   console.log('N01 vector memory graceful degradation: OK');
 } finally {
-  for (const [name, value] of Object.entries(original)) {
+  for (const name of names) {
+    const value = original[name];
     if (value === undefined) delete process.env[name];
     else process.env[name] = value;
   }
