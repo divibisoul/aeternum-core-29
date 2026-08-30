@@ -28,79 +28,77 @@ export type NeuralRoute = {
   reason: string;
 };
 
-const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+type LearnedEdge = { weight: number; attempts: number; successes: number; updatedAt: number };
 
-function clamp(value: number, min = 0, max = 1): number {
-  return Math.max(min, Math.min(max, value));
-}
+const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 
 export class SoulNeuralGraph {
   private readonly nodes = new Map<SoulNucleusId, NeuralNode>();
   private readonly signals = new Map<string, NeuralSignal>();
+  private readonly learnedEdges = new Map<string, LearnedEdge>();
+  private readonly learningRate = 0.15;
 
   registerNode(node: NeuralNode): void {
     if (!NUCLEI.includes(node.nucleus)) throw new Error(`INVALID_SOUL_NUCLEUS:${node.nucleus}`);
-    this.nodes.set(node.nucleus, {
-      ...node,
-      capabilities: [...new Set(node.capabilities)],
-      salience: clamp(node.salience),
-      load: clamp(node.load),
-    });
+    this.nodes.set(node.nucleus, { ...node, capabilities: [...new Set(node.capabilities)], salience: clamp(node.salience), load: clamp(node.load), available: Boolean(node.available) });
   }
 
   emit(signal: NeuralSignal): void {
     if (!signal.id.trim()) throw new Error('INVALID_NEURAL_SIGNAL_ID');
     if (!NUCLEI.includes(signal.source)) throw new Error(`INVALID_SIGNAL_SOURCE:${signal.source}`);
-    this.signals.set(signal.id, { ...signal, activation: clamp(signal.activation) });
+    this.signals.set(signal.id, { ...signal, activation: clamp(signal.activation), features: [...new Set(signal.features)], timestamp: signal.timestamp || Date.now() });
   }
 
-  getSignal(id: string): NeuralSignal | undefined {
-    return this.signals.get(id);
-  }
+  getSignal(id: string): NeuralSignal | undefined { return this.signals.get(id); }
 
   route(signal: NeuralSignal, capability?: string): NeuralRoute[] {
-    const candidates = [...this.nodes.values()].filter((node) => {
-      if (!node.available) return false;
-      if (capability && !node.capabilities.includes(capability)) return false;
-      return node.nucleus !== signal.source || signal.target === signal.source;
-    });
-
-    return candidates
-      .map((node) => {
-        const capabilityMatch = capability && node.capabilities.includes(capability) ? 0.45 : 0;
-        const attention = node.salience * 0.35;
-        const availability = (1 - node.load) * 0.2;
-        const targetBias = signal.target === node.nucleus ? 1 : 0;
-        const weight = clamp(capabilityMatch + attention + availability + targetBias);
-        return {
-          source: signal.source,
-          target: node.nucleus,
-          weight,
-          reason: targetBias ? 'explicit-target' : capabilityMatch ? 'capability-match' : 'distributed-attention',
-        };
-      })
-      .sort((a, b) => b.weight - a.weight);
+    const candidates = [...this.nodes.values()].filter((node) => node.available && (!capability || node.capabilities.includes(capability)) && (node.nucleus !== signal.source || signal.target === signal.source));
+    return candidates.map((node) => {
+      const key = `${signal.source}->${node.nucleus}:${capability ?? '*'}`;
+      const learned = this.learnedEdges.get(key);
+      const capabilityMatch = capability && node.capabilities.includes(capability) ? 0.45 : 0;
+      const attention = node.salience * 0.25;
+      const availability = (1 - node.load) * 0.15;
+      const targetBias = signal.target === node.nucleus ? 1 : 0;
+      const learnedComponent = learned ? learned.weight * 0.30 : 0.15;
+      const weight = clamp(capabilityMatch + attention + availability + targetBias * 0.5 + learnedComponent);
+      return { source: signal.source, target: node.nucleus, weight, reason: learned ? 'learned-capability-routing' : targetBias ? 'explicit-target' : capabilityMatch ? 'capability-match' : 'distributed-attention' };
+    }).sort((a, b) => b.weight - a.weight);
   }
 
-  propagate(signal: NeuralSignal, capability?: string): NeuralRoute[] {
-    this.emit(signal);
-    return this.route(signal, capability);
+  propagate(signal: NeuralSignal, capability?: string): NeuralRoute[] { this.emit(signal); return this.route(signal, capability); }
+
+  learn(source: SoulNucleusId, target: SoulNucleusId, capability: string, success: boolean, confidence = 1): void {
+    if (!NUCLEI.includes(source) || !NUCLEI.includes(target) || !capability.trim()) throw new Error('INVALID_NEURAL_LEARNING_EVENT');
+    const key = `${source}->${target}:${capability}`;
+    const current = this.learnedEdges.get(key) ?? { weight: 0.5, attempts: 0, successes: 0, updatedAt: 0 };
+    current.attempts += 1;
+    if (success) current.successes += 1;
+    const reward = success ? clamp(confidence) : -clamp(confidence);
+    current.weight = clamp(current.weight + this.learningRate * reward);
+    current.updatedAt = Date.now();
+    this.learnedEdges.set(key, current);
   }
 
-  describe(): {
-    model: 'distributed-neural-graph';
-    messagePassing: true;
-    learnedWeights: false;
-    nodes: readonly NeuralNode[];
-    signals: number;
-  } {
-    return {
-      model: 'distributed-neural-graph',
-      messagePassing: true,
-      learnedWeights: false,
-      nodes: [...this.nodes.values()],
-      signals: this.signals.size,
-    };
+  exportLearningState(): string { return JSON.stringify([...this.learnedEdges.entries()]); }
+
+  importLearningState(serialized: string): void {
+    const parsed: unknown = JSON.parse(serialized);
+    if (!Array.isArray(parsed)) throw new Error('INVALID_NEURAL_LEARNING_STATE');
+    const next = new Map<string, LearnedEdge>();
+    for (const item of parsed) {
+      if (!Array.isArray(item) || typeof item[0] !== 'string' || !item[1] || typeof item[1] !== 'object') throw new Error('INVALID_NEURAL_LEARNING_ENTRY');
+      const value = item[1] as Partial<LearnedEdge>;
+      if (![value.weight, value.attempts, value.successes, value.updatedAt].every((v) => typeof v === 'number' && Number.isFinite(v))) throw new Error('INVALID_NEURAL_LEARNING_ENTRY');
+      next.set(item[0], { weight: clamp(value.weight), attempts: Math.max(0, value.attempts), successes: Math.max(0, value.successes), updatedAt: value.updatedAt });
+    }
+    this.learnedEdges.clear();
+    next.forEach((value, key) => this.learnedEdges.set(key, value));
+  }
+
+  describe(): { model: 'distributed-neural-graph'; messagePassing: true; learnedWeights: boolean; learnedEdges: number; nodes: readonly NeuralNode[]; signals: number } {
+    return { model: 'distributed-neural-graph', messagePassing: true, learnedWeights: this.learnedEdges.size > 0, learnedEdges: this.learnedEdges.size, nodes: [...this.nodes.values()], signals: this.signals.size };
   }
 }
 
