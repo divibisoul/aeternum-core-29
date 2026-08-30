@@ -1,0 +1,10 @@
+{
+  "nucleus": "N01",
+  "cortexRole": "executive-control-and-mesh",
+  "participation": "distributed-neural-graph",
+  "signals": ["GOAL", "CONTEXT", "CAPABILITY", "RESULT", "ERROR", "FEEDBACK"],
+  "nativeRuntimePreserved": true,
+  "localExecutiveLayer": true,
+  "delegationToPeers": true,
+  "prefrontalControl": ["goal-management", "working-memory", "attention", "capability-selection", "inhibition", "parallel-scheduling", "result-integration", "feedback"]
+}
