@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { recallSoulMemories, rememberSoulMemory } from './supabase-vector-memory.mjs';
 
@@ -40,6 +41,7 @@ function parseIntent(rawText, model, memoryContext, correlationId) {
     compositionPermission: {
       enabled: true,
       scope: ['mesh.capability.resolve'],
+      allowDerivedCapabilityComposition: true,
       source: 'N01',
     },
   };
