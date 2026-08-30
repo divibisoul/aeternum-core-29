@@ -6,13 +6,15 @@ const manifest = JSON.parse(fs.readFileSync(path.join(root, 'SOUL-FUSION-MANIFES
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'SOUL-FUSION-REGISTRY.json'), 'utf8'));
 const expected = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
 const transports = ['IN_PROCESS','WEBVIEW_BRIDGE','LOOPBACK_HTTP','HTTP','REALTIME'];
-const stages = ['identity','discovery','secure-transport','capability-ownership','bidirectional-routing','delegation','response-correlation','health-and-recovery','observability','native-capability-preservation'];
+const stages = ['identity','discovery','secure-transport','capability-ownership','bidirectional-routing','delegation','response-correlation','health-and-recovery','observability','native-capability-preservation','capability-resolution','unified-execution'];
 if (manifest.system !== 'SOUL' || manifest.fusionVersion !== '1.1' || manifest.nucleus !== 'N01') throw new Error('INVALID_N01_FUSION_MANIFEST');
 if (manifest.independentRuntime !== true || manifest.capabilityOwnership !== 'native' || manifest.fusionGateway !== true) throw new Error('INVALID_N01_FUSION_ROLE');
+if (registry.version !== '1.3') throw new Error('INVALID_FUSION_REGISTRY_VERSION');
 if (JSON.stringify(Object.keys(registry.nuclei)) !== JSON.stringify(expected)) throw new Error('FUSION_REGISTRY_MUST_CONTAIN_SIX_NUCLEI');
 if (registry.peerContract.nuclei !== 6 || registry.peerContract.peersPerNucleus !== 5 || registry.peerContract.inChannelsPerNucleus !== 5 || registry.peerContract.outChannelsPerNucleus !== 5 || registry.peerContract.directionalChannels !== 60 || registry.peerContract.communication !== 'bidirectional') throw new Error('INVALID_FUSION_CHANNEL_CONTRACT');
 for (const transport of transports) if (!registry.transports.includes(transport)) throw new Error(`MISSING_FUSION_TRANSPORT:${transport}`);
 for (const stage of stages) if (!registry.fusionStages.includes(stage)) throw new Error(`MISSING_FUSION_STAGE:${stage}`);
+for (const capability of ['mesh.capability.resolve','mesh.fusion.execute']) if (!registry.communicationCapabilities.includes(capability)) throw new Error(`MISSING_FUSION_CAPABILITY:${capability}`);
 if (registry.ownership !== 'native-per-nucleus' || registry.fusionMode !== 'federated-independent-runtimes') throw new Error('INVALID_FUSION_OWNERSHIP_MODEL');
 if (!registry.preservation?.nativeTools || !registry.preservation?.nativeAgents || !registry.preservation?.nativeRuntime || !registry.preservation?.nativeCapabilities || !registry.preservation?.independentDeployment) throw new Error('NATIVE_INDIVIDUALITY_NOT_PRESERVED');
 console.log('SOUL fusion contract: COMPLETE');
