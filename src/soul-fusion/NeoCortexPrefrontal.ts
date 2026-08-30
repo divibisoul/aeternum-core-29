@@ -2,46 +2,12 @@ import { SoulNeuralGraph, type NeuralSignal, type NeuralRoute, type SoulNucleusI
 import { SoulSuperGPU, type SuperGPUResult, type SuperGPUTask } from './SoulSuperGPU';
 import { SoulCognitiveFabric, type AgentDescriptor, type Evidence, type WorldFact } from './SoulCognitiveFabric';
 
-export type CognitiveGoal = {
-  id: string;
-  description: string;
-  priority: number;
-  deadline?: number;
-  requiredCapabilities?: readonly string[];
-  context?: unknown;
-};
+export type CognitiveGoal = { id: string; description: string; priority: number; deadline?: number; requiredCapabilities?: readonly string[]; context?: unknown };
+export type WorkingMemoryItem = { id: string; value: unknown; salience: number; expiresAt?: number; source?: SoulNucleusId };
+export type ExecutiveDecision = { goalId: string; selectedNucleus?: SoulNucleusId; selectedCapability?: string; routes: readonly NeuralRoute[]; inhibited: boolean; reason: string };
+export type CortexSnapshot = { role: 'neocortex-prefrontal-executive-layer'; workingMemory: number; goals: number; neuralSignals: number; activeNuclei: number; gpuFabric: ReturnType<SoulSuperGPU['describe']>; gpuFedSignals: number; cognitiveFabric: ReturnType<SoulCognitiveFabric['describe']> };
 
-export type WorkingMemoryItem = {
-  id: string;
-  value: unknown;
-  salience: number;
-  expiresAt?: number;
-  source?: SoulNucleusId;
-};
-
-export type ExecutiveDecision = {
-  goalId: string;
-  selectedNucleus?: SoulNucleusId;
-  selectedCapability?: string;
-  routes: readonly NeuralRoute[];
-  inhibited: boolean;
-  reason: string;
-};
-
-export type CortexSnapshot = {
-  role: 'neocortex-prefrontal-executive-layer';
-  workingMemory: number;
-  goals: number;
-  neuralSignals: number;
-  activeNuclei: number;
-  gpuFabric: ReturnType<SoulSuperGPU['describe']>;
-  gpuFedSignals: number;
-  cognitiveFabric: ReturnType<SoulCognitiveFabric['describe']>;
-};
-
-function clamp(value: number, min = 0, max = 1): number {
-  return Math.max(min, Math.min(max, value));
-}
+const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 
 export class NeoCortexPrefrontal {
   private readonly goals = new Map<string, CognitiveGoal>();
@@ -52,11 +18,7 @@ export class NeoCortexPrefrontal {
   private gpuFedSignals = 0;
   private inhibitionThreshold = 0.15;
 
-  constructor(graph: SoulNeuralGraph, superGPU: SoulSuperGPU) {
-    this.graph = graph;
-    this.superGPU = superGPU;
-    this.ingestSuperGPUCapabilityMap();
-  }
+  constructor(graph: SoulNeuralGraph, superGPU: SoulSuperGPU) { this.graph = graph; this.superGPU = superGPU; this.ingestSuperGPUCapabilityMap(); }
 
   setInhibitionThreshold(value: number): void { this.inhibitionThreshold = clamp(value); }
 
@@ -69,11 +31,12 @@ export class NeoCortexPrefrontal {
   remember(item: WorkingMemoryItem): void {
     if (!item.id.trim()) throw new Error('INVALID_WORKING_MEMORY_ID');
     this.workingMemory.set(item.id, { ...item, salience: clamp(item.salience) });
-    this.cognitiveFabric.remember(item.id, 'WORKING', item.value, item.salience, item.source);
+    this.cognitiveFabric.remember(item.id, 'WORKING', item.value, item.salience, item.source, item.expiresAt);
   }
 
   forgetExpired(now = Date.now()): void {
     for (const [id, item] of this.workingMemory) if (item.expiresAt !== undefined && item.expiresAt <= now) this.workingMemory.delete(id);
+    this.cognitiveFabric.forgetExpired(now);
   }
 
   registerAgent(agent: AgentDescriptor): void { this.cognitiveFabric.registerAgent(agent); }
@@ -81,6 +44,8 @@ export class NeoCortexPrefrontal {
   addEvidence(key: string, evidence: Evidence): void { this.cognitiveFabric.addEvidence(key, evidence); }
   evaluateConsensus(key: string): ReturnType<SoulCognitiveFabric['consensus']> { return this.cognitiveFabric.consensus(key); }
   attention(items: readonly { id: string; salience: number; urgency?: number; confidence?: number }[], limit: number): readonly string[] { return this.cognitiveFabric.attention(items, limit); }
+  exportCognitiveState(): string { return this.cognitiveFabric.exportState(); }
+  importCognitiveState(serialized: string): void { this.cognitiveFabric.importState(serialized); }
 
   ingestSuperGPUCapabilityMap(): number {
     const signals = this.superGPU.feedCapabilityMap();
@@ -112,8 +77,9 @@ export class NeoCortexPrefrontal {
     const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, timestamp: Date.now() };
     const routes = this.graph.propagate(signal, selectedCapability);
     const candidates = selectedCapability ? this.cognitiveFabric.resolveCapability(selectedCapability) : [];
-    const best = candidates[0] && routes.find((route) => route.target === candidates[0].nucleus) ? routes.find((route) => route.target === candidates[0].nucleus) : routes[0];
-    const evidence = selectedCapability ? this.cognitiveFabric.consensus(`capability:${best?.target ?? 'N01'}`) : { confidence: 0, sources: 0, conflict: false };
+    const candidate = candidates[0];
+    const best = candidate ? routes.find((route) => route.target === candidate.nucleus) ?? routes[0] : routes[0];
+    const evidence = selectedCapability && best ? this.cognitiveFabric.consensus(`capability:${best.target}`) : { confidence: 0, sources: 0, conflict: false };
     const meta = this.cognitiveFabric.metacognition(best?.weight ?? 0, evidence.confidence, evidence.conflict);
     const inhibited = !best || best.weight < this.inhibitionThreshold || meta.shouldAskForHelp;
     return { goalId, selectedNucleus: inhibited ? undefined : best?.target, selectedCapability, routes, inhibited, reason: inhibited ? meta.reason : best?.reason ?? 'no-route' };
@@ -123,7 +89,14 @@ export class NeoCortexPrefrontal {
     if (tasks.length === 0) return [];
     const results = await this.superGPU.executeParallel(tasks);
     this.ingestSuperGPUResults(results);
-    results.forEach((result) => this.cognitiveFabric.observe({ id: result.taskId, nucleus: result.nucleus, capability: tasks.find((task) => task.id === result.taskId)?.capability ?? 'unknown', success: true, confidence: 1, latencyMs: result.finishedAt - result.startedAt, timestamp: result.finishedAt, context: result.output }));
+    for (const result of results) {
+      const task = tasks.find((candidate) => candidate.id === result.taskId);
+      if (!task) continue;
+      const confidence = result.success ? 1 : 0;
+      this.cognitiveFabric.observe({ id: result.taskId, nucleus: result.nucleus, capability: task.capability, success: result.success, confidence, latencyMs: result.finishedAt - result.startedAt, timestamp: result.finishedAt, context: result.success ? result.output : result.error });
+      this.graph.learn('N01', result.nucleus, task.capability, result.success, confidence);
+      this.cognitiveFabric.addEvidence(`execution:${task.capability}`, { source: result.nucleus, value: result.success ? result.output : { error: result.error }, confidence, timestamp: result.finishedAt });
+    }
     return results;
   }
 
