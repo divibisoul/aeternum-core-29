@@ -23,4 +23,5 @@ jobs:
       - run: node --check scripts/supabase-vector-memory.mjs
       - run: node --check scripts/soul-mesh-server.mjs
       - run: npm run byok:check
+      - run: npm run vector-memory:check
       - run: npm run rag:check
