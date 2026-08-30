@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "role": "prefrontal-executive-layer",
+  "architecture": "distributed-neural-graph-over-federated-supergpu",
+  "nucleus": "N01",
+  "branches": [
+    { "nucleus": "N01", "role": "executive-control-and-mesh" },
+    { "nucleus": "N02", "role": "language-and-conversation" },
+    { "nucleus": "N03", "role": "multimodal-perception-and-voice" },
+    { "nucleus": "N04", "role": "tools-documents-and-artifacts" },
+    { "nucleus": "N05", "role": "planning-orchestration-and-execution" },
+    { "nucleus": "N06", "role": "cognition-synthesis-and-audit" }
+  ],
+  "signals": ["GOAL", "CONTEXT", "CAPABILITY", "RESULT", "ERROR", "FEEDBACK"],
+  "executiveFunctions": [
+    "goal-management",
+    "working-memory",
+    "attention-routing",
+    "capability-selection",
+    "inhibition",
+    "parallel-task-scheduling",
+    "result-integration",
+    "feedback-propagation"
+  ],
+  "computeBackends": ["IN_PROCESS", "WEBASSEMBLY", "WEBGPU", "REMOTE_MESH"],
+  "learningStatus": "orchestration-layer; not a trained neural model",
+  "hardwareGpu": false,
+  "individualNucleiPreserved": true
+}
