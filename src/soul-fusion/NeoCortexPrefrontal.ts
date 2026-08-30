@@ -34,6 +34,7 @@ export type CortexSnapshot = {
   neuralSignals: number;
   activeNuclei: number;
   gpuFabric: ReturnType<SoulSuperGPU['describe']>;
+  gpuFedSignals: number;
 };
 
 function clamp(value: number, min = 0, max = 1): number {
@@ -45,11 +46,13 @@ export class NeoCortexPrefrontal {
   private readonly workingMemory = new Map<string, WorkingMemoryItem>();
   private readonly graph: SoulNeuralGraph;
   private readonly superGPU: SoulSuperGPU;
+  private gpuFedSignals = 0;
   private inhibitionThreshold = 0.15;
 
   constructor(graph: SoulNeuralGraph, superGPU: SoulSuperGPU) {
     this.graph = graph;
     this.superGPU = superGPU;
+    this.ingestSuperGPUCapabilityMap();
   }
 
   setInhibitionThreshold(value: number): void {
@@ -72,7 +75,45 @@ export class NeoCortexPrefrontal {
     }
   }
 
+  ingestSuperGPUCapabilityMap(): number {
+    const signals = this.superGPU.feedCapabilityMap();
+    signals.forEach((input) => {
+      const signal: NeuralSignal = {
+        id: `gpu:capability:${input.source}:${input.timestamp}`,
+        source: input.source,
+        kind: input.signal,
+        activation: input.activation,
+        features: input.features,
+        payload: input.payload,
+        timestamp: input.timestamp,
+      };
+      this.graph.propagate(signal);
+    });
+    this.gpuFedSignals += signals.length;
+    return signals.length;
+  }
+
+  ingestSuperGPUResults(results: readonly SuperGPUResult[]): number {
+    const feed = this.superGPU.feedPrefrontalCortex(results);
+    feed.signals.forEach((input) => {
+      const signal: NeuralSignal = {
+        id: `gpu:result:${input.source}:${input.timestamp}:${input.features[0] ?? 'result'}`,
+        source: input.source,
+        kind: input.signal,
+        activation: input.activation,
+        features: input.features,
+        payload: input.payload,
+        timestamp: input.timestamp,
+      };
+      this.graph.propagate(signal);
+      this.remember({ id: signal.id, value: signal.payload, salience: signal.activation, source: signal.source });
+    });
+    this.gpuFedSignals += feed.signals.length;
+    return feed.signals.length;
+  }
+
   decide(goalId: string, capability?: string): ExecutiveDecision {
+    this.ingestSuperGPUCapabilityMap();
     const goal = this.goals.get(goalId);
     if (!goal) throw new Error(`GOAL_NOT_FOUND:${goalId}`);
 
@@ -102,7 +143,9 @@ export class NeoCortexPrefrontal {
 
   async execute(tasks: readonly SuperGPUTask[]): Promise<readonly SuperGPUResult[]> {
     if (tasks.length === 0) return [];
-    return this.superGPU.executeParallel(tasks);
+    const results = await this.superGPU.executeParallel(tasks);
+    this.ingestSuperGPUResults(results);
+    return results;
   }
 
   describe(): CortexSnapshot {
@@ -114,6 +157,7 @@ export class NeoCortexPrefrontal {
       neuralSignals: graph.signals,
       activeNuclei: graph.nodes.filter((node) => node.available).length,
       gpuFabric: this.superGPU.describe(),
+      gpuFedSignals: this.gpuFedSignals,
     };
   }
 }
