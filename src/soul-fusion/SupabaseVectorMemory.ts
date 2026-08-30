@@ -25,9 +25,26 @@ export type SupabaseVectorMemoryOptions = {
   timeoutMs?: number;
 };
 
-const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
+const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-2';
 const DEFAULT_DIMENSIONS = 768;
 const DEFAULT_TIMEOUT_MS = 8_000;
+
+function env(name: string): string {
+  return typeof process !== 'undefined' && typeof process.env?.[name] === 'string'
+    ? process.env[name]!.trim()
+    : '';
+}
+
+function clamp(value: number, min = 0, max = 1): number {
+  return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
+}
+
+function timeoutSignal(timeoutMs: number): AbortSignal | undefined {
+  if (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal) {
+    return AbortSignal.timeout(Math.max(1_000, timeoutMs));
+  }
+  return undefined;
+}
 
 export class SupabaseVectorMemory {
   private readonly apiKey: string;
@@ -39,27 +56,36 @@ export class SupabaseVectorMemory {
   private readonly timeoutMs: number;
 
   constructor(options: SupabaseVectorMemoryOptions = {}) {
-    this.apiKey = (options.apiKey ?? process.env.GEMINI_API_KEY ?? '').trim();
-    this.supabaseUrl = (options.supabaseUrl ?? process.env.SUPABASE_URL ?? '').trim();
-    this.supabaseAnonKey = (options.supabaseAnonKey ?? process.env.SUPABASE_ANON_KEY ?? '').trim();
-    this.embeddingModel = (options.embeddingModel ?? process.env.GEMINI_EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL).trim();
-    this.embeddingDimensions = Number(options.embeddingDimensions ?? process.env.GEMINI_EMBEDDING_DIMENSIONS ?? DEFAULT_DIMENSIONS);
+    this.apiKey = (options.apiKey ?? env('GEMINI_API_KEY')).trim();
+    this.supabaseUrl = (options.supabaseUrl ?? env('SUPABASE_URL')).trim();
+    this.supabaseAnonKey = (options.supabaseAnonKey ?? env('SUPABASE_ANON_KEY')).trim();
+    this.embeddingModel = (options.embeddingModel ?? env('GEMINI_EMBEDDING_MODEL') ?? DEFAULT_EMBEDDING_MODEL).trim();
+    this.embeddingDimensions = Number(options.embeddingDimensions ?? env('GEMINI_EMBEDDING_DIMENSIONS') ?? DEFAULT_DIMENSIONS);
     this.nucleusId = (options.nucleusId ?? 'N01').trim() || 'N01';
-    this.timeoutMs = Math.max(1000, Number(options.timeoutMs ?? process.env.SOUL_MEMORY_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS));
+    this.timeoutMs = Math.max(1_000, Number(options.timeoutMs ?? env('SOUL_MEMORY_TIMEOUT_MS') ?? DEFAULT_TIMEOUT_MS));
   }
 
   private client(): SupabaseClient | null {
-    if (!this.supabaseUrl || !this.supabaseAnonKey) return null;
-    return createClient(this.supabaseUrl, this.supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(this.timeoutMs) }) },
-    });
+    try {
+      if (!this.supabaseUrl || !this.supabaseAnonKey) return null;
+      return createClient(this.supabaseUrl, this.supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+          fetch: (input, init) => {
+            const signal = timeoutSignal(this.timeoutMs);
+            return fetch(input, signal ? { ...init, signal } : init);
+          },
+        },
+      });
+    } catch {
+      return null;
+    }
   }
 
   private async embedding(text: string, apiKey?: string): Promise<number[] | null> {
     try {
       const key = (apiKey ?? this.apiKey).trim();
-      if (!key) return null;
+      if (!key || !text.trim()) return null;
       const ai = new GoogleGenAI({ apiKey: key });
       const response = await ai.models.embedContent({
         model: this.embeddingModel,
@@ -84,7 +110,7 @@ export class SupabaseVectorMemory {
       if (!vector) return [];
       const { data, error } = await client.rpc('match_soul_memories', {
         query_embedding: vector,
-        match_threshold: Math.max(0, Math.min(1, Number(options.threshold ?? 0.70))),
+        match_threshold: clamp(Number(options.threshold ?? 0.70)),
         match_count: Math.max(1, Math.min(100, Number(options.limit ?? 8))),
         filter_nucleus_id: null,
         filter_session_id: options.sessionId ?? null,
@@ -99,8 +125,9 @@ export class SupabaseVectorMemory {
   async remember(content: string, options: { apiKey?: string; agentId?: string; sessionId?: string; memoryType?: string; metadata?: Record<string, unknown>; importance?: number; confidence?: number } = {}): Promise<boolean> {
     try {
       const input = typeof content === 'string' ? content.trim() : '';
+      if (!input) return false;
       const client = this.client();
-      if (!input || !client) return false;
+      if (!client) return false;
       const vector = await this.embedding(input, options.apiKey);
       if (!vector) return false;
       const { error } = await client.from('soul_memories').insert({
@@ -111,8 +138,8 @@ export class SupabaseVectorMemory {
         embedding: vector,
         memory_type: options.memoryType ?? 'episodic',
         metadata: options.metadata ?? {},
-        importance: Math.max(0, Math.min(1, Number(options.importance ?? 0.5))),
-        confidence: Math.max(0, Math.min(1, Number(options.confidence ?? 0.5))),
+        importance: clamp(Number(options.importance ?? 0.5)),
+        confidence: clamp(Number(options.confidence ?? 0.5)),
       });
       return !error;
     } catch {
