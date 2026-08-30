@@ -18,7 +18,7 @@ export type SoulMemory = {
 export type SupabaseVectorMemoryOptions = {
   apiKey?: string;
   supabaseUrl?: string;
-  supabaseAnonKey?: string;
+  supabaseKey?: string;
   embeddingModel?: string;
   embeddingDimensions?: number;
   nucleusId?: string;
@@ -30,9 +30,13 @@ const DEFAULT_DIMENSIONS = 768;
 const DEFAULT_TIMEOUT_MS = 8_000;
 
 function env(name: string): string {
-  return typeof process !== 'undefined' && typeof process.env?.[name] === 'string'
-    ? process.env[name]!.trim()
-    : '';
+  try {
+    return typeof process !== 'undefined' && typeof process.env?.[name] === 'string'
+      ? process.env[name]!.trim()
+      : '';
+  } catch {
+    return '';
+  }
 }
 
 function clamp(value: number, min = 0, max = 1): number {
@@ -46,10 +50,17 @@ function timeoutSignal(timeoutMs: number): AbortSignal | undefined {
   return undefined;
 }
 
+function resolveSupabaseKey(explicit?: string): string {
+  return (explicit?.trim()
+    || env('SUPABASE_SECRET_KEY')
+    || env('SUPABASE_SERVICE_ROLE_KEY')
+    || env('SUPABASE_ANON_KEY')).trim();
+}
+
 export class SupabaseVectorMemory {
   private readonly apiKey: string;
   private readonly supabaseUrl: string;
-  private readonly supabaseAnonKey: string;
+  private readonly supabaseKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimensions: number;
   private readonly nucleusId: string;
@@ -58,18 +69,19 @@ export class SupabaseVectorMemory {
   constructor(options: SupabaseVectorMemoryOptions = {}) {
     this.apiKey = (options.apiKey ?? env('GEMINI_API_KEY')).trim();
     this.supabaseUrl = (options.supabaseUrl ?? env('SUPABASE_URL')).trim();
-    this.supabaseAnonKey = (options.supabaseAnonKey ?? env('SUPABASE_ANON_KEY')).trim();
-    this.embeddingModel = (options.embeddingModel ?? env('GEMINI_EMBEDDING_MODEL') ?? DEFAULT_EMBEDDING_MODEL).trim();
-    this.embeddingDimensions = Number(options.embeddingDimensions ?? env('GEMINI_EMBEDDING_DIMENSIONS') ?? DEFAULT_DIMENSIONS);
+    this.supabaseKey = resolveSupabaseKey(options.supabaseKey);
+    this.embeddingModel = (options.embeddingModel ?? env('GEMINI_EMBEDDING_MODEL') || DEFAULT_EMBEDDING_MODEL).trim();
+    const requestedDimensions = Number(options.embeddingDimensions ?? env('GEMINI_EMBEDDING_DIMENSIONS') || DEFAULT_DIMENSIONS);
+    this.embeddingDimensions = requestedDimensions === DEFAULT_DIMENSIONS ? DEFAULT_DIMENSIONS : DEFAULT_DIMENSIONS;
     this.nucleusId = (options.nucleusId ?? 'N01').trim() || 'N01';
-    this.timeoutMs = Math.max(1_000, Number(options.timeoutMs ?? env('SOUL_MEMORY_TIMEOUT_MS') ?? DEFAULT_TIMEOUT_MS));
+    this.timeoutMs = Math.max(1_000, Number(options.timeoutMs ?? env('SOUL_MEMORY_TIMEOUT_MS') || DEFAULT_TIMEOUT_MS));
   }
 
   private client(): SupabaseClient | null {
     try {
-      if (!this.supabaseUrl || !this.supabaseAnonKey) return null;
-      return createClient(this.supabaseUrl, this.supabaseAnonKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
+      if (!this.supabaseUrl || !this.supabaseKey) return null;
+      return createClient(this.supabaseUrl, this.supabaseKey, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
         global: {
           fetch: (input, init) => {
             const signal = timeoutSignal(this.timeoutMs);
@@ -93,7 +105,7 @@ export class SupabaseVectorMemory {
         config: { outputDimensionality: this.embeddingDimensions },
       });
       const values = response.embeddings?.[0]?.values;
-      if (!Array.isArray(values) || values.length !== this.embeddingDimensions) return null;
+      if (!Array.isArray(values) || values.length !== DEFAULT_DIMENSIONS) return null;
       return values.map(Number);
     } catch {
       return null;
@@ -113,7 +125,7 @@ export class SupabaseVectorMemory {
         match_threshold: clamp(Number(options.threshold ?? 0.70)),
         match_count: Math.max(1, Math.min(100, Number(options.limit ?? 8))),
         filter_nucleus_id: null,
-        filter_session_id: options.sessionId ?? null,
+        filter_session_id: options.sessionId?.trim() || null,
       });
       if (error || !Array.isArray(data)) return [];
       return data as SoulMemory[];
@@ -141,6 +153,17 @@ export class SupabaseVectorMemory {
         importance: clamp(Number(options.importance ?? 0.5)),
         confidence: clamp(Number(options.confidence ?? 0.5)),
       });
+      return !error;
+    } catch {
+      return false;
+    }
+  }
+
+  async healthCheck(): Promise<boolean> {
+    try {
+      const client = this.client();
+      if (!client) return false;
+      const { error } = await client.from('soul_memories').select('id').limit(1);
       return !error;
     } catch {
       return false;
