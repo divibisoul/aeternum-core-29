@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
 const DEFAULT_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-2';
-const DIMENSIONS = Number(process.env.GEMINI_EMBEDDING_DIMENSIONS || 768);
+const DIMENSIONS = 768;
 const TIMEOUT_MS = Math.max(1000, Number(process.env.SOUL_MEMORY_TIMEOUT_MS || 8000));
 
 function env(name) { return typeof process.env[name] === 'string' ? process.env[name].trim() : ''; }
