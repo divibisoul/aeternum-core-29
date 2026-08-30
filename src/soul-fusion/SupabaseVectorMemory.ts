@@ -18,6 +18,7 @@ export type SoulMemory = {
 export type SupabaseVectorMemoryOptions = {
   apiKey?: string;
   supabaseUrl?: string;
+  supabaseKey?: string;
   supabaseAnonKey?: string;
   embeddingModel?: string;
   embeddingDimensions?: number;
@@ -32,7 +33,7 @@ const DEFAULT_TIMEOUT_MS = 8_000;
 export class SupabaseVectorMemory {
   private readonly apiKey: string;
   private readonly supabaseUrl: string;
-  private readonly supabaseAnonKey: string;
+  private readonly supabaseKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimensions: number;
   private readonly nucleusId: string;
@@ -41,7 +42,13 @@ export class SupabaseVectorMemory {
   constructor(options: SupabaseVectorMemoryOptions = {}) {
     this.apiKey = (options.apiKey ?? process.env.GEMINI_API_KEY ?? '').trim();
     this.supabaseUrl = (options.supabaseUrl ?? process.env.SUPABASE_URL ?? '').trim();
-    this.supabaseAnonKey = (options.supabaseAnonKey ?? process.env.SUPABASE_ANON_KEY ?? '').trim();
+    this.supabaseKey = (
+      options.supabaseKey ??
+      process.env.SUPABASE_SERVICE_ROLE_KEY ??
+      options.supabaseAnonKey ??
+      process.env.SUPABASE_ANON_KEY ??
+      ''
+    ).trim();
     this.embeddingModel = (options.embeddingModel ?? process.env.GEMINI_EMBEDDING_MODEL ?? DEFAULT_EMBEDDING_MODEL).trim();
     this.embeddingDimensions = Number(options.embeddingDimensions ?? process.env.GEMINI_EMBEDDING_DIMENSIONS ?? DEFAULT_DIMENSIONS);
     this.nucleusId = (options.nucleusId ?? process.env.SOUL_NUCLEUS_ID ?? 'N01').trim() || 'N01';
@@ -50,8 +57,8 @@ export class SupabaseVectorMemory {
 
   private client(): SupabaseClient | null {
     try {
-      if (!this.supabaseUrl || !this.supabaseAnonKey) return null;
-      return createClient(this.supabaseUrl, this.supabaseAnonKey, {
+      if (!this.supabaseUrl || !this.supabaseKey) return null;
+      return createClient(this.supabaseUrl, this.supabaseKey, {
         auth: { persistSession: false, autoRefreshToken: false },
         global: {
           fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(this.timeoutMs) }),
