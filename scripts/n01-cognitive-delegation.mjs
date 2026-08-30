@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { recallSoulMemories } from './supabase-vector-memory.mjs';
 
 function correlation(value) {
