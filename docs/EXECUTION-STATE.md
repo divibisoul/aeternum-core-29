@@ -9,41 +9,48 @@ This is the execution control board. An item cannot remain OPEN without a concre
 | ID | Stage | Status | Done | Remaining | Why not complete |
 |---|---|---|---|---|---|
 | N01-01 | Baseline/source audit | COMPLETE | Existing N01 structure, Mesh registry, transports, provider/bridge direction inspected | None | Closed |
-| N01-02 | Capability Graph | IMPLEMENTED / VALIDATION OPEN | CapabilityGraph.ts exists with ownership, status, cost, privacy, dependencies and permissions | Runtime exposure + tests | Source structure exists; no executable proof yet |
+| N01-02 | Capability Graph | IMPLEMENTED / VALIDATION OPEN | CapabilityGraph.ts exists with ownership, status, cost, privacy, dependencies and permissions | Runtime exposure + tests | Source structure exists; executable proof is now included in the transport contract test |
 | N01-03 | CognitiveProvider contract | IMPLEMENTED / VALIDATION OPEN | Provider-neutral local/browser/cloud contract + fallback exists | Concrete local provider + tests | Dependency choice deferred until transport path is stable |
 | N01-04 | Browser Session bridge | IMPLEMENTED / VALIDATION OPEN | Session states and correlation IDs exist; credentials excluded | Secure extension boundary + tests | Browser messaging boundary still needs validation |
 | N01-05 | Hardware profiler | IMPLEMENTED / VALIDATION OPEN | WebGPU/WASM/CPU selection primitive exists | Runtime benchmark + tests | Detection is not benchmark proof |
-| N01-06 | Canonical Mesh envelope | IMPLEMENTED / VALIDATION OPEN | `src/core/soul/SoulMeshEnvelope.ts` provides the v1.0 envelope with node IDs, message types, timestamp, nonce, TTL, correlationId and HMAC-SHA256 verification | Transport acceptance/emission validation | Existing registry must remain backward compatible |
-| N01-06A | Canonical transport adapter | IMPLEMENTED / VALIDATION OPEN | `src/core/soul/CanonicalTransportAdapter.ts` validates the existing canonical envelope and resolves/frames bidirectional transports without replacing the registry | Build/lint validation and integration with runtime transport path | Added as a non-destructive adapter after the registry path was verified at `lib/soul-mesh/HybridTransportRegistry.ts` |
+| N01-06 | Canonical Mesh envelope | IMPLEMENTED / VALIDATION OPEN | `src/core/soul/SoulMeshEnvelope.ts` provides the v1.0 envelope with node IDs, message types, timestamp, nonce, TTL, correlationId and HMAC-SHA256 verification | Runtime transport acceptance/emission proof | Integrated test requires CI/runtime evidence |
+| N01-06A | Canonical transport adapter | IMPLEMENTED / VALIDATION OPEN | Adapter validates the canonical envelope and now consumes `HybridTransportRegistry` as the single transport source of truth | Successful CI/build/lint validation | Previous duplicate transport list was removed from the adapter |
 | N01-07 | Authorization | BLOCKED | Permission fields exist | Enforce permission before task dispatch | Requires canonical verified task path |
-| N01-08 | Executable tests | OPEN | CI build/lint workflow exists | Obtain successful run and add focused tests | Repository has no dedicated test runner |
-| N01-09 | N01↔N02 transaction | BLOCKED | Target architecture defined | Real correlated capability request/result | Requires verified N01 transport and N02 contract |
+| N01-08 | Executable tests | IN PROGRESS | Transport test now exercises registry, MeshRouter integration and N01 capability bridge | Successful CI run | Latest run failed before useful step evidence was exposed; failed job was re-run |
+| N01-09 | N01↔N02 transaction | NEXT AFTER VALIDATION | N02 current branch provides canonical Mesh server, discovery and executable inference/audio boundary | Signed bidirectional correlated capability request/result | N02 still marks runtime E2E as pending |
 | N01-10 | Final N01 audit | BLOCKED | None | Before/after evidence and percentage | Cannot close before runtime proof |
 
 ## Confirmed execution commits
 
-- `c8b4574f6fc1e0967e9ee8cbf3c59c7e4cfccfc6`: prior canonical envelope implementation recorded by the previous execution board.
+- `c8b4574f6fc1e0967e9ee8cbf3c59c7e4cfccfc6`: prior canonical envelope implementation.
 - `3a772db715f2a223cb595158df23e6f79104e73e`: added `CanonicalTransportAdapter.ts`.
-- `26fce025e4f16d1b54cbbc885180d907496d7262`: corrected the adapter to remain independent of an uncommitted registry API; this is the current functional head of this branch.
+- `26fce025e4f16d1b54cbbc885180d907496d7262`: corrected adapter independence from an uncommitted registry API.
+- `23edfd297e21e9eb4dfe93bd276673abd4564529`: corrected N01 CI runtime from Node 20 to Node 22 so the existing `--experimental-strip-types` test command has a compatible runtime.
+- `5aa5d4b001bd9c925ecb524d08d4a1788615ed30`: made the canonical transport adapter consume the existing registry as its single source of truth.
+- `0b4b1e599dfef4ed76a2a773208b1a45c25199e7`: expanded the transport contract test to exercise MeshRouter integration and the N01 capability bridge.
+- `cf69107fc95f3f01a053ca960919bef3a7825ba2`: routed MeshRouter transport selection and task framing through the canonical adapter.
+- `6bef438f7610378c66eb1261d949aa03650054e4`: made N01 validation run on active `feature/**` and `upgrade/**` branches as well as main/PRs.
 
-## Important correction
+## Validation evidence
 
-The previous execution incorrectly treated `src/lib/soul-mesh/HybridTransportRegistry.ts` as the registry location. The current GitHub tree proves the existing registry is at `lib/soul-mesh/HybridTransportRegistry.ts`, while `src/core/soul/MeshRouter.ts` imports it. The canonical envelope is at `src/core/soul/SoulMeshEnvelope.ts`. No existing registry was deleted or replaced.
+- GitHub Actions run `33284125133` was created for `6bef438f7610378c66eb1261d949aa03650054e4`.
+- The first observed job attempt reported `failure`, but connector logs/step detail were unavailable; no green result is claimed.
+- The failed jobs were explicitly re-run. The run must be read again before declaring success.
+
+## Cross-front observation — verified from GitHub
+
+- N02 (`Eternium-`): PR #7 is the active cumulative Mesh execution boundary. Its documented remaining work is exact N01/N02 signed-envelope exchange, bidirectional discovery/invocation, retry/circuit breaker and grounded agent/tool/capability composition.
+- N03 (`nexus-aeternum-fusion`): current work binds N02↔N03 synergy to runtime inventories and has executable pair-fusion tests with dimension-aware multiplication.
+- N04 (`nextjs-ai-chatbots`): current work exposes a 15-capability execution surface, runtime bootstrap validation, CI validation and cooperative capability fusion.
+- N05/N06: current fusion state explicitly says the next work is to inspect both real agent registries/execution paths and map actual capability/tool/agent intersections before adding adapters.
 
 ## Cumulative fusion directive
 
-The new SOUL Master Prompt is cumulative. Existing work remains valid. N01 is being hardened while the paired and cross-pair work continues in parallel. Every fusion stage must cross agents, tools, capabilities, context and execution, and must distinguish structural implementation from runtime verification.
-
-## Fusion levels
-
-- L1: `N01 × N02`, `N03 × N04`, `N05 × N06` — parallel pair analysis.
-- L2: `(N01 × N02) × (N03 × N04)` and justified cross-compositions.
-- L3: four-core fusion with emergent capability contracts.
-- L4: six-core `SOUL SUPERCOMPUTE` with inter-core + intra-core parallel execution.
+The SOUL Master Prompt remains cumulative. L1 is executed concurrently as `N01×N02 || N03×N04 || N05×N06`; higher fusion must consume evidence from those completed/advancing pair layers. Corrections are applied immediately when a defect is found, and every correction is re-read from GitHub before the next step.
 
 ## Next single executable action
 
-Validate the new canonical transport adapter against the repository build/lint path and then use the result to integrate the adapter into the existing runtime transport path without replacing the registry. In parallel, inspect the current N02/N03/N04/N05/N06 GitHub states so the first three pair fusions remain synchronized with the N01 foundation.
+Re-read the rerun of GitHub Actions run `33284125133`; if it fails, diagnose and repair the first concrete failure. If it succeeds, proceed immediately to the smallest evidence-backed N01↔N02 signed discovery/capability transaction and record its correlated result.
 
 ## Anti-loop rule
 
