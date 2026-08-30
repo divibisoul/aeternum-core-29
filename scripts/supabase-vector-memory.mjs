@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 
-const DEFAULT_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001';
+const DEFAULT_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-2';
 const DIMENSIONS = Number(process.env.GEMINI_EMBEDDING_DIMENSIONS || 768);
 const TIMEOUT_MS = Math.max(1000, Number(process.env.SOUL_MEMORY_TIMEOUT_MS || 8000));
 
@@ -9,18 +9,22 @@ function env(name) { return typeof process.env[name] === 'string' ? process.env[
 function clamp(value, min = 0, max = 1) { return Math.max(min, Math.min(max, Number.isFinite(value) ? value : min)); }
 
 function client() {
-  const url = env('SUPABASE_URL');
-  const key = env('SUPABASE_ANON_KEY');
-  if (!url || !key) return null;
-  return createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-    global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) }) },
-  });
+  try {
+    const url = env('SUPABASE_URL');
+    const key = env('SUPABASE_ANON_KEY');
+    if (!url || !key) return null;
+    return createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(TIMEOUT_MS) }) },
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function embed(text, apiKey) {
   try {
-    if (!apiKey) return null;
+    if (!apiKey || !text) return null;
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.embedContent({
       model: DEFAULT_MODEL,
