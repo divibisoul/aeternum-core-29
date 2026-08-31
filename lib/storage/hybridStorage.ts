@@ -1,5 +1,3 @@
-import 'server-only';
-
 export type HybridStorageInput = {
   data: string | Uint8Array | ArrayBuffer | Blob;
   filename?: string;
@@ -41,10 +39,7 @@ async function uploadToWeb3Storage(input: HybridStorageInput): Promise<string> {
     body: form,
   });
 
-  if (!response.ok) {
-    throw new Error(`WEB3_STORAGE_UPLOAD_FAILED:${response.status}`);
-  }
-
+  if (!response.ok) throw new Error(`WEB3_STORAGE_UPLOAD_FAILED:${response.status}`);
   const payload = (await response.json()) as { cid?: string };
   if (!payload.cid) throw new Error('WEB3_STORAGE_CID_MISSING');
   return payload.cid;
@@ -93,12 +88,5 @@ export async function storeHybrid(input: HybridStorageInput): Promise<HybridStor
   const gatewayUrl = `${IPFS_GATEWAY_URL.replace(/\/$/, '')}/${cid}`;
   const record = await recordInSupabase({ cid, mimeType, nucleusId, metadata, gatewayUrl });
 
-  return {
-    id: record.id,
-    cid,
-    mimeType,
-    createdAt: record.createdAt,
-    metadata,
-    gatewayUrl,
-  };
+  return { id: record.id, cid, mimeType, createdAt: record.createdAt, metadata, gatewayUrl };
 }
