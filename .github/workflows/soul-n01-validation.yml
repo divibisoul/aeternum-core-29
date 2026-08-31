@@ -21,5 +21,6 @@ jobs:
       - run: node --check scripts/n01-byok-gemini.mjs
       - run: node --check scripts/soul-mesh-server.mjs
       - run: node --check scripts/supabase-vector-memory.mjs
+      - run: npm run mesh:contract:check
       - run: npm run byok:check
       - run: npm run vector-memory:check
