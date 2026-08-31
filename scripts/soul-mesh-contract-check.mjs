@@ -10,15 +10,14 @@ const SOURCES = [
 ];
 
 const EXPECTED = '1.1.0';
+const VERSION_PATTERN = new RegExp(`(?:contractVersion\\s*[:=]\\s*|contractVersion[^\\n]{0,120})[\\"']?${EXPECTED.replaceAll('.', '\\.')}`);
 
 for (const [name, url] of SOURCES) {
   const response = await fetch(url, { cache: 'no-store' });
   assert.equal(response.ok, true, `${name}: source unavailable (${response.status})`);
   const source = await response.text();
   assert.match(source, /contractVersion/, `${name}: canonical contractVersion is absent`);
-  if (name !== 'N01 envelope') {
-    assert.match(source, new RegExp(EXPECTED.replaceAll('.', '\\.'), 'g'), `${name}: canonical contract version ${EXPECTED} is not present`);
-  }
+  assert.match(source, VERSION_PATTERN, `${name}: canonical contract version ${EXPECTED} is not present`);
 }
 
 console.log(`SOUL_MESH_CONTRACT: ok=true version=${EXPECTED} nuclei=${SOURCES.length}`);
