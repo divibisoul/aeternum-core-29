@@ -1,8 +1,9 @@
 import type { SoulMeshCapability } from './SoulMeshCapabilities';
-import type { SoulNucleus } from './SoulMeshProtocol';
+import { SOUL_MESH_CONTRACT_VERSION, SOUL_MESH_PROTOCOL, type SoulNucleus } from './SoulMeshProtocol';
 
 export type SoulMeshHandshake = {
-  protocol: 'soul-mesh/1';
+  protocol: typeof SOUL_MESH_PROTOCOL;
+  contractVersion: typeof SOUL_MESH_CONTRACT_VERSION;
   nucleus: SoulNucleus;
   version: string;
   capabilities: SoulMeshCapability[];
@@ -14,10 +15,11 @@ export function createSoulMeshHandshake(
   nucleus: SoulNucleus,
   capabilities: readonly SoulMeshCapability[],
   transports: readonly string[] = [],
-  version = '1.0',
+  version = SOUL_MESH_CONTRACT_VERSION,
 ): SoulMeshHandshake {
   return {
-    protocol: 'soul-mesh/1',
+    protocol: SOUL_MESH_PROTOCOL,
+    contractVersion: SOUL_MESH_CONTRACT_VERSION,
     nucleus,
     version,
     capabilities: [...capabilities].filter(capability => capability.owner === nucleus),
@@ -29,7 +31,8 @@ export function createSoulMeshHandshake(
 export function isSoulMeshHandshake(value: unknown): value is SoulMeshHandshake {
   if (!value || typeof value !== 'object') return false;
   const h = value as Record<string, unknown>;
-  return h.protocol === 'soul-mesh/1'
+  return h.protocol === SOUL_MESH_PROTOCOL
+    && h.contractVersion === SOUL_MESH_CONTRACT_VERSION
     && typeof h.nucleus === 'string'
     && typeof h.version === 'string'
     && Array.isArray(h.capabilities)
