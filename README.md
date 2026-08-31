@@ -50,6 +50,12 @@ The probe only reports N01↔N06 as successful when the response identity and co
 
 See `MESH_STATUS.md` for the acceptance criteria and current implementation boundary.
 
+## CI/CD environment configuration
+
+Never commit real environment secrets. The repository intentionally tracks only `.env.example`; local `.env` and `.env.local` files are ignored by Git.
+
+For CI/CD, configure the required values as GitHub Actions repository or environment secrets/variables and inject them into the build/runtime job. In particular, `VITE_*` values used by the Vite client must be supplied at build time; do not place real API keys in committed source files.
+
 ## What technologies are used for this project?
 
 This project is built with Vite, TypeScript, React, shadcn-ui and Tailwind CSS.
