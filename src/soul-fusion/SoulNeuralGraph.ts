@@ -10,6 +10,8 @@ export type NeuralSignal = {
   activation: number;
   features: readonly string[];
   payload?: unknown;
+  /** When true, N02/N05 are preferred because their accelerated inference providers are available. */
+  fast_inference?: boolean;
   timestamp: number;
 };
 
@@ -31,6 +33,7 @@ export type NeuralRoute = {
 type LearnedEdge = { weight: number; attempts: number; successes: number; updatedAt: number };
 
 const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const FAST_INFERENCE_NUCLEI: readonly SoulNucleusId[] = ['N02', 'N05'];
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 
 export class SoulNeuralGraph {
@@ -61,9 +64,19 @@ export class SoulNeuralGraph {
       const attention = node.salience * 0.25;
       const availability = (1 - node.load) * 0.15;
       const targetBias = signal.target === node.nucleus ? 1 : 0;
+      const fastInferenceBias = signal.fast_inference && FAST_INFERENCE_NUCLEI.includes(node.nucleus) ? 0.30 : 0;
       const learnedComponent = learned ? learned.weight * 0.30 : 0.15;
-      const weight = clamp(capabilityMatch + attention + availability + targetBias * 0.5 + learnedComponent);
-      return { source: signal.source, target: node.nucleus, weight, reason: learned ? 'learned-capability-routing' : targetBias ? 'explicit-target' : capabilityMatch ? 'capability-match' : 'distributed-attention' };
+      const weight = clamp(capabilityMatch + attention + availability + targetBias * 0.5 + fastInferenceBias + learnedComponent);
+      const reason = targetBias
+        ? 'explicit-target'
+        : fastInferenceBias > 0
+          ? 'fast-inference-groq-priority'
+          : learned
+            ? 'learned-capability-routing'
+            : capabilityMatch
+              ? 'capability-match'
+              : 'distributed-attention';
+      return { source: signal.source, target: node.nucleus, weight, reason };
     }).sort((a, b) => b.weight - a.weight);
   }
 
