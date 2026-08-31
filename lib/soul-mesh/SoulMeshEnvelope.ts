@@ -1,4 +1,5 @@
 export const SOUL_MESH_VERSION = '1.0' as const;
+export const SOUL_MESH_CONTRACT_VERSION = '1.1.0' as const;
 
 export const MESSAGE_TYPES = [
   'PING',
@@ -13,7 +14,10 @@ export type MessageType = typeof MESSAGE_TYPES[number];
 export type SoulNodeId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'BROADCAST';
 
 export interface SoulMeshEnvelope<T = unknown> {
+  /** Legacy transport version; preserved for backward compatibility. */
   version: typeof SOUL_MESH_VERSION;
+  /** Canonical cross-nucleus contract version. */
+  contractVersion: typeof SOUL_MESH_CONTRACT_VERSION;
   messageId: string;
   source: SoulNodeId;
   target: SoulNodeId;
@@ -30,6 +34,8 @@ export interface EnvelopeValidationOptions {
   nowMs?: number;
   maxClockSkewMs?: number;
   seenNonces?: Set<string>;
+  /** Strict mode is opt-in so existing legacy traffic is not broken during migration. */
+  requireContractVersion?: boolean;
 }
 
 const encoder = new TextEncoder();
@@ -37,6 +43,7 @@ const encoder = new TextEncoder();
 function canonicalUnsignedEnvelope<T>(envelope: SoulMeshEnvelope<T>): string {
   return JSON.stringify({
     version: envelope.version,
+    contractVersion: envelope.contractVersion,
     messageId: envelope.messageId,
     source: envelope.source,
     target: envelope.target,
@@ -73,6 +80,7 @@ export async function signEnvelope<T>(envelope: Omit<SoulMeshEnvelope<T>, 'hmac'
 
 export async function verifyEnvelope<T>(envelope: SoulMeshEnvelope<T>, secret: Uint8Array, options: EnvelopeValidationOptions = {}): Promise<boolean> {
   if (envelope.version !== SOUL_MESH_VERSION) throw new Error('Unsupported SOUL Mesh envelope version');
+  if (options.requireContractVersion && envelope.contractVersion !== SOUL_MESH_CONTRACT_VERSION) throw new Error('Unsupported SOUL Mesh contract version');
   if (!MESSAGE_TYPES.includes(envelope.type)) throw new Error(`Unsupported message type: ${envelope.type}`);
   if (!envelope.messageId || !envelope.nonce || !envelope.correlationId) throw new Error('Envelope identity fields are required');
   if (envelope.source === envelope.target && envelope.target !== 'BROADCAST') throw new Error('Envelope source and target cannot be identical');
@@ -92,10 +100,11 @@ export async function verifyEnvelope<T>(envelope: SoulMeshEnvelope<T>, secret: U
   return true;
 }
 
-export function createEnvelope<T>(input: Omit<SoulMeshEnvelope<T>, 'version' | 'messageId' | 'timestamp' | 'nonce' | 'hmac'>): Omit<SoulMeshEnvelope<T>, 'hmac'> {
+export function createEnvelope<T>(input: Omit<SoulMeshEnvelope<T>, 'version' | 'contractVersion' | 'messageId' | 'timestamp' | 'nonce' | 'hmac'>): Omit<SoulMeshEnvelope<T>, 'hmac'> {
   return {
     ...input,
     version: SOUL_MESH_VERSION,
+    contractVersion: SOUL_MESH_CONTRACT_VERSION,
     messageId: crypto.randomUUID(),
     timestamp: Date.now(),
     nonce: crypto.randomUUID(),
