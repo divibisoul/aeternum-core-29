@@ -8,11 +8,7 @@ export type SoulMeshRegistration = {
   lastSeen: number;
 };
 
-/**
- * In-memory registry used by N01 as the primary discovery abstraction.
- * A persistent adapter (Supabase/Redis) can implement the same contract later;
- * no existing transport is replaced by this registry.
- */
+/** In-memory registry used by N01 as the primary discovery abstraction. */
 export class SoulMeshDiscoveryRegistry {
   private readonly peers = new Map<Exclude<SoulNucleus, 'N01'>, SoulMeshRegistration>();
 
@@ -22,8 +18,15 @@ export class SoulMeshDiscoveryRegistry {
     return this.peers.get(registration.nucleus)!;
   }
 
-  resolve(nucleus: Exclude<SoulNucleus, 'N01'>): SoulMeshRegistration | undefined {
-    return this.peers.get(nucleus);
+  resolve(nucleus: Exclude<SoulNucleus, 'N01'>): SoulMeshRegistration | undefined { return this.peers.get(nucleus); }
+
+  updateCapabilities(nucleus: Exclude<SoulNucleus, 'N01'>, capabilities: string[], version?: string): SoulMeshRegistration | undefined {
+    const peer = this.peers.get(nucleus);
+    if (!peer) return undefined;
+    peer.capabilities = [...new Set(capabilities)].sort();
+    if (version) peer.version = version;
+    peer.lastSeen = Date.now();
+    return peer;
   }
 
   heartbeat(nucleus: Exclude<SoulNucleus, 'N01'>): boolean {
@@ -33,7 +36,5 @@ export class SoulMeshDiscoveryRegistry {
     return true;
   }
 
-  list(): SoulMeshRegistration[] {
-    return [...this.peers.values()];
-  }
+  list(): SoulMeshRegistration[] { return [...this.peers.values()]; }
 }
