@@ -9,6 +9,12 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      SOUL_MESH_TOKEN: ${{ secrets.SOUL_MESH_TOKEN }}
+      SOUL_MESH_HMAC_SECRET: ${{ secrets.SOUL_MESH_HMAC_SECRET }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,3 +29,4 @@ jobs:
       - run: node --check scripts/supabase-vector-memory.mjs
       - run: npm run byok:check
       - run: npm run vector-memory:check
+      - run: npm run google:check
