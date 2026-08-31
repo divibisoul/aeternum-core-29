@@ -4,6 +4,9 @@ export type SoulMeshRegistration = {
   nucleus: Exclude<SoulNucleus, 'N01'>;
   url: string;
   capabilities: string[];
+  /** Canonical Mesh contract version advertised by the peer. */
+  contractVersion?: string;
+  /** @deprecated Legacy alias retained for backward compatibility. */
   version?: string;
   lastSeen: number;
 };
@@ -14,17 +17,25 @@ export class SoulMeshDiscoveryRegistry {
 
   register(registration: SoulMeshRegistration): SoulMeshRegistration {
     if (!/^https?:\/\//i.test(registration.url)) throw new Error('INVALID_PEER_URL');
-    this.peers.set(registration.nucleus, { ...registration, lastSeen: Date.now() });
+    const contractVersion = registration.contractVersion ?? registration.version;
+    this.peers.set(registration.nucleus, {
+      ...registration,
+      ...(contractVersion ? { contractVersion, version: registration.version ?? contractVersion } : {}),
+      lastSeen: Date.now(),
+    });
     return this.peers.get(registration.nucleus)!;
   }
 
   resolve(nucleus: Exclude<SoulNucleus, 'N01'>): SoulMeshRegistration | undefined { return this.peers.get(nucleus); }
 
-  updateCapabilities(nucleus: Exclude<SoulNucleus, 'N01'>, capabilities: string[], version?: string): SoulMeshRegistration | undefined {
+  updateCapabilities(nucleus: Exclude<SoulNucleus, 'N01'>, capabilities: string[], contractVersion?: string): SoulMeshRegistration | undefined {
     const peer = this.peers.get(nucleus);
     if (!peer) return undefined;
     peer.capabilities = [...new Set(capabilities)].sort();
-    if (version) peer.version = version;
+    if (contractVersion) {
+      peer.contractVersion = contractVersion;
+      peer.version = peer.version ?? contractVersion;
+    }
     peer.lastSeen = Date.now();
     return peer;
   }
