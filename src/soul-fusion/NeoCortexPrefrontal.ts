@@ -2,7 +2,7 @@ import { SoulNeuralGraph, type NeuralSignal, type NeuralRoute, type SoulNucleusI
 import { SoulSuperGPU, type SuperGPUResult, type SuperGPUTask } from './SoulSuperGPU';
 import { SoulCognitiveFabric, type AgentDescriptor, type Evidence, type WorldFact } from './SoulCognitiveFabric';
 
-export type CognitiveGoal = { id: string; description: string; priority: number; deadline?: number; requiredCapabilities?: readonly string[]; context?: unknown };
+export type CognitiveGoal = { id: string; description: string; priority: number; deadline?: number; requiredCapabilities?: readonly string[]; context?: unknown; fast_inference?: boolean };
 export type WorkingMemoryItem = { id: string; value: unknown; salience: number; expiresAt?: number; source?: SoulNucleusId };
 export type ExecutiveDecision = { goalId: string; selectedNucleus?: SoulNucleusId; selectedCapability?: string; routes: readonly NeuralRoute[]; inhibited: boolean; reason: string };
 export type CortexSnapshot = { role: 'neocortex-prefrontal-executive-layer'; workingMemory: number; goals: number; neuralSignals: number; activeNuclei: number; gpuFabric: ReturnType<SoulSuperGPU['describe']>; gpuFedSignals: number; cognitiveFabric: ReturnType<SoulCognitiveFabric['describe']> };
@@ -74,7 +74,7 @@ export class NeoCortexPrefrontal {
     const goal = this.goals.get(goalId);
     if (!goal) throw new Error(`GOAL_NOT_FOUND:${goalId}`);
     const selectedCapability = capability ?? goal.requiredCapabilities?.[0];
-    const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, timestamp: Date.now() };
+    const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, fast_inference: goal.fast_inference === true, timestamp: Date.now() };
     const routes = this.graph.propagate(signal, selectedCapability);
     const candidates = selectedCapability ? this.cognitiveFabric.resolveCapability(selectedCapability) : [];
     const candidate = candidates[0];
