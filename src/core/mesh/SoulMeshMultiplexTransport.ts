@@ -1,9 +1,9 @@
 import type { SoulMeshMessage, SoulMeshTransport } from './SoulMeshProtocol';
 
 /**
- * Hybrid transport: sends through every configured transport and accepts
- * inbound messages from all of them. One channel failing does not disable
- * the others; callers receive an error only when every channel fails.
+ * Hybrid transport with ordered failover. A message is sent once through the
+ * first working transport; later transports are fallbacks, preventing duplicate
+ * remote execution while preserving multiple communication paths.
  */
 export class SoulMeshMultiplexTransport implements SoulMeshTransport {
   private readonly listeners = new Set<(message: SoulMeshMessage) => void | Promise<void>>();
@@ -19,11 +19,16 @@ export class SoulMeshMultiplexTransport implements SoulMeshTransport {
   }
 
   async send(message: SoulMeshMessage): Promise<void> {
-    const results = await Promise.allSettled(this.transports.map(transport => transport.send(message)));
-    const failures = results.filter(result => result.status === 'rejected');
-    if (failures.length === results.length) {
-      throw new Error(`Soul Mesh all transports failed: ${failures.map(f => String(f.reason)).join(' | ')}`);
+    const failures: unknown[] = [];
+    for (const transport of this.transports) {
+      try {
+        await transport.send(message);
+        return;
+      } catch (error) {
+        failures.push(error);
+      }
     }
+    throw new Error(`Soul Mesh all transports failed: ${failures.map(String).join(' | ')}`);
   }
 
   onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void {
