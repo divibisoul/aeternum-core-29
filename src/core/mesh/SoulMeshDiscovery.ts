@@ -1,4 +1,5 @@
 import type { SoulNucleus } from './SoulMeshProtocol';
+import { SOUL_MESH_CONTRACT_VERSION } from './SoulMeshProtocol';
 
 export type SoulMeshRegistration = {
   nucleus: Exclude<SoulNucleus, 'N01'>;
@@ -18,6 +19,9 @@ export class SoulMeshDiscoveryRegistry {
   register(registration: SoulMeshRegistration): SoulMeshRegistration {
     if (!/^https?:\/\//i.test(registration.url)) throw new Error('INVALID_PEER_URL');
     const contractVersion = registration.contractVersion ?? registration.version;
+    if (contractVersion && contractVersion !== SOUL_MESH_CONTRACT_VERSION) {
+      throw new Error(`UNSUPPORTED_MESH_CONTRACT_VERSION:${contractVersion}`);
+    }
     this.peers.set(registration.nucleus, {
       ...registration,
       ...(contractVersion ? { contractVersion, version: registration.version ?? contractVersion } : {}),
@@ -31,6 +35,9 @@ export class SoulMeshDiscoveryRegistry {
   updateCapabilities(nucleus: Exclude<SoulNucleus, 'N01'>, capabilities: string[], contractVersion?: string): SoulMeshRegistration | undefined {
     const peer = this.peers.get(nucleus);
     if (!peer) return undefined;
+    if (contractVersion && contractVersion !== SOUL_MESH_CONTRACT_VERSION) {
+      throw new Error(`UNSUPPORTED_MESH_CONTRACT_VERSION:${contractVersion}`);
+    }
     peer.capabilities = [...new Set(capabilities)].sort();
     if (contractVersion) {
       peer.contractVersion = contractVersion;
