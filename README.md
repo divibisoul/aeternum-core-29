@@ -50,6 +50,10 @@ The probe only reports N01↔N06 as successful when the response identity and co
 
 See `MESH_STATUS.md` for the acceptance criteria and current implementation boundary.
 
+## Environment
+
+Copy `.env.example` to `.env` for local development and fill in your own values. Never commit `.env`. In CI, configure the same names as GitHub Actions Secrets. The live Google check uses `GEMINI_API_KEY` or `GOOGLE_API_KEY`.
+
 ## What technologies are used for this project?
 
 This project is built with Vite, TypeScript, React, shadcn-ui and Tailwind CSS.
