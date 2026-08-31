@@ -5,6 +5,8 @@ export type SoulMeshRegistration = {
   nucleus: Exclude<SoulNucleus, 'N01'>;
   url: string;
   capabilities: string[];
+  transports?: string[];
+  channels?: Record<string, unknown>;
   /** Canonical Mesh contract version advertised by the peer. */
   contractVersion?: string;
   /** @deprecated Legacy alias retained for backward compatibility. */
@@ -25,6 +27,7 @@ export class SoulMeshDiscoveryRegistry {
     this.peers.set(registration.nucleus, {
       ...registration,
       ...(contractVersion ? { contractVersion, version: registration.version ?? contractVersion } : {}),
+      transports: registration.transports ? [...new Set(registration.transports)].sort() : undefined,
       lastSeen: Date.now(),
     });
     return this.peers.get(registration.nucleus)!;
@@ -32,7 +35,7 @@ export class SoulMeshDiscoveryRegistry {
 
   resolve(nucleus: Exclude<SoulNucleus, 'N01'>): SoulMeshRegistration | undefined { return this.peers.get(nucleus); }
 
-  updateCapabilities(nucleus: Exclude<SoulNucleus, 'N01'>, capabilities: string[], contractVersion?: string): SoulMeshRegistration | undefined {
+  updateCapabilities(nucleus: Exclude<SoulNucleus, 'N01'>, capabilities: string[], contractVersion?: string, metadata?: Pick<SoulMeshRegistration, 'transports' | 'channels'>): SoulMeshRegistration | undefined {
     const peer = this.peers.get(nucleus);
     if (!peer) return undefined;
     if (contractVersion && contractVersion !== SOUL_MESH_CONTRACT_VERSION) {
@@ -43,6 +46,8 @@ export class SoulMeshDiscoveryRegistry {
       peer.contractVersion = contractVersion;
       peer.version = peer.version ?? contractVersion;
     }
+    if (metadata?.transports) peer.transports = [...new Set(metadata.transports)].sort();
+    if (metadata?.channels) peer.channels = { ...metadata.channels };
     peer.lastSeen = Date.now();
     return peer;
   }
