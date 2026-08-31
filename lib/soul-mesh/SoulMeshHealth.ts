@@ -29,6 +29,7 @@ export class SoulMeshHealth {
   };
   private circuit: CircuitState = 'CLOSED';
   private openedAt = 0;
+  private halfOpenProbeUsed = false;
   private readonly policy: HealthPolicy;
 
   constructor(policy: Partial<HealthPolicy> = {}) {
@@ -47,8 +48,9 @@ export class SoulMeshHealth {
     if (this.circuit === 'HALF_OPEN' || this.snapshot.consecutiveSuccesses >= this.policy.successThreshold) {
       this.circuit = 'CLOSED';
       this.openedAt = 0;
+      this.halfOpenProbeUsed = false;
     }
-    return this.snapshot;
+    return { ...this.snapshot };
   }
 
   recordFailure(): HealthSnapshot {
@@ -64,17 +66,24 @@ export class SoulMeshHealth {
     if (failures >= this.policy.failureThreshold) {
       this.circuit = 'OPEN';
       this.openedAt = now;
+      this.halfOpenProbeUsed = false;
     }
-    return this.snapshot;
+    return { ...this.snapshot };
   }
 
+  /** Returns true for normal traffic, or exactly one probe after the open cooldown. */
   canAttempt(now = Date.now()): boolean {
     if (this.circuit === 'CLOSED') return true;
     if (this.circuit === 'OPEN' && now - this.openedAt >= this.policy.openCooldownMs) {
       this.circuit = 'HALF_OPEN';
+      this.halfOpenProbeUsed = false;
+    }
+    if (this.circuit === 'HALF_OPEN') {
+      if (this.halfOpenProbeUsed) return false;
+      this.halfOpenProbeUsed = true;
       return true;
     }
-    return this.circuit === 'HALF_OPEN';
+    return false;
   }
 
   getSnapshot(): HealthSnapshot { return { ...this.snapshot }; }
