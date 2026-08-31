@@ -1,4 +1,5 @@
 import type { SoulNucleus, SoulMeshTransport } from './SoulMeshProtocol';
+import { SOUL_MESH_CONTRACT_VERSION } from './SoulMeshProtocol';
 import { createSoulMeshRouter } from './createSoulMeshRouter';
 import { SoulMeshDiscoveryRegistry } from './SoulMeshDiscovery';
 
@@ -32,10 +33,15 @@ export async function syncR1Capabilities(transport: SoulMeshTransport, registry:
       const response = await router.request(peer, 'mesh.describe', { requestedBy: 'N01' });
       if (response.kind !== 'response') throw new Error(`DISCOVERY_FAILED:${peer}`);
       const payload = response.payload as Record<string, unknown>;
+      if (payload.contractVersion !== SOUL_MESH_CONTRACT_VERSION) {
+        throw new Error(`DISCOVERY_CONTRACT_MISMATCH:${peer}`);
+      }
       const raw = payload.capabilities ?? payload.declaredCapabilities ?? payload.executableCapabilities;
-      const capabilities = Array.isArray(raw) ? raw.map(String) : [];
-      const updated = registry.updateCapabilities(peer, capabilities, typeof payload.contractVersion === 'string' ? payload.contractVersion : undefined);
-      return { peer, discovered: capabilities, registered: Boolean(updated) };
+      if (!Array.isArray(raw)) throw new Error(`DISCOVERY_CAPABILITIES_MISSING:${peer}`);
+      const capabilities = raw.map(String).filter(Boolean);
+      const updated = registry.updateCapabilities(peer, capabilities, SOUL_MESH_CONTRACT_VERSION);
+      if (!updated) throw new Error(`DISCOVERY_PEER_NOT_REGISTERED:${peer}`);
+      return { peer, discovered: capabilities, registered: true };
     }));
   } finally {
     router.close();
