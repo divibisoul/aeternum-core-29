@@ -39,9 +39,11 @@ export async function syncR1Capabilities(transport: SoulMeshTransport, registry:
       const raw = payload.capabilities ?? payload.declaredCapabilities ?? payload.executableCapabilities;
       if (!Array.isArray(raw)) throw new Error(`DISCOVERY_CAPABILITIES_MISSING:${peer}`);
       const capabilities = raw.map(String).filter(Boolean);
-      const updated = registry.updateCapabilities(peer, capabilities, SOUL_MESH_CONTRACT_VERSION);
+      const transports = Array.isArray(payload.transports) ? payload.transports.map(String).filter(Boolean) : undefined;
+      const channels = payload.channels && typeof payload.channels === 'object' ? payload.channels as Record<string, unknown> : undefined;
+      const updated = registry.updateCapabilities(peer, capabilities, SOUL_MESH_CONTRACT_VERSION, { transports, channels });
       if (!updated) throw new Error(`DISCOVERY_PEER_NOT_REGISTERED:${peer}`);
-      return { peer, discovered: capabilities, registered: true };
+      return { peer, discovered: capabilities, transports, registered: true };
     }));
   } finally {
     router.close();
