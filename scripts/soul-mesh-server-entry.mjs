@@ -9,9 +9,17 @@ const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
   stdio: 'inherit',
 });
 
+function upstreamPath(reqUrl) {
+  if (reqUrl === '/api/soul-mesh/register') return '/mesh/register';
+  if (reqUrl === '/api/soul-mesh/peers' || reqUrl === '/api/soul-mesh/discovery') return '/mesh/discovery';
+  if (reqUrl === '/api/soul-mesh/health') return '/mesh/health';
+  return reqUrl;
+}
+
 function proxy(req, res) {
+  const requestPath = upstreamPath(req.url);
   const headers = { ...req.headers, host: `127.0.0.1:${internalPort}` };
-  const request = http.request({ hostname: '127.0.0.1', port: internalPort, path: req.url, method: req.method, headers }, (upstream) => {
+  const request = http.request({ hostname: '127.0.0.1', port: internalPort, path: requestPath, method: req.method, headers }, (upstream) => {
     const chunks = [];
     upstream.on('data', chunk => chunks.push(Buffer.from(chunk)));
     upstream.on('end', () => {
