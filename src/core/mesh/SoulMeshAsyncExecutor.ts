@@ -7,11 +7,19 @@ export interface SoulMeshAsyncExecutionContext {
 
 /** Pull-based worker: safe for serverless because one invocation claims one job. */
 export class SoulMeshAsyncExecutor {
+  private readonly store: SoulMeshJobStore;
+  private readonly context: SoulMeshAsyncExecutionContext;
+  private readonly telemetry?: SoulMeshTelemetry;
+
   constructor(
-    private readonly store: SoulMeshJobStore,
-    private readonly context: SoulMeshAsyncExecutionContext,
-    private readonly telemetry?: SoulMeshTelemetry,
-  ) {}
+    store: SoulMeshJobStore,
+    context: SoulMeshAsyncExecutionContext,
+    telemetry?: SoulMeshTelemetry,
+  ) {
+    this.store = store;
+    this.context = context;
+    this.telemetry = telemetry;
+  }
 
   async run(jobId: string): Promise<SoulMeshJob | null> {
     const startedAt = Date.now();
@@ -36,6 +44,7 @@ export class SoulMeshAsyncExecutor {
     try {
       const result = await this.context.execute(job);
       const completed = await this.store.complete(job.jobId, result);
+      if (!completed) throw new Error('ASYNC_COMPLETION_PERSIST_FAILED');
       this.telemetry?.emit('mesh.capability.completed', {
         jobId: job.jobId,
         correlationId: job.correlationId,
@@ -58,6 +67,7 @@ export class SoulMeshAsyncExecutor {
         code: 'ASYNC_EXECUTION_FAILED',
         detail: error instanceof Error ? error.message : String(error),
       });
+      if (!failed) throw new Error('ASYNC_FAILURE_PERSIST_FAILED');
       this.telemetry?.emit('mesh.capability.failed', {
         jobId: job.jobId,
         correlationId: job.correlationId,
