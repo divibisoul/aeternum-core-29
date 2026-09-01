@@ -1,0 +1,30 @@
+name: SOUL Mesh regression
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mesh-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run Health tests
+        run: node --experimental-strip-types lib/soul-mesh/SoulMeshHealth.test.ts
+      - name: Run peer resilience tests
+        run: node --experimental-strip-types lib/soul-mesh/SoulMeshPeerResilience.test.ts
+      - name: Run telemetry tests
+        run: node --experimental-strip-types lib/soul-mesh/SoulMeshTelemetry.test.ts
+      - name: Run capability graph tests
+        run: node --experimental-strip-types lib/soul-mesh/SoulMeshCapabilityGraph.test.ts
+      - name: Run async executor tests
+        run: node --experimental-strip-types src/core/mesh/SoulMeshAsyncExecutor.test.ts
