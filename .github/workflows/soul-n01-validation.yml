@@ -20,9 +20,10 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - run: npm run build
+      - name: Validate Node server syntax before lint
+        run: node --check scripts/soul-mesh-server.mjs
       - run: npm run lint
       - run: node --check scripts/n01-byok-gemini.mjs
-      - run: node --check scripts/soul-mesh-server.mjs
       - run: node --check scripts/soul-mesh-server-entry.mjs
       - run: node --check scripts/soul-mesh-local-contract-check.mjs
       - run: node --check scripts/supabase-vector-memory.mjs
