@@ -1,7 +1,7 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
-import java.time.Instant
+import java.util.UUID
 
 /** Runtime endpoint: validates, handles health, dispatches local capabilities, then delegates hybrid modes. */
 class SoulMeshEndpoint(
@@ -26,13 +26,13 @@ class SoulMeshEndpoint(
 
     private fun reply(source: SoulMeshMessage, kind: String, payload: JSONObject): SoulMeshMessage =
         SoulMeshMessage(
-            id = java.util.UUID.randomUUID().toString(),
+            id = UUID.randomUUID().toString(),
             correlationId = source.correlationId,
             source = source.target,
             target = source.source,
             kind = kind,
             capability = source.capability,
             payload = payload,
-            timestamp = Instant.now().toString(),
+            timestamp = System.currentTimeMillis(),
         )
 }
