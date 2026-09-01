@@ -1,7 +1,6 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
-import java.time.Instant
 import java.util.UUID
 
 /** Executes a capability in the runtime that actually owns it. */
@@ -25,12 +24,12 @@ class SoulHybridCapabilityExecutor(
 
     private fun response(source: SoulMeshMessage, payload: JSONObject) = source.copy(
         id = UUID.randomUUID().toString(), source = source.target, target = source.source,
-        kind = "response", payload = payload, timestamp = Instant.now().toString()
+        kind = "response", payload = payload, timestamp = System.currentTimeMillis()
     )
 
     private fun error(source: SoulMeshMessage, code: String, detail: String) = source.copy(
         id = UUID.randomUUID().toString(), source = source.target, target = source.source,
         kind = "error", payload = JSONObject().put("code", code).put("detail", detail),
-        timestamp = Instant.now().toString()
+        timestamp = System.currentTimeMillis()
     )
 }
