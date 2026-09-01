@@ -29,4 +29,12 @@ export default tseslint.config(
       "no-useless-escape": "warn",
     },
   },
+  {
+    files: ["**/*.{js,mjs,cjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.node,
+    },
+  },
 );
