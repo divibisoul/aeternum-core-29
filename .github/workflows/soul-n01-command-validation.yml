@@ -1,0 +1,86 @@
+name: SOUL N01 command validation
+
+on:
+  push:
+    branches: [audit/2026-09-01-hardening]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: npm run build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+
+  lint:
+    name: npm run lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run lint
+
+  node-syntax:
+    name: Node syntax validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          node --check scripts/soul-mesh-server.mjs
+          node --check scripts/n01-byok-gemini.mjs
+          node --check scripts/soul-mesh-server-entry.mjs
+          node --check scripts/soul-mesh-local-contract-check.mjs
+          node --check scripts/supabase-vector-memory.mjs
+          node --check scripts/test-n01-n06.mjs
+
+  mesh-contract:
+    name: Mesh contract checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run mesh:contract:check
+      - run: node scripts/soul-mesh-local-contract-check.mjs
+
+  mesh-units:
+    name: Mesh unit checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run mesh:health:unit
+      - run: npm run mesh:async:unit
+
+  byok-vector:
+    name: BYOK and vector-memory checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run byok:check
+      - run: npm run vector-memory:check
