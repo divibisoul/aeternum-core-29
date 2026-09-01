@@ -12,7 +12,7 @@ const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${baseUrl}/mesh/health`);
+      const response = await fetch(`${baseUrl}/api/soul-mesh/health`);
       if (response.ok) return;
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 250));
@@ -20,8 +20,33 @@ const waitForHealth = async () => {
   throw new Error('N01_LOCAL_SERVER_START_TIMEOUT');
 };
 
+const json = async (response) => ({ status: response.status, body: await response.json().catch(() => ({})) });
+
 try {
   await waitForHealth();
+
+  const health = await json(await fetch(`${baseUrl}/api/soul-mesh/health`));
+  if (health.status !== 200 || health.body.nucleus !== 'N01') throw new Error(`N01_CANONICAL_HEALTH_FAILED:${JSON.stringify(health)}`);
+
+  const discovery = await json(await fetch(`${baseUrl}/api/soul-mesh/peers`));
+  if (discovery.status !== 200 || discovery.body.nucleus !== 'N01' || discovery.body.protocol !== 'soul-mesh/1') {
+    throw new Error(`N01_CANONICAL_DISCOVERY_FAILED:${JSON.stringify(discovery)}`);
+  }
+
+  const register = await json(await fetch(`${baseUrl}/api/soul-mesh/register`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      nucleus: 'N02',
+      endpoint: 'http://127.0.0.1:19002',
+      capabilities: ['ai.generate'],
+      role: 'independent-ai',
+    }),
+  }));
+  if (register.status !== 200 || register.body.registered !== 'N02' || typeof register.body.token !== 'string') {
+    throw new Error(`N01_CANONICAL_REGISTER_FAILED:${JSON.stringify(register)}`);
+  }
+
   const correlationId = crypto.randomUUID();
   const response = await fetch(`${baseUrl}/api/soul-mesh`, {
     method: 'POST',
@@ -51,7 +76,16 @@ try {
     capability: body.capability === 'mesh.ping',
   };
   for (const [name, ok] of Object.entries(checks)) if (!ok) throw new Error(`N01_LOCAL_CONTRACT_${name.toUpperCase()}_FAILED:${JSON.stringify(body)}`);
-  console.log(JSON.stringify({ stage: 'N01_LOCAL_RUNTIME_CONTRACT', ok: true, ...checks, correlationId }, null, 2));
+
+  console.log(JSON.stringify({
+    stage: 'N01_LOCAL_RUNTIME_CONTRACT',
+    ok: true,
+    health: true,
+    discovery: true,
+    registration: true,
+    message: checks,
+    correlationId,
+  }, null, 2));
 } finally {
   child.kill('SIGTERM');
   setTimeout(() => child.kill('SIGKILL'), 2_000).unref();
