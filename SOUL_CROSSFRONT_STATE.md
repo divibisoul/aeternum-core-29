@@ -6,9 +6,9 @@ GitHub is the source of truth. This file is a durable handoff between the six pa
 
 | Nucleus | Repository | Main HEAD observed | Latest confirmed work |
 |---|---|---|---|
-| N01 | `divibisoul/aeternum-core-29` | `338fa98b50cef37a654e76610ff15b3d774932a3` | Super GPU dependency normalization + execution timing; staged N07 boundary and Mesh retry/circuit hardening also landed immediately before this head |
+| N01 | `divibisoul/aeternum-core-29` | `3c1e2bb975cc04c17f06e20726336b3777912341` | Super GPU dependency normalization + timing telemetry; staged N07 boundary; Mesh transport hardening |
 | N02 | `divibisoul/Eternium-` | `02a1dbdefed62e49341767c605c6fa706ae8b32a` | Canonical HMAC signing for peer egress |
-| N03 | `divibisoul/nexus-aeternum-fusion` | `59a7cfbdabce8bbaee539c9dc8b808ed6a257743` | Validated emergent compositions now require producer→consumer evidence |
+| N03 | `divibisoul/nexus-aeternum-fusion` | `01db86c7a74dbbd89b1f353115e04110aeb0a197` | Peer HMAC nonce generation repaired after canonicalization |
 | N04 | `divibisoul/nextjs-ai-chatbots` | `d42484df548f2a960aa502880ac1d49e35f3dae8` | Cross-front matrix reconciled with current tree |
 | N05 | `divibisoul/nextjs-ai-chatbot` | `749f089f67e084359e25c982891233213f859635` | Peer discovery requires explicit executable capability evidence |
 | N06 | `divibisoul/nextjs-ai-chatbot-2000` | `f35f9e9e2bfd942fdfa35bc0d8e7af302f8d4e03` | N07 staged as structural-only; active N06 peer execution remains N01–N05 |
@@ -18,9 +18,10 @@ GitHub is the source of truth. This file is a durable handoff between the six pa
 - N05 discovery no longer treats generic/declared capability inventories as invocation permission; only `executableCapabilities` can satisfy capability resolution.
 - N01 SuperCompute and legacy SuperGPU dependency handling now accept the canonical `dependsOn` form and legacy `dependencies` form consistently.
 - N01 SuperGPU results expose per-task duration telemetry for performance measurement.
-- N01 peer transport now has bounded retry/backoff and a per-peer circuit breaker in the active TypeScript transport path.
+- N01 TypeScript peer transport now has bounded retry/backoff and a per-peer circuit breaker; this transport is distinct from the active Node gateway runtime and must not be conflated with it.
 - N01/N06 no longer allow active N07 execution before final commissioning; N07 remains structurally represented for the final fusion boundary.
 - N06 discovery explicitly reports active peers separately from structural peers.
+- N03 has independently repaired its canonical HMAC nonce generation on the live `main`, so the cross-front security state has changed since the earlier snapshot.
 
 ## Important runtime distinction
 
