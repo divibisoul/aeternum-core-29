@@ -1,19 +1,27 @@
 # N01↔N06 Capability Compatibility Matrix
 
-| Direction | Capability | Owner | Remote consumer | Context | Result |
+This matrix describes the current executable capability vocabulary, not historical names. A row is design-level until a real transaction reaches the owning runtime and returns a correlated result.
+
+| Direction | Capability | Owner | Consumer | Context | Result |
 |---|---|---|---|---|---|
-| N01→N06 | ai.reasoning | N06 | N01 | permitted request context | structured reasoning result |
-| N01→N06 | conversation | N06 | N01 | conversation context | assistant result |
-| N01→N06 | tools.describe | N06 | N01 | none/minimal | tool metadata |
-| N01→N06 | context.orchestration | N06 | N01 | selected context | synthesized context |
-| N06→N01 | android.device_info | N01 | N06 | authorized device scope | device state |
-| N06→N01 | android.battery | N01 | N06 | authorized device scope | battery state |
-| N06→N01 | android.memory | N01 | N06 | authorized device scope | memory state |
-| N06→N01 | android.network | N01 | N06 | authorized device scope | network state |
-| N06→N01 | android.events | N01 | N06 | authorized event scope | event data |
+| N01→N06 | support.ai-pilot | N06 | N01 / Mesh peers | prompt + optional system context | N06 AI-pilot result |
+| N01→N06 | support.context | N06 | N01 / Mesh peers | selected context + metadata | contextual support result |
+| N01→N06 | support.tool-execution | N06 | N01 / Mesh peers | authorized user/tool context | native tool result |
+| N01→N06 | support.artifacts | N06 | N01 / Mesh peers | authorized user/data stream | artifact operation result |
+| N01→N06 | support.documents | N06 | N01 / Mesh peers | authorized user/data stream | document operation result |
+| N01→N06 | support.streaming | N06 | N01 / Mesh peers | stream-capable request context | streaming result/events |
+| N01→N06 | support.mesh | N06 | N01 / Mesh peers | canonical Mesh request | correlated Mesh result |
+| N06→N01 | android.device_info | N01 | N06 / Mesh peers | authorized device scope | device state |
+| N06→N01 | android.battery | N01 | N06 / Mesh peers | authorized device scope | battery state |
+| N06→N01 | android.memory | N01 | N06 / Mesh peers | authorized device scope | memory state |
+| N06→N01 | android.network | N01 | N06 / Mesh peers | authorized device scope | network state |
+| N06→N01 | android.events | N01 | N06 / Mesh peers | authorized event scope | event data |
 
-## Proof requirement
-Every row is a design-level compatibility path until a real transaction reaches the owning runtime and returns a correlated result. No ping/health result upgrades a row to VERIFIED.
+## Verification state
+No row is marked VERIFIED by ping/health alone. A row becomes VERIFIED only when an executable capability reaches its owning runtime and returns the original correlation identity through the canonical Mesh contract.
 
-## Composition target
-The first fusion scenario should compose at least one N06 cognitive capability and one N01 Android capability in a single transaction chain, with explicit context propagation and independently owned execution.
+## Composition target before N07
+The pre-N07 fusion scenario must compose at least one N06 native capability with one N01 native capability in one transaction chain, preserving ownership, authorization, correlation and failure isolation.
+
+## Final N07 handoff
+N07 will consume the stabilized N01↔N06 capability graph, not a duplicate copy. The final N07 stage may compose capabilities across N01 and N06 and add N07-native neural/compute orchestration, while keeping each owning runtime independent.
