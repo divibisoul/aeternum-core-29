@@ -54,3 +54,19 @@ The goal of connected nuclei is multiplicative capability: agents, functions and
 
 ## Final delivery rule
 Before presenting a task as complete, report the actual state, not the intended state. Include a compact health/coverage graph for the relevant fronts, current CI/runtime evidence, elapsed time, and any remaining unverified areas. A graph is a decision aid for delivery readiness, not a substitute for tests.
+
+## CUMULATIVE MASTER DIRECTIVE
+
+No previous directive is cancelled. Apply the full sequence PRESERVE → AUDIT → MAP → CORRECT → COMPLETE → CONNECT → CROSS → FUSE → OPTIMIZE → VALIDATE → DOCUMENT → RE-AUDIT. Every actionable finding becomes engineering work. Research official documentation, standards and viable alternatives when blocked; a failed first approach is not a stopping condition.
+
+Audit the complete six-nucleus surface: identity, agents, capabilities, functions, tools, providers, context, memory, execution, inputs, outputs, Mesh, discovery, delegation, response, security, resilience, dependencies, performance, tests and CI. Six core nuclei imply 15 bidirectional peer pairs and 30 directed logical links, with five IN and five OUT peer relationships per nucleus.
+
+Soul Mesh remains the single interoperability layer. Its functional chain is DISCOVERY → CAPABILITY DISCOVERY → TASK ROUTING → DELEGATION → EXECUTION → RESPONSE → CORRELATION → COMPOSITION. Transport resolution may use HTTP/REST, WebSocket/realtime, events/PubSub, loopback or internal adapters when justified, without creating a second Mesh.
+
+For every pair investigate agents×agents, tools×tools, capabilities×capabilities, context×context, execution×execution and AI×AI. Only technically grounded, useful compositions become emergent capabilities. Each new capability requires contract, owner, participants, input, processing, output, dependencies, execution mode, registry, tests and documentation.
+
+Enable dynamic agent federation, capability-based delegation, routing by capability fit/load/latency/availability/priority/cost/dependencies/reliability, safe parallel execution, cache reuse and resilient recovery. Treat N01's gateway/registry/device capabilities as executable resources, not merely metadata.
+
+SOUL Super GPU / SuperCompute is a logical distributed processing fabric: TASK → DECOMPOSITION → SCHEDULER → CAPABILITY ROUTER → PARALLEL EXECUTION → RESULT AGGREGATION → VALIDATION → FINAL RESULT. Combine inter-nucleus and intra-nucleus parallelism when dependencies permit. N01 contributes its registry/gateway/device and cognitive resources to this fabric.
+
+Coverage/health/execution/latency graphs are mandatory delivery aids where measurable, but never substitutes for tests. Final reports must use the actual current HEAD and latest CI state. N07 remains the final implementation target; do not use N07 files as proof that N01–N06 are ready.
