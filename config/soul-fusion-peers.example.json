@@ -3,5 +3,6 @@
   "N03": {"url":"http://<N03-HOST>:<N03-PORT>","role":"perception-voice-multimodal-context"},
   "N04": {"url":"http://<N04-HOST>:<N04-PORT>","role":"tools-documents-artifacts"},
   "N05": {"url":"http://<N05-HOST>:<N05-PORT>","role":"orchestration-dispatch-execution"},
-  "N06": {"url":"http://<N06-HOST>:<N06-PORT>","role":"cognition-synthesis-audit-governance"}
+  "N06": {"url":"http://<N06-HOST>:<N06-PORT>","role":"cognition-synthesis-audit-governance"},
+  "N07": {"url":"http://<N07-HOST>:<N07-PORT>","role":"neural-prefrontal-compute-cognitive-execution"}
 }
