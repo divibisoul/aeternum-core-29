@@ -5,6 +5,7 @@ import org.json.JSONObject
 /** Canonical cross-language wire message for Soul Mesh v1. */
 data class SoulMeshMessage(
     val protocol: String = SoulMeshContract.PROTOCOL,
+    val contractVersion: String = SoulMeshContract.CONTRACT_VERSION,
     val id: String,
     val correlationId: String,
     val source: String,
@@ -15,12 +16,12 @@ data class SoulMeshMessage(
     val timestamp: Long,
 ) {
     fun validate(): Result<Unit> = SoulMeshContract.validate(
-        protocol, id, correlationId, source, target, kind, capability
+        protocol, contractVersion, id, correlationId, source, target, kind, capability
     )
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("protocol", protocol)
-        put("contractVersion", SoulMeshContract.CONTRACT_VERSION)
+        put("contractVersion", contractVersion)
         put("id", id)
         put("correlationId", correlationId)
         put("source", source)
@@ -35,6 +36,7 @@ data class SoulMeshMessage(
         fun fromJson(json: JSONObject): SoulMeshMessage {
             val message = SoulMeshMessage(
                 protocol = json.optString("protocol"),
+                contractVersion = json.optString("contractVersion"),
                 id = json.optString("id"),
                 correlationId = json.optString("correlationId"),
                 source = json.optString("source"),
