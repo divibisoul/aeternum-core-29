@@ -1,7 +1,6 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -25,7 +24,7 @@ class SoulMeshRuntime(private val nuclei: List<String> = SoulMeshChannels.nuclei
             kind = "request",
             capability = capability,
             payload = payload,
-            timestamp = Instant.now().toString(),
+            timestamp = System.currentTimeMillis(),
         )
         return endpoint.receive(request)
     }
