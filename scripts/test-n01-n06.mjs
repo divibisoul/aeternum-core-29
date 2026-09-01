@@ -30,13 +30,16 @@ function makeEnvelope(target, capability, payload = {}) {
 }
 
 async function post(url, body) {
-  const r = await fetch(url, {
+  const response = await fetch(url, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-correlation-id': body.correlationId },
+    headers: {
+      'content-type': 'application/json',
+      'x-correlation-id': body.correlationId,
+    },
     body: JSON.stringify(body),
   });
-  const data = await r.json();
-  return { status: r.status, data };
+  const data = await response.json().catch(() => ({}));
+  return { status: response.status, data };
 }
 
 const health = await fetch(`${n01.replace(/\/$/, '')}/mesh/health`);
@@ -44,19 +47,42 @@ const healthBody = await health.json();
 if (!health.ok || healthBody.nucleus !== 'N01') throw new Error(`N01 health failed: ${health.status}`);
 console.log(JSON.stringify({ stage: 'N01_HEALTH', ok: true, peers: healthBody.peers?.map((p) => p.id) || [] }, null, 2));
 
-if (!n06) {
-  throw new Error('SOUL_MESH_N06_URL not configured; canonical N01-N06 E2E cannot be claimed in CI');
-}
+if (!n06) throw new Error('SOUL_MESH_N06_URL not configured; canonical N01-N06 E2E cannot be claimed in CI');
 
 const message = makeEnvelope('N06', 'mesh.ping', { probe: 'N01-N06' });
-const result = await post(`${n06.replace(/\/$/, '')}/mesh/in`, message);
+const result = await post(`${n06.replace(/\/$/, '')}/api/soul-mesh`, {
+  protocol: 'soul-mesh/1',
+  contractVersion: CONTRACT_VERSION,
+  id: message.messageId,
+  correlationId: message.correlationId,
+  source: message.source,
+  target: message.target,
+  kind: 'request',
+  capability: 'mesh.ping',
+  payload: message.payload.payload,
+  timestamp: message.timestamp,
+});
+
 if (result.status < 200 || result.status >= 300) {
-  throw new Error(`N01-N06 ping failed: HTTP ${result.status} ${JSON.stringify(result.data)}`);
+  throw new Error(`N01-N06 capability failed: HTTP ${result.status} ${JSON.stringify(result.data)}`);
 }
-if (result.data?.source !== 'N06' || result.data?.target !== 'N01' || result.data?.correlationId !== message.correlationId) {
-  throw new Error(`N01-N06 identity mismatch: ${JSON.stringify(result.data)}`);
+for (const [field, expected] of [
+  ['source', 'N06'],
+  ['target', 'N01'],
+  ['correlationId', message.correlationId],
+  ['contractVersion', CONTRACT_VERSION],
+]) {
+  if (result.data?.[field] !== expected) {
+    throw new Error(`N01-N06 ${field} mismatch: expected ${expected}, got ${result.data?.[field]}`);
+  }
 }
-if (result.data?.contractVersion !== CONTRACT_VERSION) {
-  throw new Error(`N01-N06 contract mismatch: expected ${CONTRACT_VERSION}, got ${result.data?.contractVersion}`);
-}
-console.log(JSON.stringify({ stage: 'N01_N06_E2E', ok: true, source: result.data.source, target: result.data.target, contractVersion: result.data.contractVersion, correlationId: result.data.correlationId }, null, 2));
+
+console.log(JSON.stringify({
+  stage: 'N01_N06_E2E',
+  ok: true,
+  source: result.data.source,
+  target: result.data.target,
+  capability: result.data.capability,
+  contractVersion: result.data.contractVersion,
+  correlationId: result.data.correlationId,
+}, null, 2));
