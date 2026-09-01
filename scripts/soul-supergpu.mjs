@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 const BACKENDS = ['IN_PROCESS', 'WEBASSEMBLY', 'WEBGPU', 'REMOTE_MESH'];
 const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
 
