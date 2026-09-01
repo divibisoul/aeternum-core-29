@@ -2,8 +2,8 @@ export type NucleusId='N01'|'N02'|'N03'|'N04'|'N05'|'N06'|'N07';
 export type MeshKind='request'|'response'|'event'|'error';
 export type SoulMeshMessage={protocol:'soul-mesh/1';contractVersion:'1.1.0';id:string;correlationId:string;source:NucleusId;target:NucleusId;kind:MeshKind;capability:string;payload:unknown;timestamp:number;meta?:{runtime?:string;transport?:string;encoding?:string;version?:string;nonce?:string;traceId?:string}};
 
-/** N07 remains a structural boundary until the final N01×N06×N07 commissioning stage. */
-const ACTIVE_PEERS:Exclude<NucleusId,'N01'|'N07'>[]=['N02','N03','N04','N05','N06'];
+/** N07 is now an active peer through the N01 server-side secure relay. */
+const ACTIVE_PEERS:Exclude<NucleusId,'N01'>[]=['N02','N03','N04','N05','N06','N07'];
 const STRUCTURAL_PEERS:Exclude<NucleusId,'N01'>[]=['N02','N03','N04','N05','N06','N07'];
 const MAX_ATTEMPTS=3;
 const RETRY_BASE_DELAY_MS=250;
@@ -25,8 +25,12 @@ function recordFailure(target:NucleusId){const failures=(circuitFailures.get(tar
 
 export async function sendTo(target:NucleusId,capability:string,payload:unknown,timeoutMs=15000):Promise<SoulMeshMessage>{
  if(target==='N01')throw new Error('N01 inbound transport is owned by the Android runtime bridge');
- if(target==='N07')throw new Error('N07_NOT_COMMISSIONED');
- const url=urls[target];if(!url)throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);if(!capability.trim())throw new Error('SOUL_MESH_CAPABILITY_REQUIRED');
+ const directUrl=urls[target];
+ const isN07=target==='N07';
+ const relayOrigin=globalThis.location?.origin?.trim()??'';
+ const requestUrl=isN07?`${relayOrigin}/api/soul-mesh/n07`:`${(directUrl??'').replace(/\/$/,'')}/api/soul-mesh`;
+ if(isN07&&!relayOrigin)throw new Error('N07_BROWSER_RELAY_ORIGIN_REQUIRED');
+ if(!directUrl&&!isN07)throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);if(!capability.trim())throw new Error('SOUL_MESH_CAPABILITY_REQUIRED');
  if(!circuitAllows(target))throw new Error(`SOUL_MESH_CIRCUIT_OPEN:${target}`);
  const correlationId=uuid();let lastError:unknown;
  for(let attempt=1;attempt<=MAX_ATTEMPTS;attempt++){
@@ -34,9 +38,10 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
   const message:SoulMeshMessage={protocol:'soul-mesh/1',contractVersion:'1.1.0',id,correlationId,source:'N01',target,kind:'request',capability,payload,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:'1.1.0',traceId:correlationId,nonce:n}};
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
-   const headers:Record<string,string>={'content-type':'application/json','x-soul-correlation-id':correlationId,'x-soul-mesh-nonce':n};
-   if(token)headers.authorization=`Bearer ${token}`;
-   const response=await fetch(`${url.replace(/\/$/,'')}/api/soul-mesh`,{method:'POST',headers,body:JSON.stringify(message),signal:controller.signal});
+   const headers:Record<string,string>={'content-type':'application/json','x-soul-correlation-id':correlationId};
+   if(!isN07)headers['x-soul-mesh-nonce']=n;
+   if(token&&!isN07)headers.authorization=`Bearer ${token}`;
+   const response=await fetch(requestUrl,{method:'POST',headers,body:JSON.stringify(message),signal:controller.signal,cache:'no-store'});
    const body=await response.json() as SoulMeshMessage;
    if(body.correlationId!==correlationId)throw new Error('SOUL_MESH_CORRELATION_MISMATCH');
    if(body.contractVersion!=='1.1.0'||body.protocol!=='soul-mesh/1')throw new Error('SOUL_MESH_CONTRACT_MISMATCH');
