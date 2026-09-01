@@ -1,0 +1,42 @@
+name: Audit diagnostics
+on:
+  push:
+    branches: [audit/2026-09-01-hardening]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Capture diagnostics
+        shell: bash
+        run: |
+          set +e
+          {
+            echo '=== node ==='; node --version; npm --version
+            echo '=== npm install ==='; npm install --legacy-peer-deps --no-audit --no-fund
+            echo "install_exit=$?"
+            for cmd in 'npm run build' 'npm run lint' 'npm run mesh:contract:check' 'npm run mesh:health:unit' 'npm run mesh:async:unit' 'npm run byok:check' 'npm run vector-memory:check'; do
+              echo "=== $cmd ==="
+              eval "$cmd"
+              echo "exit=$?"
+            done
+            for f in tsconfig.json vite.config.ts eslint.config.js scripts/soul-mesh-server.mjs scripts/soul-mesh-server-entry.mjs; do
+              echo "=== $f ==="
+              if [ -f "$f" ]; then sed -n '1,260p' "$f"; else echo 'MISSING'; fi
+            done
+          } 2>&1 | tee audit-diagnostics-n01.txt
+      - name: Commit diagnostics
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add audit-diagnostics-n01.txt
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(audit): capture N01 execution diagnostics [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
