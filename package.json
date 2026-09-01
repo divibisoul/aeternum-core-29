@@ -9,7 +9,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "mesh:n01": "node scripts/soul-mesh-server.mjs",
+    "mesh:n01": "node scripts/soul-mesh-server-entry.mjs",
     "mesh:health": "node scripts/test-n01-n06.mjs",
     "mesh:health:unit": "node --experimental-strip-types lib/soul-mesh/SoulMeshHealth.test.ts",
     "mesh:async:unit": "node --experimental-strip-types src/core/mesh/SoulMeshAsyncExecutor.test.ts",
