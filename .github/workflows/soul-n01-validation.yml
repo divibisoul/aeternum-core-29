@@ -23,8 +23,12 @@ jobs:
       - run: npm run lint
       - run: node --check scripts/n01-byok-gemini.mjs
       - run: node --check scripts/soul-mesh-server.mjs
+      - run: node --check scripts/soul-mesh-server-entry.mjs
+      - run: node --check scripts/soul-mesh-local-contract-check.mjs
       - run: node --check scripts/supabase-vector-memory.mjs
       - run: npm run mesh:contract:check
+      - name: Run local Mesh runtime contract proof
+        run: node scripts/soul-mesh-local-contract-check.mjs
       - run: npm run mesh:health:unit
       - run: npm run mesh:async:unit
       - run: node --check scripts/test-n01-n06.mjs
