@@ -1,69 +1,23 @@
+import { createHmac } from 'node:crypto';
 import type { SoulMeshMessage, SoulMeshTransport } from './SoulMeshProtocol';
 import { isSoulMeshMessage } from './SoulMeshProtocol';
 
-export type SoulMeshCircuitState = 'CLOSED' | 'OPEN' | 'HALF-OPEN';
-export type SoulMeshHttpTransportOptions = { headers?: Record<string, string>; timeoutMs?: number; retries?: number; retryDelayMs?: number; requestIdFactory?: () => string; failureThreshold?: number; openMs?: number };
+export type SoulMeshCircuitState='CLOSED'|'OPEN'|'HALF-OPEN';
+export type SoulMeshHttpTransportOptions={headers?:Record<string,string>;timeoutMs?:number;retries?:number;retryDelayMs?:number;requestIdFactory?:()=>string;failureThreshold?:number;openMs?:number;hmacSecret?:string};
+function cloneForWire(message:SoulMeshMessage):SoulMeshMessage{const clone={...message,meta:{...(message.meta??{})}};return clone;}
+function canonical(message:SoulMeshMessage,nonce:string){return JSON.stringify({protocol:message.protocol,contractVersion:message.contractVersion,id:message.id,correlationId:message.correlationId,source:message.source,target:message.target,kind:message.kind,capability:message.capability??null,payload:message.payload,timestamp:message.timestamp,transport:message.transport??null,meta:message.meta??null,nonce});}
+function meshNonce(){const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return Buffer.from(bytes).toString('base64url');}
+function sign(message:SoulMeshMessage,secret:string,nonce:string){return createHmac('sha256',secret).update(canonical(message,nonce),'utf8').digest('hex');}
 
-/** HTTP transport for deployed nuclei; preserves correlation, retries transient failures and protects unhealthy peers. */
-export class SoulMeshHttpTransport implements SoulMeshTransport {
-  private readonly listeners = new Set<(message: SoulMeshMessage) => void | Promise<void>>();
-  private readonly headers: Record<string, string>;
-  private readonly timeoutMs: number;
-  private readonly retries: number;
-  private readonly retryDelayMs: number;
-  private readonly requestIdFactory: () => string;
-  private readonly failureThreshold: number;
-  private readonly openMs: number;
-  private failures = 0;
-  private openedAt = 0;
-  private state: SoulMeshCircuitState = 'CLOSED';
-
-  constructor(private readonly endpoint: string, options: SoulMeshHttpTransportOptions = {}) {
-    if (!/^https?:\/\//i.test(endpoint)) throw new Error('Soul Mesh HTTP endpoint must be an absolute http(s) URL');
-    this.headers = options.headers ?? {};
-    this.timeoutMs = Math.max(1000, options.timeoutMs ?? 15000);
-    this.retries = Math.max(0, Math.min(3, options.retries ?? 1));
-    this.retryDelayMs = Math.max(50, options.retryDelayMs ?? 250);
-    this.requestIdFactory = options.requestIdFactory ?? (() => crypto.randomUUID());
-    this.failureThreshold = Math.max(1, options.failureThreshold ?? 3);
-    this.openMs = Math.max(1000, options.openMs ?? 30000);
-  }
-
-  getCircuitState(): SoulMeshCircuitState { return this.state; }
-
-  private allowRequest(): boolean {
-    if (this.state !== 'OPEN') return true;
-    if (Date.now() - this.openedAt < this.openMs) return false;
-    this.state = 'HALF-OPEN';
-    return true;
-  }
-
-  private markSuccess(): void { this.failures = 0; this.state = 'CLOSED'; }
-  private markFailure(): void { this.failures += 1; if (this.failures >= this.failureThreshold) { this.state = 'OPEN'; this.openedAt = Date.now(); } }
-
-  async send(message: SoulMeshMessage): Promise<void> {
-    if (!this.allowRequest()) throw new Error(`Soul Mesh circuit OPEN: ${this.endpoint}`);
-    let lastError: unknown;
-    for (let attempt = 0; attempt <= this.retries; attempt += 1) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-      try {
-        const requestId = this.headers['x-request-id'] ?? message.correlationId ?? this.requestIdFactory();
-        const response = await fetch(this.endpoint, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json', 'x-request-id': requestId, 'x-soul-mesh-contract-version': message.contractVersion, ...this.headers }, body: JSON.stringify(message), signal: controller.signal });
-        if (!response.ok) throw new Error(`Soul Mesh transport failed: HTTP ${response.status}`);
-        if (response.status !== 204 && response.status !== 202) {
-          const contentType = response.headers.get('content-type') ?? '';
-          if (contentType.includes('application/json')) { const body: unknown = await response.json(); if (isSoulMeshMessage(body)) await this.receive(body); }
-        }
-        this.markSuccess();
-        return;
-      } catch (error) { lastError = error; if (attempt < this.retries) await new Promise(resolve => setTimeout(resolve, this.retryDelayMs * (attempt + 1))); }
-      finally { clearTimeout(timer); }
-    }
-    this.markFailure();
-    throw lastError instanceof Error ? lastError : new Error(String(lastError));
-  }
-
-  onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void { this.listeners.add(handler); return () => this.listeners.delete(handler); }
-  async receive(message: SoulMeshMessage): Promise<void> { if (!isSoulMeshMessage(message)) throw new Error('Invalid Soul Mesh message'); await Promise.allSettled([...this.listeners].map(listener => listener(message))); }
+export class SoulMeshHttpTransport implements SoulMeshTransport{
+ private readonly listeners=new Set<(message:SoulMeshMessage)=>void|Promise<void>>();
+ private readonly headers:Record<string,string>;private readonly timeoutMs:number;private readonly retries:number;private readonly retryDelayMs:number;private readonly requestIdFactory:()=>string;private readonly failureThreshold:number;private readonly openMs:number;private readonly hmacSecret:string;private failures=0;private openedAt=0;private state:SoulMeshCircuitState='CLOSED';
+ constructor(private readonly endpoint:string,options:SoulMeshHttpTransportOptions={}){if(!/^https?:\/\//i.test(endpoint))throw new Error('Soul Mesh HTTP endpoint must be an absolute http(s) URL');this.headers=options.headers??{};this.timeoutMs=Math.max(1000,options.timeoutMs??15000);this.retries=Math.max(0,Math.min(3,options.retries??1));this.retryDelayMs=Math.max(50,options.retryDelayMs??250);this.requestIdFactory=options.requestIdFactory??(()=>crypto.randomUUID());this.failureThreshold=Math.max(1,options.failureThreshold??3);this.openMs=Math.max(1000,options.openMs??30000);this.hmacSecret=(options.hmacSecret??(import.meta as ImportMeta&{env?:Record<string,string>}).env?.VITE_SOUL_MESH_HMAC_SECRET??'').trim();}
+ getCircuitState(){return this.state;}
+ private allowRequest(){if(this.state!=='OPEN')return true;if(Date.now()-this.openedAt<this.openMs)return false;this.state='HALF-OPEN';return true;}
+ private markSuccess(){this.failures=0;this.state='CLOSED';}
+ private markFailure(){this.failures+=1;if(this.failures>=this.failureThreshold){this.state='OPEN';this.openedAt=Date.now();}}
+ async send(message:SoulMeshMessage):Promise<void>{if(!this.allowRequest())throw new Error(`Soul Mesh circuit OPEN: ${this.endpoint}`);let lastError:unknown;for(let attempt=0;attempt<=this.retries;attempt+=1){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),this.timeoutMs);try{const wire=cloneForWire(message);const requestId=this.headers['x-request-id']??wire.correlationId??this.requestIdFactory();const headers:Record<string,string>={'content-type':'application/json',accept:'application/json','x-request-id':requestId,'x-soul-mesh-contract-version':wire.contractVersion,...this.headers};if(this.hmacSecret){const nonce=meshNonce();wire.meta={...(wire.meta??{}),nonce};headers['x-soul-mesh-nonce']=nonce;headers['x-soul-mesh-hmac']=sign(wire,this.hmacSecret,nonce);}const response=await fetch(this.endpoint,{method:'POST',headers,body:JSON.stringify(wire),signal:controller.signal});if(!response.ok)throw new Error(`Soul Mesh transport failed: HTTP ${response.status}`);if(response.status!==204&&response.status!==202){const contentType=response.headers.get('content-type')??'';if(contentType.includes('application/json')){const body:unknown=await response.json();if(isSoulMeshMessage(body)&&body.correlationId===wire.correlationId)await this.receive(body);}}this.markSuccess();return;}catch(error){lastError=error;if(attempt<this.retries)await new Promise(resolve=>setTimeout(resolve,this.retryDelayMs*(attempt+1)));}finally{clearTimeout(timer)}}this.markFailure();throw lastError instanceof Error?lastError:new Error(String(lastError));}
+ onMessage(handler:(message:SoulMeshMessage)=>void|Promise<void>):()=>void{this.listeners.add(handler);return()=>this.listeners.delete(handler);}
+ async receive(message:SoulMeshMessage):Promise<void>{if(!isSoulMeshMessage(message))throw new Error('Invalid Soul Mesh message');await Promise.allSettled([...this.listeners].map(listener=>listener(message)));}
 }
