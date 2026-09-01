@@ -1,4 +1,4 @@
-import { SoulMeshHealth, type HealthPolicy, type HealthSnapshot, type CircuitState } from './SoulMeshHealth';
+import { SoulMeshHealth, type HealthPolicy, type HealthSnapshot, type CircuitState } from './SoulMeshHealth.ts';
 
 export interface PeerResilienceSnapshot extends HealthSnapshot {
   nucleus: string;
@@ -43,12 +43,7 @@ export class SoulMeshPeerResilience {
   snapshot(nucleus: string): PeerResilienceSnapshot {
     const health = this.health(nucleus);
     const snapshot = health.getSnapshot();
-    return {
-      ...snapshot,
-      nucleus,
-      circuit: health.getCircuitState(),
-      routable: health.getCircuitState() !== 'OPEN',
-    };
+    return { ...snapshot, nucleus, circuit: health.getCircuitState(), routable: health.getCircuitState() !== 'OPEN' };
   }
 
   snapshotAll(): readonly PeerResilienceSnapshot[] {
