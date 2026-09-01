@@ -7,9 +7,8 @@ const localSource = resolve(process.cwd(), 'lib/soul-mesh/SoulMeshEnvelope.ts');
 const source = await readFile(localSource, 'utf8');
 
 assert.match(source, /contractVersion/, 'N01 envelope: canonical contractVersion is absent');
-assert.match(
-  source,
-  new RegExp(`(?:contractVersion\\s*[:=]\\s*|contractVersion[^\\n]{0,120})[\\"']?${EXPECTED.replaceAll('.', '\\.')}`),
+assert.ok(
+  source.includes(`SOUL_MESH_CONTRACT_VERSION = '${EXPECTED}'`),
   `N01 envelope: canonical contract version ${EXPECTED} is not present`,
 );
 
