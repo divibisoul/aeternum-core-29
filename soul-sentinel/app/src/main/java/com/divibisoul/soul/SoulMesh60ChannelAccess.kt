@@ -1,7 +1,6 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
@@ -9,7 +8,7 @@ import java.util.concurrent.Executors
 /**
  * Native APK access to the complete 60-channel logical fabric.
  * Each channel is multiplexed over the peer's canonical /api/soul-mesh receiver;
- * channelId preserves the five-slot identity. A channel is only reported reachable
+ * channelId is carried in the request payload. A channel is only reported reachable
  * when the peer returns a correlated response.
  */
 class SoulMesh60ChannelAccess(
@@ -49,9 +48,8 @@ class SoulMesh60ChannelAccess(
 
     private fun probe(channelId: String): Result {
         val parts = channelId.split('.')
-        val source = if (parts[1] == "OUT") parts[0] else parts[0]
-        val target = if (parts[1] == "OUT") parts[3] else parts[3]
-        val peer = if (source == sourceNucleus) target else source
+        val target = parts[3]
+        val peer = if (sourceNucleus == parts[0]) target else parts[0]
         val base = peerEndpoints[peer]
         val correlationId = UUID.randomUUID().toString()
         if (base.isNullOrBlank()) return Result(channelId, peer, false, false, correlationId, "PEER_ENDPOINT_NOT_CONFIGURED")
@@ -64,8 +62,7 @@ class SoulMesh60ChannelAccess(
             kind = "request",
             capability = "mesh.ping",
             payload = JSONObject().put("channelId", channelId).put("surface", "APK"),
-            timestamp = Instant.now().toString(),
-            channelId = channelId,
+            timestamp = System.currentTimeMillis(),
         )
         return transport.send(url, message).fold(
             onSuccess = { response ->
