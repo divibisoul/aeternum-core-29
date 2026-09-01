@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -17,23 +17,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - name: Sync npm lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Commit synchronized lockfile
-        run: |
-          if git diff --quiet -- package-lock.json; then exit 0; fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add package-lock.json
-          git commit -m "chore(N01): synchronize npm lockfile [skip ci]"
-          git push
-      - run: npm ci --no-audit --no-fund
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
       - run: npm run build
       - run: npm run lint
       - run: node --check scripts/n01-byok-gemini.mjs
       - run: node --check scripts/soul-mesh-server.mjs
       - run: node --check scripts/supabase-vector-memory.mjs
       - run: npm run mesh:contract:check
+      - run: npm run mesh:health:unit
+      - run: npm run mesh:async:unit
+      - run: node --check scripts/test-n01-n06.mjs
       - run: npm run byok:check
       - run: npm run vector-memory:check
