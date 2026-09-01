@@ -1,0 +1,20 @@
+name: Debug N01 Mesh syntax
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: read
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Print parser window
+        run: nl -ba scripts/soul-mesh-server.mjs | sed -n '54,68p'
+      - name: Node syntax check
+        run: node --check scripts/soul-mesh-server.mjs
+      - name: ESLint syntax check
+        run: bunx eslint scripts/soul-mesh-server.mjs
