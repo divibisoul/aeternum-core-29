@@ -36,56 +36,46 @@ try {
   const register = await json(await fetch(`${baseUrl}/api/soul-mesh/register`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      nucleus: 'N02',
-      endpoint: 'http://127.0.0.1:19002',
-      capabilities: ['ai.generate'],
-      role: 'independent-ai',
-    }),
+    body: JSON.stringify({ nucleus: 'N02', endpoint: 'http://127.0.0.1:19002', capabilities: ['ai.generate'], role: 'independent-ai' }),
   }));
   if (register.status !== 200 || register.body.registered !== 'N02' || typeof register.body.token !== 'string') {
     throw new Error(`N01_CANONICAL_REGISTER_FAILED:${JSON.stringify(register)}`);
   }
 
+  const n07CorrelationId = crypto.randomUUID();
+  const n07Response = await fetch(`${baseUrl}/api/soul-mesh`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
+      correlationId: n07CorrelationId, source: 'N07', target: 'N01', kind: 'response',
+      capability: 'neural.forward', payload: { status: 'ok', values: [1, 2, 3] }, timestamp: Date.now(),
+    }),
+  });
+  const n07Body = await n07Response.json();
+  if (n07Response.status !== 200 || n07Body.source !== 'N07' || n07Body.target !== 'N01' || n07Body.kind !== 'response' || n07Body.correlationId !== n07CorrelationId || n07Body.contractVersion !== '1.1.0') {
+    throw new Error(`N01_N07_RESPONSE_ROUTE_FAILED:${JSON.stringify(n07Body)}`);
+  }
+
   const correlationId = crypto.randomUUID();
   const response = await fetch(`${baseUrl}/api/soul-mesh`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId },
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId },
     body: JSON.stringify({
-      protocol: 'soul-mesh/1',
-      contractVersion: '1.1.0',
-      id: crypto.randomUUID(),
-      correlationId,
-      source: 'N02',
-      target: 'N01',
-      kind: 'request',
-      capability: 'mesh.ping',
-      payload: { probe: 'local-runtime-contract' },
-      timestamp: Date.now(),
+      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
+      correlationId, source: 'N02', target: 'N01', kind: 'request', capability: 'mesh.ping',
+      payload: { probe: 'local-runtime-contract' }, timestamp: Date.now(), nonce: crypto.randomUUID(),
     }),
   });
   const body = await response.json();
   if (!response.ok) throw new Error(`N01_LOCAL_MESH_HTTP_${response.status}:${JSON.stringify(body)}`);
   const checks = {
-    protocol: body.protocol === 'soul-mesh/1',
-    contractVersion: body.contractVersion === '1.1.0',
-    source: body.source === 'N01',
-    target: body.target === 'N02',
-    correlationId: body.correlationId === correlationId,
-    kind: body.kind === 'response',
-    capability: body.capability === 'mesh.ping',
+    protocol: body.protocol === 'soul-mesh/1', contractVersion: body.contractVersion === '1.1.0',
+    source: body.source === 'N01', target: body.target === 'N02', correlationId: body.correlationId === correlationId,
+    kind: body.kind === 'response', capability: body.capability === 'mesh.ping',
   };
   for (const [name, ok] of Object.entries(checks)) if (!ok) throw new Error(`N01_LOCAL_CONTRACT_${name.toUpperCase()}_FAILED:${JSON.stringify(body)}`);
 
-  console.log(JSON.stringify({
-    stage: 'N01_LOCAL_RUNTIME_CONTRACT',
-    ok: true,
-    health: true,
-    discovery: true,
-    registration: true,
-    message: checks,
-    correlationId,
-  }, null, 2));
+  console.log(JSON.stringify({ stage: 'N01_LOCAL_RUNTIME_CONTRACT', ok: true, health: true, discovery: true, registration: true, n07ResponseRoute: true, message: checks, correlationId, n07CorrelationId }, null, 2));
 } finally {
   child.kill('SIGTERM');
   setTimeout(() => child.kill('SIGKILL'), 2_000).unref();
