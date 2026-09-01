@@ -35,7 +35,12 @@ export interface SoulMeshJobRepository {
 }
 
 export class RepositorySoulMeshJobStore implements SoulMeshJobStore {
-  constructor(private readonly repository: SoulMeshJobRepository, private readonly ttlMs = 10 * 60_000) {
+  private readonly repository: SoulMeshJobRepository;
+  private readonly ttlMs: number;
+
+  constructor(repository: SoulMeshJobRepository, ttlMs = 10 * 60_000) {
+    this.repository = repository;
+    this.ttlMs = ttlMs;
     if (!Number.isFinite(ttlMs) || ttlMs < 1_000) throw new Error('INVALID_JOB_TTL');
   }
 
