@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run build
 
   lint:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run lint
 
   node-syntax:
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run mesh:contract:check
       - run: node scripts/soul-mesh-local-contract-check.mjs
 
@@ -69,7 +69,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run mesh:health:unit
       - run: npm run mesh:async:unit
 
@@ -81,6 +81,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
       - run: npm run byok:check
       - run: npm run vector-memory:check
