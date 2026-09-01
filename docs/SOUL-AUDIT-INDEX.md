@@ -1,11 +1,11 @@
 # SOUL — Master Audit & Execution Index
 
-Version: 1.0
+Version: 1.1
 Status: BASELINE / EXECUTION CONTROL
 
 ## Purpose
 
-This document is the permanent control index for recovery and evolution of the six SOUL nuclei. It records what is verified in GitHub, what is only architectural intent, the current execution stage, and the next gate.
+This document is the permanent control index for recovery and evolution of the seven SOUL nuclei. It records what is verified in GitHub, what is architectural intent, the current execution stage, and the next gate.
 
 ## Non-destructive rules
 
@@ -15,62 +15,56 @@ This document is the permanent control index for recovery and evolution of the s
 - A document, interface, or endpoint is not counted as functional integration until an executable test demonstrates a correlated result.
 - API/cloud cognition is optional; SOUL must not require a paid external cognitive API to remain operational.
 - Browser-session integration must never receive the user's password through SOUL.
+- Legacy/older files are removable only after dependency, import, workflow, package, deployment and runtime analysis proves they are outside the active execution graph.
 
 ## Global execution model
 
-AUDIT ALL SIX → MAP DEPENDENCIES → DEFINE CANONICAL CONTRACTS → EXECUTE ONE NUCLEUS AT A TIME → INTEGRATE → FINAL AUDIT.
+AUDIT ALL SEVEN → MAP DEPENDENCIES → DEFINE CANONICAL CONTRACTS → EXECUTE ONE NUCLEUS AT A TIME → INTEGRATE → FINAL AUDIT.
 
 ## Nuclei
 
 | ID | Repository | Role | Current gate |
 |---|---|---|---|
-| N01 | aeternum-core-29 | Android/device/gateway foundation | G0 baseline |
-| N02 | Eternium- | coordination/provider laboratory | G0 baseline |
-| N03 | nexus-aeternum-fusion | perception/audio/multimodal | G0 baseline |
-| N04 | nextjs-ai-chatbots | application/cognitive/tooling | G0 baseline |
-| N05 | nextjs-ai-chatbot | runtime/mesh/security reference | G0 baseline |
-| N06 | nextjs-ai-chatbot-2000 | runtime/coordination/advanced services | G0 baseline |
+| N01 | aeternum-core-29 | Android/device/gateway foundation | active validation |
+| N02 | Eternium- | coordination/provider laboratory | active validation |
+| N03 | nexus-aeternum-fusion | perception/audio/multimodal | active validation |
+| N04 | nextjs-ai-chatbots | application/cognitive/tooling | active validation |
+| N05 | nextjs-ai-chatbot | runtime/mesh/security reference | active validation |
+| N06 | nextjs-ai-chatbot-2000 | runtime/coordination/advanced services | active validation |
+| N07 | Orquestrador- | neural/prefrontal/compute/cognitive execution | backend/fusion validation |
 
 ## Gates
 
 ### G0 — Global baseline
-Inventory every nucleus, protocol, transport, capability, provider, security mechanism, test suite, and dependency. No implementation percentage is considered final until evidence is recorded.
+Inventory every nucleus, protocol, transport, capability, provider, security mechanism, test suite, dependency and deployment surface. No implementation percentage is considered final until evidence is recorded.
 
 ### G1 — Capability contract
 Reconcile existing capability declarations and define the canonical capability representation without deleting compatible legacy representations.
 
 ### G2 — Mesh contract
-Reconcile the multiple existing SoulMesh implementations and select/adapt a canonical envelope and transport abstraction.
+Reconcile the existing SoulMesh implementations and select/adapt a canonical envelope and transport abstraction.
 
 ### G3 — Secure communication
-HMAC-SHA256 + timestamp + nonce + correlationId; authentication is separate from authorization. Existing N05 security work must be reused where technically compatible.
+HMAC-SHA256 + timestamp + nonce + correlationId where supported; authentication is separate from authorization. Existing security work must be reused where compatible.
 
-### G4 — N01
-Stabilize gateway/bridge/capability discovery and prove an executable bidirectional transaction.
+### G4–G9 — N01 through N06
+Stabilize each nucleus, prove executable local behavior, then prove ownership-aware Mesh capability execution with adjacent nuclei.
 
-### G5 — N02
-Integrate N02 with the canonical capability and mesh contracts and isolate cognitive providers.
-
-### G6 — N03
-Integrate perception/audio capabilities through the same contracts.
-
-### G7 — N04
-Integrate application/tool/cognitive capabilities.
-
-### G8 — N05
-Preserve and consolidate its existing mesh/security work as appropriate.
-
-### G9 — N06
-Integrate runtime/coordination capabilities.
-
-### G10 — Six-nucleus integration
+### G10 — Seven-nucleus integration
 Prove bidirectional capability execution across the logical SOUL topology, not merely health/ping.
 
 ### G11 — Provider independence
-Local WASM/CPU/WebGPU and Browser Session are progressive providers; cloud APIs remain optional fallbacks/providers.
+Local WASM/CPU/WebGPU and Browser Session are progressive providers; cloud APIs remain optional providers/fallbacks.
 
-### G12 — Final audit
-Repeat the same measurements used at baseline and publish before/after evidence.
+### G12 — N07 backend and storage
+Prove the N07 backend, Supabase persistence, current Storacha upload/retrieval path, SuperGPU execution and production container.
+
+### G13 — Final audit and online readiness
+Repeat baseline measurements, verify all current HEADs and CI evidence, verify deployment configuration, then perform live runtime commissioning.
+
+## Topology math
+
+Seven nuclei form 21 unordered peer pairs and 42 directed logical links. With one IN and one OUT channel for every peer relationship, the federation exposes 84 channel slots.
 
 ## Progress measurement
 
@@ -81,6 +75,7 @@ For each nucleus and globally, track separately:
 - Integration: another nucleus executes a real capability and receives a correlated result.
 - Security: authentication/authorization controls are implemented and tested.
 - Architecture: implementation conforms to the canonical contract.
+- Deployment: the runtime can be started with documented production configuration.
 
 Global percentage must be evidence-based; documentation alone never counts as functional integration.
 
@@ -97,12 +92,15 @@ Every execution cycle must record:
 7. Tests executed and result.
 8. Commit SHA.
 9. Post-change audit.
-10. Percentage before/after.
+10. Percentage/state before/after where measurable.
 11. Next gate.
 
 ## Current execution status
 
-- Master index: CREATED as an auditable project-control artifact.
-- New destructive changes: NONE.
-- Global architecture: established from existing contracts and repository evidence.
-- Next operation: complete G0 evidence matrix across N01–N06 before structural refactoring.
+- Canonical federation registry: seven nuclei, version 1.5.
+- Canonical Mesh contract: `soul-mesh/1`, version `1.1.0`.
+- N07 backend: structurally integrated and CI-tested.
+- Supabase persistence: integrated and access-restricted.
+- Current Storacha path: implemented with Guppy and explicit Space/data-dir configuration; live Space commissioning remains deployment evidence.
+- Legacy cleanup: active; deletion requires dependency proof.
+- Final runtime E2E across all seven deployed nuclei: not yet proven.
