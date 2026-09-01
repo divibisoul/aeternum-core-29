@@ -10,6 +10,7 @@ object SoulMeshContract {
 
     fun validate(
         protocol: String,
+        contractVersion: String,
         id: String,
         correlationId: String,
         source: String,
@@ -18,6 +19,7 @@ object SoulMeshContract {
         capability: String,
     ): Result<Unit> {
         if (protocol != PROTOCOL) return Result.failure(IllegalArgumentException("Unsupported Mesh protocol"))
+        if (contractVersion != CONTRACT_VERSION) return Result.failure(IllegalArgumentException("Unsupported Mesh contract version"))
         if (id.isBlank() || correlationId.isBlank()) return Result.failure(IllegalArgumentException("Missing message identifiers"))
         if (source !in nucleusIds || target !in nucleusIds) return Result.failure(IllegalArgumentException("Unknown nucleus"))
         if (source == target) return Result.failure(IllegalArgumentException("Inter-nucleus message cannot target itself"))
