@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     name: npm run build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,7 +24,7 @@ jobs:
 
   lint:
     name: npm run lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,7 +35,7 @@ jobs:
 
   node-syntax:
     name: Node syntax validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -51,7 +51,7 @@ jobs:
 
   mesh-contract:
     name: Mesh contract checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -63,7 +63,7 @@ jobs:
 
   mesh-units:
     name: Mesh unit checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,7 +75,7 @@ jobs:
 
   byok-vector:
     name: BYOK and vector-memory checks
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
