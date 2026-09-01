@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   web:
     name: Web TypeScript / Vite validation
@@ -14,6 +17,16 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Sync Bun lockfile
+        run: bun install --no-save
+      - name: Commit synchronized lockfile
+        run: |
+          if git diff --quiet -- bun.lock; then exit 0; fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add bun.lock
+          git commit -m "chore(N01): synchronize bun lockfile [skip ci]"
+          git push
       - name: Install web dependencies
         run: bun install --frozen-lockfile
       - name: Lint
