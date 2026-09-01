@@ -35,7 +35,11 @@ export interface SoulMeshTelemetryRecord {
  * second Mesh transport.
  */
 export class SoulMeshTelemetry {
-  constructor(private readonly nucleus: string) {}
+  private readonly nucleus: string;
+
+  constructor(nucleus: string) {
+    this.nucleus = nucleus;
+  }
 
   emit(
     event: SoulMeshTelemetryEvent,
