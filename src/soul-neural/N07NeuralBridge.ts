@@ -7,11 +7,11 @@ type CanonicalEnvelope = {
   contractVersion: "1.1.0";
   id: string;
   correlationId: string;
-  source: "N01";
-  target: "N07";
-  kind: "request";
+  source: string;
+  target: string;
+  kind: string;
   capability: string;
-  payload: { values: number[] };
+  payload: Record<string, unknown>;
   timestamp: number;
   nonce: string;
 };
@@ -44,8 +44,25 @@ function canonicalWire(value: CanonicalEnvelope): string {
   });
 }
 
-async function sign(value: CanonicalEnvelope, secret: string): Promise<string> {
-  if (!secret) return "";
+function canonicalLegacyResponse(value: Record<string, unknown>, nonce: string): string {
+  return JSON.stringify({
+    version: "1.0",
+    contractVersion: CONTRACT,
+    messageId: String(value.id ?? value.messageId ?? ""),
+    source: "N07",
+    target: "N01",
+    timestamp: Number(value.timestamp ?? 0),
+    nonce,
+    correlationId: String(value.correlationId ?? ""),
+    type: String(value.kind ?? "response") === "error" ? "ERROR" : "TASK_RESULT",
+    payload: {
+      capability: String(value.capability ?? ""),
+      payload: value.payload ?? {},
+    },
+  });
+}
+
+async function hmacHex(data: string, secret: string): Promise<string> {
   if (secret.length < 16) throw new Error("SOUL_MESH_HMAC_SECRET must contain at least 16 characters");
   const key = await crypto.subtle.importKey(
     "raw",
@@ -54,34 +71,26 @@ async function sign(value: CanonicalEnvelope, secret: string): Promise<string> {
     false,
     ["sign"],
   );
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(canonicalWire(value)),
-  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return Array.from(new Uint8Array(signature), byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function sign(value: CanonicalEnvelope, secret: string): Promise<string> {
+  if (!secret) return "";
+  return hmacHex(canonicalWire(value), secret);
 }
 
 async function verifyCanonicalResponse(value: Record<string, unknown>, response: Response, secret: string): Promise<void> {
   if (!secret) return;
   const nonce = response.headers.get("x-soul-mesh-nonce")?.trim() || String(value.nonce ?? "");
-  const signature = response.headers.get("x-soul-mesh-hmac")?.trim();
-  if (!signature || !nonce) return;
-  const envelope: CanonicalEnvelope = {
-    protocol: PROTOCOL,
-    contractVersion: CONTRACT,
-    id: String(value.id ?? ""),
-    correlationId: String(value.correlationId ?? ""),
-    source: "N01",
-    target: "N07",
-    kind: "request",
-    capability: String(value.capability ?? ""),
-    payload: { values: [] },
-    timestamp: Number(value.timestamp ?? Date.now()),
-    nonce,
-  };
-  const expected = await sign(envelope, secret);
-  if (expected && expected !== signature) throw new Error("N07 Mesh response HMAC mismatch");
+  const signature = response.headers.get("x-soul-mesh-hmac")?.trim() || String(value.hmac ?? "");
+  if (!signature || !nonce) throw new Error("N07 Mesh response HMAC credentials missing");
+  const timestamp = Number(value.timestamp ?? 0);
+  if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 30000) {
+    throw new Error("N07 Mesh response timestamp outside accepted clock skew");
+  }
+  const expected = await hmacHex(canonicalLegacyResponse(value, nonce), secret);
+  if (expected !== signature) throw new Error("N07 Mesh response HMAC mismatch");
 }
 
 export class N07NeuralBridge {
