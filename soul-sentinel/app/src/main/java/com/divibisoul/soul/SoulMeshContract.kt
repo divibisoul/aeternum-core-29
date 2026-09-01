@@ -1,11 +1,11 @@
 package com.divibisoul.soul
 
-/** Canonical validation rules for Soul Mesh v1. */
+/** Canonical validation rules for Soul Mesh v1 across all seven independent nuclei. */
 object SoulMeshContract {
     const val PROTOCOL = "soul-mesh/1"
     const val CONTRACT_VERSION = "1.1.0"
 
-    val nucleusIds = setOf("N01", "N02", "N03", "N04", "N05", "N06")
+    val nucleusIds = setOf("N01", "N02", "N03", "N04", "N05", "N06", "N07")
     val kinds = setOf("request", "response", "event", "error")
 
     fun validate(
