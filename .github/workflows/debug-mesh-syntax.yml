@@ -12,6 +12,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+      - name: Install lint dependencies
+        run: bun install --no-save
       - name: Print parser window
         run: nl -ba scripts/soul-mesh-server.mjs | sed -n '54,68p'
       - name: Node syntax check
