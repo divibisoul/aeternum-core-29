@@ -1,43 +1,121 @@
 name: Audit diagnostics
+
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   diagnose:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: FIRST EXECUTION STEP - runner diagnostics
+        shell: bash
+        run: |
+          set -u
+          mkdir -p .diagnostics
+          {
+            echo '=== workflow context ==='
+            date -u
+            printf 'RUNNER_OS=%s\nRUNNER_ARCH=%s\nRUNNER_NAME=%s\nRUNNER_TEMP=%s\nGITHUB_WORKSPACE=%s\nGITHUB_RUN_ID=%s\nGITHUB_RUN_ATTEMPT=%s\nGITHUB_SHA=%s\nGITHUB_REF=%s\nGITHUB_REF_NAME=%s\n' \
+              "$RUNNER_OS" "$RUNNER_ARCH" "$RUNNER_NAME" "$RUNNER_TEMP" "$GITHUB_WORKSPACE" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_SHA" "$GITHUB_REF" "$GITHUB_REF_NAME"
+            echo '=== tool versions ==='
+            command -v node || true
+            node --version || true
+            command -v npm || true
+            npm --version || true
+            command -v git || true
+            git --version || true
+            echo '=== operating system ==='
+            uname -a || true
+            cat /etc/os-release || true
+            echo '=== cpu and memory ==='
+            nproc || true
+            free -h || true
+            echo '=== disk ==='
+            df -hT || true
+            echo '=== mounts ==='
+            mount | head -n 120 || true
+            echo '=== process snapshot ==='
+            ps -ef || true
+            echo '=== environment names only ==='
+            env | cut -d= -f1 | sort || true
+            echo '=== runner diagnostic directories ==='
+            find "$RUNNER_TEMP" -maxdepth 3 -type f -printf '%p\n' 2>/dev/null | head -n 300 || true
+          } 2>&1 | tee .diagnostics/runner-first-step.log
+
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Capture diagnostics
+
+      - name: Run deep project diagnostics
+        shell: bash
+        run: node scripts/diagnostics.mjs
+
+      - name: Capture project command diagnostics
         shell: bash
         run: |
           set +e
           {
-            echo '=== node ==='; node --version; npm --version
-            echo '=== npm ci ==='; npm ci --no-audit --no-fund
+            echo '=== node/npm ==='
+            node --version
+            npm --version
+            echo '=== npm ci ==='
+            npm ci --no-audit --no-fund
             echo "install_exit=$?"
             for cmd in 'npm run build' 'npm run lint' 'npm run mesh:contract:check' 'npm run mesh:health:unit' 'npm run mesh:async:unit' 'npm run byok:check' 'npm run vector-memory:check'; do
               echo "=== $cmd ==="
               eval "$cmd"
               echo "exit=$?"
             done
-            for f in tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts eslint.config.js scripts/soul-mesh-server.mjs scripts/soul-mesh-server-entry.mjs scripts/soul-mesh-contract-check.mjs scripts/n01-byok-gemini.mjs scripts/supabase-vector-memory.mjs; do
-              echo "=== $f ==="
-              if [ -f "$f" ]; then sed -n '1,320p' "$f"; else echo 'MISSING'; fi
-            done
-          } 2>&1 | tee audit-diagnostics-n01.txt
-      - name: Commit diagnostics
+          } 2>&1 | tee .diagnostics/project-commands.log
+
+      - name: Emergency runner diagnostics
+        if: failure()
+        shell: bash
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add audit-diagnostics-n01.txt
-          git diff --cached --quiet && exit 0
-          git commit -m "chore(audit): capture N01 execution diagnostics [skip ci]"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          set +e
+          mkdir -p .diagnostics
+          {
+            echo '=== EMERGENCY DIAGNOSTICS ==='
+            date -u
+            echo '=== github environment ==='
+            env | cut -d= -f1 | sort
+            echo '=== runner temp files ==='
+            find "$RUNNER_TEMP" -maxdepth 5 -type f -printf '%p\n' 2>/dev/null | head -n 1000
+            echo '=== runner logs if present ==='
+            find "$RUNNER_TEMP" "$GITHUB_WORKSPACE" -type f \( -iname '*.log' -o -iname '*error*' \) -print 2>/dev/null | head -n 500
+            echo '=== process state ==='
+            ps -ef
+            echo '=== disk state ==='
+            df -hT
+          } 2>&1 | tee .diagnostics/emergency.log
+
+      - name: Upload diagnostics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aeternum-core-29-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Commit diagnostics to repository
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [ -d .diagnostics ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .diagnostics
+            git diff --cached --quiet || git commit -m "chore(audit): capture execution diagnostics [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}" || true
+          fi
