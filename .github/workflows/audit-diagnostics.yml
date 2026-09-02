@@ -6,97 +6,76 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  NPM_CONFIG_LEGACY_PEER_DEPS: 'true'
 
 jobs:
   diagnose:
-    runs-on: ubuntu-latest
+    name: Deep runner and project diagnostics
+    runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
-      - name: FIRST EXECUTION STEP - runner diagnostics
+      - name: FIRST EXECUTION STEP - runner bootstrap capture
         shell: bash
         run: |
           set -u
-          mkdir -p .diagnostics
+          mkdir -p "$RUNNER_TEMP/n01-bootstrap"
           {
-            echo '=== workflow context ==='
-            date -u
-            printf 'RUNNER_OS=%s\nRUNNER_ARCH=%s\nRUNNER_NAME=%s\nRUNNER_TEMP=%s\nGITHUB_WORKSPACE=%s\nGITHUB_RUN_ID=%s\nGITHUB_RUN_ATTEMPT=%s\nGITHUB_SHA=%s\nGITHUB_REF=%s\nGITHUB_REF_NAME=%s\n' \
-              "$RUNNER_OS" "$RUNNER_ARCH" "$RUNNER_NAME" "$RUNNER_TEMP" "$GITHUB_WORKSPACE" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_SHA" "$GITHUB_REF" "$GITHUB_REF_NAME"
-            echo '=== tool versions ==='
-            command -v node || true
-            node --version || true
-            command -v npm || true
-            npm --version || true
-            command -v git || true
-            git --version || true
-            echo '=== operating system ==='
-            uname -a || true
-            cat /etc/os-release || true
-            echo '=== cpu and memory ==='
-            nproc || true
-            free -h || true
-            echo '=== disk ==='
-            df -hT || true
-            echo '=== mounts ==='
-            mount | head -n 120 || true
-            echo '=== process snapshot ==='
-            ps -ef || true
-            echo '=== environment names only ==='
-            env | cut -d= -f1 | sort || true
-            echo '=== runner diagnostic directories ==='
-            find "$RUNNER_TEMP" -maxdepth 3 -type f -printf '%p\n' 2>/dev/null | head -n 300 || true
-          } 2>&1 | tee .diagnostics/runner-first-step.log
+            echo '=== bootstrap timestamp ==='; date -u
+            echo '=== runner identity ==='
+            printf 'RUNNER_OS=%s\nRUNNER_ARCH=%s\nRUNNER_NAME=%s\nRUNNER_TEMP=%s\nRUN_ID=%s\nATTEMPT=%s\nSHA=%s\nREF=%s\n' "$RUNNER_OS" "$RUNNER_ARCH" "$RUNNER_NAME" "$RUNNER_TEMP" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$GITHUB_SHA" "$GITHUB_REF"
+            echo '=== versions ==='; command -v node || true; node --version || true; command -v npm || true; npm --version || true; git --version || true
+            echo '=== system ==='; uname -a || true; cat /etc/os-release || true
+            echo '=== resources ==='; nproc || true; free -h || true; df -hT || true
+            echo '=== processes ==='; ps -ef || true
+            echo '=== environment names ==='; env | cut -d= -f1 | sort || true
+            echo '=== runner temp ==='; find "$RUNNER_TEMP" -maxdepth 4 -type f -print 2>/dev/null | head -n 500 || true
+          } 2>&1 | tee "$RUNNER_TEMP/n01-bootstrap/first-step.log"
 
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      - name: Run deep project diagnostics
-        shell: bash
+      - name: Execute deep diagnostics
         run: node scripts/diagnostics.mjs
 
-      - name: Capture project command diagnostics
+      - name: Validate dependency graph
+        run: npm ci --no-audit --no-fund
+
+      - name: Execute real project checks
         shell: bash
         run: |
-          set +e
-          {
-            echo '=== node/npm ==='
-            node --version
-            npm --version
-            echo '=== npm ci ==='
-            npm ci --no-audit --no-fund
-            echo "install_exit=$?"
-            for cmd in 'npm run build' 'npm run lint' 'npm run mesh:contract:check' 'npm run mesh:health:unit' 'npm run mesh:async:unit' 'npm run byok:check' 'npm run vector-memory:check'; do
-              echo "=== $cmd ==="
-              eval "$cmd"
-              echo "exit=$?"
-            done
-          } 2>&1 | tee .diagnostics/project-commands.log
+          set -euo pipefail
+          npm run build
+          npm run lint
+          npm run mesh:contract:check
+          npm run mesh:health:unit
+          npm run mesh:async:unit
+          npm run byok:check
+          npm run vector-memory:check
 
-      - name: Emergency runner diagnostics
+      - name: Emergency runner capture
         if: failure()
         shell: bash
         run: |
           set +e
           mkdir -p .diagnostics
           {
-            echo '=== EMERGENCY DIAGNOSTICS ==='
-            date -u
-            echo '=== github environment ==='
-            env | cut -d= -f1 | sort
-            echo '=== runner temp files ==='
-            find "$RUNNER_TEMP" -maxdepth 5 -type f -printf '%p\n' 2>/dev/null | head -n 1000
-            echo '=== runner logs if present ==='
-            find "$RUNNER_TEMP" "$GITHUB_WORKSPACE" -type f \( -iname '*.log' -o -iname '*error*' \) -print 2>/dev/null | head -n 500
-            echo '=== process state ==='
-            ps -ef
-            echo '=== disk state ==='
-            df -hT
-          } 2>&1 | tee .diagnostics/emergency.log
+            echo '=== EMERGENCY CAPTURE ==='; date -u
+            echo '=== runner ==='; uname -a; cat /etc/os-release
+            echo '=== resources ==='; free -h; df -hT
+            echo '=== processes ==='; ps -ef
+            echo '=== temp/log candidates ==='
+            find "$RUNNER_TEMP" -maxdepth 6 -type f -print 2>/dev/null | head -n 1500
+            echo '=== workspace error/log candidates ==='
+            find "$GITHUB_WORKSPACE" -maxdepth 5 -type f \( -name '*.log' -o -iname '*error*' \) -print 2>/dev/null | head -n 1000
+          } 2>&1 | tee .diagnostics/emergency-runner.log
 
       - name: Upload diagnostics artifact
         if: always()
@@ -104,18 +83,5 @@ jobs:
         with:
           name: aeternum-core-29-diagnostics-${{ github.run_id }}
           path: .diagnostics/
-          if-no-files-found: warn
+          if-no-files-found: ignore
           retention-days: 14
-
-      - name: Commit diagnostics to repository
-        if: always()
-        shell: bash
-        run: |
-          set +e
-          if [ -d .diagnostics ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add .diagnostics
-            git diff --cached --quiet || git commit -m "chore(audit): capture execution diagnostics [skip ci]"
-            git push origin "HEAD:${GITHUB_REF_NAME}" || true
-          fi
