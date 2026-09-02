@@ -1,7 +1,7 @@
 name: Audit diagnostics
 on:
   push:
-    branches: [audit/2026-09-01-hardening]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
@@ -14,22 +14,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - name: Capture diagnostics
         shell: bash
         run: |
           set +e
           {
             echo '=== node ==='; node --version; npm --version
-            echo '=== npm install ==='; npm install --legacy-peer-deps --no-audit --no-fund
+            echo '=== npm ci ==='; npm ci --no-audit --no-fund
             echo "install_exit=$?"
             for cmd in 'npm run build' 'npm run lint' 'npm run mesh:contract:check' 'npm run mesh:health:unit' 'npm run mesh:async:unit' 'npm run byok:check' 'npm run vector-memory:check'; do
               echo "=== $cmd ==="
               eval "$cmd"
               echo "exit=$?"
             done
-            for f in tsconfig.json vite.config.ts eslint.config.js scripts/soul-mesh-server.mjs scripts/soul-mesh-server-entry.mjs; do
+            for f in tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts eslint.config.js scripts/soul-mesh-server.mjs scripts/soul-mesh-server-entry.mjs scripts/soul-mesh-contract-check.mjs scripts/n01-byok-gemini.mjs scripts/supabase-vector-memory.mjs; do
               echo "=== $f ==="
-              if [ -f "$f" ]; then sed -n '1,260p' "$f"; else echo 'MISSING'; fi
+              if [ -f "$f" ]; then sed -n '1,320p' "$f"; else echo 'MISSING'; fi
             done
           } 2>&1 | tee audit-diagnostics-n01.txt
       - name: Commit diagnostics
