@@ -5,33 +5,226 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  NODE_VERSION: '22'
+  NPM_CONFIG_LEGACY_PEER_DEPS: 'true'
+
 jobs:
-  validate:
-    runs-on: ubuntu-latest
+  build:
+    name: Build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
     steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/n01-first-step"
+          {
+            date -u
+            uname -a || true
+            cat /etc/os-release || true
+            node --version || true
+            npm --version || true
+            df -hT || true
+            free -h || true
+            env | cut -d= -f1 | sort || true
+          } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/build.log"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - run: npm run build
-      - name: Validate Node server syntax before lint
-        run: node --check scripts/soul-mesh-server.mjs
-      - run: npm run lint
-      - run: node --check scripts/n01-byok-gemini.mjs
-      - run: node --check scripts/soul-mesh-server-entry.mjs
-      - run: node --check scripts/soul-mesh-local-contract-check.mjs
-      - run: node --check scripts/supabase-vector-memory.mjs
-      - run: npm run mesh:contract:check
-      - name: Run local Mesh runtime contract proof
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Emergency diagnostics
+        if: failure()
+        run: node scripts/diagnostics.mjs
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-build-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: ignore
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/n01-first-step"
+          { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/lint.log"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Emergency diagnostics
+        if: failure()
+        run: node scripts/diagnostics.mjs
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-lint-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: ignore
+
+  mesh-unit:
+    name: Mesh unit checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/n01-first-step"
+          { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/mesh-unit.log"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Mesh health unit test
+        run: npm run mesh:health:unit
+      - name: Mesh async executor unit test
+        run: npm run mesh:async:unit
+      - name: Emergency diagnostics
+        if: failure()
+        run: node scripts/diagnostics.mjs
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-mesh-unit-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: ignore
+
+  byok-vector:
+    name: BYOK and vector-memory checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/n01-first-step"
+          { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/byok-vector.log"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: BYOK behavioral check
+        run: npm run byok:check
+      - name: Vector memory behavioral check
+        run: npm run vector-memory:check
+      - name: Emergency diagnostics
+        if: failure()
+        run: node scripts/diagnostics.mjs
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-byok-vector-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: ignore
+
+  syntax:
+    name: Node syntax validation
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/n01-first-step"
+          { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/syntax.log"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Validate required Node scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            scripts/soul-mesh-server.mjs \
+            scripts/n01-byok-gemini.mjs \
+            scripts/soul-mesh-server-entry.mjs \
+            scripts/soul-mesh-local-contract-check.mjs \
+            scripts/supabase-vector-memory.mjs \
+            scripts/test-n01-n06.mjs \
+            scripts/soul-mesh-contract-check.mjs \
+            scripts/test-n01-byok.mjs \
+            scripts/test-supabase-vector-memory.mjs \
+            scripts/diagnostics.mjs; do
+            test -f "$file"
+            node --check "$file"
+          done
+      - name: Emergency diagnostics
+        if: failure()
+        run: node scripts/diagnostics.mjs
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-syntax-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: ignore
+
+  contract:
+    name: Mesh contract checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: FIRST EXECUTION STEP - capture runner state
+        shell: bash
+        run: |
+          set -u
+          mkdir -p "$RUNNER_TEMP/n01-first-step"
+          { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/contract.log"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Mesh contract check
+        run: npm run mesh:contract:check
+      - name: Local Mesh runtime contract proof
         run: node scripts/soul-mesh-local-contract-check.mjs
-      - run: npm run mesh:health:unit
-      - run: npm run mesh:async:unit
-      - run: node --check scripts/test-n01-n06.mjs
-      - run: npm run byok:check
-      - run: npm run vector-memory:check
+      - name: Emergency diagnostics
+        if: failure()
+        run: node scripts/diagnostics.mjs
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-contract-diagnostics-${{ github.run_id }}
+          path: .diagnostics/
+          if-no-files-found: ignore
