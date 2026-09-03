@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "mesh:n01": "node scripts/soul-mesh-server-entry.mjs",
     "mesh:health": "node scripts/test-n01-n06.mjs",
-    "mesh:diagnose": "node scripts/mesh-diagnose.mjs",
+    "mesh:diagnose": "node scripts/n01-5x5-diagnostic.mjs",
     "mesh:health:unit": "node --experimental-strip-types lib/soul-mesh/SoulMeshHealth.test.ts",
     "mesh:async:unit": "node --experimental-strip-types src/core/mesh/SoulMeshAsyncExecutor.test.ts",
     "mesh:contract:check": "node scripts/soul-mesh-contract-check.mjs",
