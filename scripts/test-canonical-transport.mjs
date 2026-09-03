@@ -25,6 +25,6 @@ assert.equal(task.target, 'N02');
 assert.equal(task.type, 'TASK');
 assert.match(task.hmac, /^[0-9a-f]{64}$/i);
 assert.equal(await router.verify(task), true);
-assert.throws(() => router.createTask('N01', 'N01', {}), /SOUL_MESH_SELF_ROUTE_NOT_ALLOWED/);
+await assert.rejects(() => router.createTask('N01', 'N01', {}), /SOUL_MESH_SELF_ROUTE_NOT_ALLOWED/);
 
 console.log('SOUL canonical transport contract: PASS');
