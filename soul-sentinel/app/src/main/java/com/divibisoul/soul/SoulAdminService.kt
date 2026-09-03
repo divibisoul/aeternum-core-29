@@ -44,13 +44,7 @@ class SoulAdminService : Service() {
     private fun runCycle() {
         try {
             val integrity = cortex.integritySnapshot()
-            Log.i(
-                TAG,
-                "integrity core=${integrity.coreHealthy} mesh=${integrity.meshHealthy} " +
-                    "battery=${integrity.batteryPercent}% nuclei=${integrity.nuclei} " +
-                    "directedLinks=${integrity.directedLinks} pairs=${integrity.bidirectionalPairs} " +
-                    "wifi=${integrity.wifiEnabled} bluetooth=${integrity.bluetoothEnabled}"
-            )
+            Log.i(TAG, "integrity core=${integrity.coreHealthy} mesh=${integrity.meshHealthy} battery=${integrity.batteryPercent}% nuclei=${integrity.nuclei} directedLinks=${integrity.directedLinks} pairs=${integrity.bidirectionalPairs} wifi=${integrity.wifiEnabled} bluetooth=${integrity.bluetoothEnabled}")
             cortex.evaluate().forEach { decision -> Log.i(TAG, "decision=${decision.action}: ${decision.reason}") }
             val status = if (integrity.coreHealthy && integrity.meshHealthy) "HEALTHY" else "DEGRADED"
             mainHandler.post { updateNotification("Soul Sentinel $status · ${integrity.directedLinks} directed links") }
@@ -80,11 +74,11 @@ class SoulAdminService : Service() {
 
     private fun createChannel() {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Soul Sentinel", NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Soul Admin", NotificationManager.IMPORTANCE_LOW))
     }
 
     private fun notification(text: String): Notification = Notification.Builder(this, CHANNEL)
-        .setContentTitle("Soul Sentinel")
+        .setContentTitle("Soul Admin")
         .setContentText(text)
         .setSmallIcon(android.R.drawable.ic_menu_manage)
         .setOngoing(true)
@@ -102,7 +96,7 @@ class SoulAdminService : Service() {
         private const val TAG = "SoulSentinel"
         private const val MAX_CONSECUTIVE_FAILURES = 3
         private const val RESTART_DELAY_MS = 5_000L
-        const val CHANNEL = "soul_sentinel"
+        const val CHANNEL = "soul_admin"
         const val NOTIFICATION_ID = 7001
     }
 }
