@@ -1,5 +1,5 @@
-import { verifyEnvelope, type SoulMeshEnvelope } from './SoulMeshEnvelope';
-import { rankCompatible, supportsBidirectional, type TransportKind } from '../../../lib/soul-mesh/HybridTransportRegistry';
+import { verifyEnvelope, type SoulMeshEnvelope } from './SoulMeshEnvelope.ts';
+import { rankCompatible, supportsBidirectional, type TransportKind } from '../../../lib/soul-mesh/HybridTransportRegistry.ts';
 
 export interface CanonicalTransportFrame<T = unknown> {
   envelope: SoulMeshEnvelope<T>;
