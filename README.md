@@ -20,8 +20,16 @@ N01 recognizes the seven-nucleus topology `N01..N07`. Each nucleus has six peer 
 ## Executable validation
 
 ```sh
+npm ci
+npm run typecheck
 npm run build
 npm run lint
+npm test
+```
+
+Individual gates remain available:
+
+```sh
 npm run test:soul-transport
 npm run mesh:health:unit
 npm run mesh:async:unit
@@ -29,6 +37,7 @@ npm run mesh:contract:check
 npm run fusion:check
 npm run byok:check
 npm run vector-memory:check
+npm run mesh:diagnose
 ```
 
 The N01 validation workflow is the machine-execution boundary. A green claim is made only from an actual GitHub Actions run; source-level assertions and documentation are not substituted for runtime evidence.
@@ -59,5 +68,12 @@ N01 consolidation preserves historical branches and commits. The canonical execu
 - **#7/#8/#9 — Mesh foundations:** their useful contract, discovery and diagnostic concepts are already represented by the current canonical Mesh stack; no second Mesh fabric is created.
 - **#6/#4 — peer/integration architecture:** preserved as historical compatibility evidence and reconciled through the current canonical registry/router rather than a second peer registry.
 - **#1/#2 — original Sentinel foundation/JVM correction:** already present in the Android Sentinel tree; the current line hardens and activates that implementation rather than replacing it.
+
+## Review records
+
+- `docs/N01-architecture.md` — architecture and canonical authorities.
+- `CHANGELOG-N01.md` — change history.
+- `docs/RELATORIO-REVISAO-COMPLETA-N01.md` — complete source-review report and validation boundary.
+- `docs/EXECUTION-STATE.md` — continuous execution state.
 
 No historical branch is deleted as part of this consolidation.
