@@ -13,8 +13,20 @@ export class MeshRouter {
     return resolveCanonicalTransport(local, remote);
   }
 
-  async createTask(source: SoulMeshEnvelope['source'], target: SoulMeshEnvelope['target'], payload: unknown, correlationId?: string) {
-    return createEnvelope({ version: '1.0', source, target, type: 'TASK', payload, correlationId }, this.secret);
+  async createTask(
+    source: SoulMeshEnvelope['source'],
+    target: SoulMeshEnvelope['target'],
+    payload: unknown,
+    correlationId = crypto.randomUUID(),
+  ): Promise<SoulMeshEnvelope> {
+    if (source === target && target !== 'BROADCAST') throw new Error('SOUL_MESH_SELF_ROUTE_NOT_ALLOWED');
+    return createEnvelope({
+      source,
+      target,
+      type: 'TASK',
+      payload,
+      correlationId,
+    }, this.secret);
   }
 
   frameTask<T>(envelope: SoulMeshEnvelope<T>, transport: TransportKind): CanonicalTransportFrame<T> {
