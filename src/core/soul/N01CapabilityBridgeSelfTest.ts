@@ -1,4 +1,4 @@
-import { getN01MeshCapabilities, validateN01MeshCapabilities } from './N01CapabilityBridge';
+import { getN01MeshCapabilities, validateN01MeshCapabilities } from './N01CapabilityBridge.ts';
 
 export function runN01CapabilityBridgeSelfTest(): { ok: true; count: number } {
   validateN01MeshCapabilities();
