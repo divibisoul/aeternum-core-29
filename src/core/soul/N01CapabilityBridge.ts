@@ -1,5 +1,5 @@
-import { getN01Capabilities, type SoulCapability } from './CapabilityGraph';
-import { validateCapabilityContract, type CapabilityContract } from './N01Contract';
+import { getN01Capabilities, type SoulCapability } from './CapabilityGraph.ts';
+import { validateCapabilityContract, type CapabilityContract } from './N01Contract.ts';
 
 /** Adapts the existing N01 capability graph to the existing Mesh capability contract. */
 export function toN01MeshCapability(capability: SoulCapability): CapabilityContract {
