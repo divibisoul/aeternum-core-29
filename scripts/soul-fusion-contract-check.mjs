@@ -11,7 +11,7 @@ if (manifest.system !== 'SOUL' || manifest.fusionVersion !== '1.5' || manifest.n
 if (manifest.independentRuntime !== true || manifest.capabilityOwnership !== 'native' || manifest.fusionGateway !== true) throw new Error('INVALID_N01_FUSION_ROLE');
 if (registry.version !== '1.5') throw new Error(`INVALID_FUSION_REGISTRY_VERSION:${registry.version}`);
 if (JSON.stringify(Object.keys(registry.nuclei)) !== JSON.stringify(expected)) throw new Error('FUSION_REGISTRY_MUST_CONTAIN_SEVEN_NUCLEI');
-if (registry.peerContract.nuclei !== 7 || registry.peerContract.peersPerNucleus !== 6 || registry.peerContract.inChannelsPerNucleus !== 6 || registry.peerContract.outChannelsPerNucleus !== 6 || registry.peerContract.directionalChannels !== 84 || registry.peerContract.communication !== 'bidirectional') throw new Error('INVALID_FUSION_CHANNEL_CONTRACT');
+if (registry.peerContract.nuclei !== 7 || registry.peerContract.peersPerNucleus !== 6 || registry.peerContract.inChannelsPerNucleus !== 6 || registry.peerContract.outChannelsPerNucleus !== 6 || registry.peerContract.directionalChannels !== 42 || registry.peerContract.communication !== 'bidirectional') throw new Error('INVALID_FUSION_CHANNEL_CONTRACT');
 for (const transport of transports) if (!registry.transports.includes(transport)) throw new Error(`MISSING_FUSION_TRANSPORT:${transport}`);
 for (const stage of stages) if (!registry.fusionStages.includes(stage)) throw new Error(`MISSING_FUSION_STAGE:${stage}`);
 for (const capability of ['mesh.capability.resolve','mesh.fusion.execute']) if (!registry.communicationCapabilities.includes(capability)) throw new Error(`MISSING_FUSION_CAPABILITY:${capability}`);
