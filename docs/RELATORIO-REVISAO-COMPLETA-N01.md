@@ -4,117 +4,117 @@
 **Branch:** `consolidacao-n01`  
 **PR canônica:** #25  
 **Executor:** ChatGPT — agente único autorizado  
-**Escopo:** 38 arquivos alterados pela PR #25, incluindo código, testes, configuração, scripts, workflow, documentação e migração.
+**Escopo atual:** 43 arquivos alterados pela PR #25.
 
 ## 1. Levantamento
 
-A lista canônica de arquivos da PR #25 foi obtida diretamente do GitHub e contém 38 arquivos. O diff completo foi revisado; os componentes críticos receberam inspeção integral de conteúdo e correções quando necessárias.
+A lista canônica atual foi obtida diretamente do GitHub e contém 43 caminhos. O diff completo da PR foi revisado; os módulos críticos receberam inspeção integral de conteúdo e os defeitos concretos encontrados foram corrigidos na própria branch.
 
 ### Arquivos revisados
 
 1. `.env.example`
 2. `.github/workflows/soul-n01-validation.yml`
-3. `README.md`
-4. `docs/EXECUTION-STATE.md`
-5. `docs/N01-HISTORICAL-CONSOLIDATION.md`
-6. `docs/SOUL-FUSION-REGISTRY.json`
-7. `lib/storage/hybridStorage.ts`
-8. `package.json`
-9. `scripts/mesh-diagnose.mjs`
-10. `scripts/n01-5x5-diagnostic.mjs`
-11. `scripts/soul-fusion-contract-check.mjs`
-12. `scripts/soul-fusion-runtime-check.mjs`
-13. `scripts/soul-mesh-contract-check.mjs`
-14. `scripts/soul-mesh-server.mjs`
-15. `scripts/test-canonical-transport.mjs`
-16. `soul-sentinel/app/build.gradle.kts`
-17. `soul-sentinel/app/src/androidTest/java/com/divibisoul/soul/SoulMeshAllLinksTest.kt`
-18. `soul-sentinel/app/src/androidTest/java/com/divibisoul/soul/SoulMeshRpcEndToEndTest.kt`
-19. `soul-sentinel/app/src/androidTest/java/com/divibisoul/soul/SoulSystemIntegrationTest.kt`
-20. `soul-sentinel/app/src/main/AndroidManifest.xml`
-21. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulAdminService.kt`
-22. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulBootReceiver.kt`
-23. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulConfig.kt`
-24. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulCortex.kt`
-25. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulHybridActivity.kt`
-26. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshContract.kt`
-27. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshMessage.kt`
-28. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshPeerConfig.kt`
-29. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshRemoteClient.kt`
-30. `src/core/mesh/SoulMeshProtocol.ts`
-31. `src/core/mesh/SoulMeshRouter.ts`
-32. `src/core/soul/CanonicalTransportAdapter.ts`
-33. `src/core/soul/MeshRouter.ts`
-34. `src/core/soul/N01CapabilityBridge.ts`
-35. `src/core/soul/N01CapabilityBridgeSelfTest.ts`
-36. `src/core/soul/SoulMeshEnvelope.ts`
-37. `src/soul-fusion/NeoCortexPrefrontal.ts`
-38. `src/soul-fusion/SoulNeuralGraph.ts`
-39. `supabase/migrations/20260831000000_create_soul_storage_records.sql`
-
-> Observação: o levantamento do GitHub retornou 39 nomes na lista atual, embora a consolidação histórica registrasse 38 arquivos antes desta revisão. O relatório adota a lista atual como fonte de verdade e não omite nenhum caminho retornado.
+3. `CHANGELOG-N01.md`
+4. `README.md`
+5. `docs/EXECUTION-STATE.md`
+6. `docs/N01-HISTORICAL-CONSOLIDATION.md`
+7. `docs/N01-architecture.md`
+8. `docs/RELATORIO-REVISAO-COMPLETA-N01.md`
+9. `docs/SOUL-FUSION-REGISTRY.json`
+10. `lib/storage/hybridStorage.ts`
+11. `package.json`
+12. `scripts/mesh-diagnose.mjs`
+13. `scripts/n01-5x5-diagnostic.mjs`
+14. `scripts/soul-fusion-contract-check.mjs`
+15. `scripts/soul-fusion-runtime-check.mjs`
+16. `scripts/soul-mesh-contract-check.mjs`
+17. `scripts/soul-mesh-server.mjs`
+18. `scripts/test-canonical-transport.mjs`
+19. `soul-sentinel/app/build.gradle.kts`
+20. `soul-sentinel/app/src/androidTest/java/com/divibisoul/soul/SoulMeshAllLinksTest.kt`
+21. `soul-sentinel/app/src/androidTest/java/com/divibisoul/soul/SoulMeshRpcEndToEndTest.kt`
+22. `soul-sentinel/app/src/androidTest/java/com/divibisoul/soul/SoulSystemIntegrationTest.kt`
+23. `soul-sentinel/app/src/main/AndroidManifest.xml`
+24. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulAdminService.kt`
+25. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulBootReceiver.kt`
+26. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulConfig.kt`
+27. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulCortex.kt`
+28. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulHybridActivity.kt`
+29. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshContract.kt`
+30. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshMessage.kt`
+31. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshPeerConfig.kt`
+32. `soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshRemoteClient.kt`
+33. `src/core/mesh/SoulMeshProtocol.ts`
+34. `src/core/mesh/SoulMeshRouter.ts`
+35. `src/core/soul/CanonicalTransportAdapter.ts`
+36. `src/core/soul/MeshRouter.ts`
+37. `src/core/soul/N01CapabilityBridge.ts`
+38. `src/core/soul/N01CapabilityBridgeSelfTest.ts`
+39. `src/core/soul/N01Contract.ts`
+40. `src/core/soul/SoulMeshEnvelope.ts`
+41. `src/soul-fusion/NeoCortexPrefrontal.ts`
+42. `src/soul-fusion/SoulNeuralGraph.ts`
+43. `supabase/migrations/20260831000000_create_soul_storage_records.sql`
 
 ## 2. Incompletudes, conflitos e duplicidades encontradas
 
 ### A. Envelope Mesh duplicado — CORRIGIDO
 
-`src/core/soul/SoulMeshEnvelope.ts` continha uma segunda implementação criptográfica diferente da autoridade de `lib/soul-mesh/SoulMeshEnvelope.ts` e, ao mesmo tempo, não exportava o `createEnvelope` que `MeshRouter.ts` tentava importar.
+`src/core/soul/SoulMeshEnvelope.ts` continha uma segunda implementação criptográfica diferente da autoridade de `lib/soul-mesh/SoulMeshEnvelope.ts` e não exportava o `createEnvelope` que `MeshRouter.ts` tentava importar.
 
-**Correção:** `src/core/soul/SoulMeshEnvelope.ts` foi transformado em facade de compatibilidade, delegando assinatura, verificação e criação ao módulo canônico. Isso remove lógica criptográfica concorrente sem apagar o contrato histórico de importação.
+**Correção:** tornou-se facade de compatibilidade delegando assinatura, verificação e criação ao módulo canônico. A duplicidade de criptografia foi removida sem apagar o ponto de entrada histórico.
 
 ### B. `MeshRouter` com integração quebrada — CORRIGIDO
 
-`src/core/soul/MeshRouter.ts` referenciava uma função inexistente no arquivo local e criava um envelope com campos de uma geração anterior do contrato.
+`src/core/soul/MeshRouter.ts` referenciava função inexistente e montava envelopes com campos de uma geração anterior do contrato.
 
-**Correção:** criação de tarefa agora usa a autoridade canônica, gera correlação por padrão, rejeita self-route e expõe framing através do `CanonicalTransportAdapter`.
+**Correção:** usa criação canônica, gera `correlationId` por padrão, rejeita self-route e utiliza o `CanonicalTransportAdapter` para framing/seleção.
 
 ### C. Configuração Android Java/Kotlin removida — CORRIGIDO
 
-A consolidação havia removido `compileOptions` Java 17 e `kotlinOptions.jvmTarget = "17"` do `soul-sentinel/app/build.gradle.kts`, apesar de a base utilizá-los.
+A consolidação havia removido `compileOptions` Java 17 e `kotlinOptions.jvmTarget = "17"`.
 
-**Correção:** restauração do target Java/Kotlin 17 sem remover os novos BuildConfig de endpoints.
+**Correção:** configuração Java/Kotlin 17 restaurada, mantendo os campos BuildConfig para peers.
 
 ### D. Capabilities Android divergentes — CORRIGIDO
 
-`SoulMeshRemoteClient` usava `mesh.describe` e `capability.list`, enquanto o gateway consolidado anunciava `mesh.fusion.describe` e `mesh.capabilities`.
+O cliente Android usava `mesh.describe` e `capability.list`, enquanto o gateway canônico usa `mesh.fusion.describe` e `mesh.capabilities`.
 
-**Correção:** chamadas alinhadas ao catálogo canônico.
+**Correção:** nomes alinhados ao catálogo canônico.
 
 ### E. Constantes de protocolo duplicadas — CORRIGIDO
 
-`N01Contract.ts` possuía constantes próprias de protocolo/tipos que podiam divergir do envelope canônico.
+`N01Contract.ts` possuía cópias próprias de protocolo/tipos.
 
-**Correção:** constantes são reexportadas do envelope canônico; o arquivo permanece como contrato de compatibilidade e validação de capabilities.
+**Correção:** os valores são reexportados da implementação canônica do envelope; o arquivo continua apenas como contrato de compatibilidade e validação de capabilities.
 
-### F. Probe de diagnóstico pouco resiliente — CORRIGIDO
+### F. Diagnóstico com timeout não cancelável — CORRIGIDO
 
-`mesh-diagnose.mjs` tinha timeout sem cancelamento da requisição e dependia de `crypto` global.
+`mesh-diagnose.mjs` podia deixar requisições pendentes após o timeout e dependia de `crypto` global.
 
-**Correção:** import explícito de `randomUUID`, validação do JSON, validação de endpoint HTTP(S) e `AbortController` para cancelar requests.
+**Correção:** import explícito de `randomUUID`, validação de configuração/endpoints e AbortController para cancelamento.
 
-### G. Probe de fusão aceitava resposta apenas parcialmente válida — CORRIGIDO
+### G. Probe de fusão com validação fraca — CORRIGIDO
 
-`soul-fusion-runtime-check.mjs` considerava correlação apenas como campo presente.
+`soul-fusion-runtime-check.mjs` aceitava qualquer valor truthy em `correlationId`.
 
-**Correção:** exige protocolo, versão de contrato, `correlationId` exato e rota de retorno correta; timeout também é limitado e endpoint é validado.
+**Correção:** protocolo, contrato, correlação exata, origem e destino são validados; timeout é limitado e endpoint HTTP(S) é obrigatório.
 
 ## 3. Auditoria dos módulos críticos
 
-| Módulo | Situação após revisão | Evidência de código |
+| Módulo | Estado de código | Estado de certificação |
 |---|---|---|
-| Soul Sentinel | IMPLEMENTAÇÃO PRESENTE / validação de runtime pendente | `SoulAdminService` + `SoulCortex` + boot receiver |
-| CanonicalTransportAdapter | ÚNICA autoridade de seleção | adapter delega ao `HybridTransportRegistry` |
-| Mesh | TOPOLOGIA ESTRUTURAL 7 NÚCLEOS / 42 LINKS / 21 PARES | contract + testes Android |
-| Storage híbrido | INTEGRADO NO CÓDIGO / prova de integração pendente | IPFS/Web3 Storage + Supabase metadata |
-| Diagnóstico 5×5 | 25 VERIFICAÇÕES ESTRUTURAIS | `n01-5x5-diagnostic.mjs` |
-| N01↔N02 | CONTRATO E E2E IMPLEMENTADOS / runtime real pendente | `SoulMeshRpcEndToEndTest.kt` |
-| Capability Bridge | SELF-TEST IMPLEMENTADO | `N01CapabilityBridgeSelfTest.ts` |
+| Soul Sentinel | IMPLEMENTADO E ENDURECIDO | runtime Android pendente |
+| CanonicalTransportAdapter | AUTORIDADE ÚNICA DE SELEÇÃO | execução pendente |
+| Mesh | 7 núcleos / 42 links / 21 pares | runtime pendente |
+| Storage híbrido | IPFS/Web3 Storage + Supabase metadata | integração real pendente |
+| Diagnóstico 5×5 | 25 verificações estruturais | execução pendente |
+| N01↔N02 | bridge/client + E2E presente | transação remota real pendente |
+| Capability Bridge | self-test implementado | execução pendente |
 
-Nenhuma destas linhas é marcada `PASS` como prova global enquanto a execução real não estiver disponível.
+Nenhum desses estados é promovido artificialmente para PASS.
 
-## 4. Topologia
-
-O contrato consolidado é:
+## 4. Topologia consolidada
 
 - 7 núcleos: N01–N07
 - 6 peers por núcleo
@@ -122,55 +122,46 @@ O contrato consolidado é:
 - 21 pares bidirecionais
 - 5 transportes
 
-A contagem 84 foi tratada como contagem de endpoints de entrada/saída, não como quantidade de links direcionais.
+A contagem antiga `84` foi corrigida: ela correspondia ao dobro dos links direcionais ao contar entradas e saídas como entidades separadas.
 
 ## 5. Testes adicionados/reforçados
 
-- teste do `CanonicalTransportAdapter`;
-- teste integrado de criação/verificação de tarefa no `MeshRouter`;
+- contrato e framing do `CanonicalTransportAdapter`;
+- criação/verificação de tarefa no `MeshRouter`;
 - self-test do `N01CapabilityBridge`;
-- regressões de 42 links/21 pares;
-- validação temporal do envelope Android;
-- teste de habilitação padrão do Sentinel;
-- validação de correlação e direção das respostas remotas;
-- `npm test` consolidando os gates de teste existentes.
+- regressões dos 42 links e 21 pares;
+- validação temporal do protocolo Android;
+- teste de Sentinel habilitado por padrão;
+- verificação estrita de correlação nos probes;
+- comando `npm test` consolidando os gates existentes.
 
-## 6. Validação local
+## 6. Documentação
 
-**Não certificada nesta execução.** O ambiente atual permite leitura e escrita do repositório GitHub, mas não dispõe de um executor local do checkout privado capaz de rodar os comandos contra os 39 arquivos reais.
+Atualizados/criados na mesma PR: `README.md`, `docs/N01-architecture.md`, `docs/N01-HISTORICAL-CONSOLIDATION.md`, `docs/EXECUTION-STATE.md`, `CHANGELOG-N01.md` e este relatório.
 
-| Comando | Estado | Motivo |
-|---|---|---|
-| `npm ci` | NÃO EXECUTADO | executor local do checkout indisponível |
-| `npm run typecheck` | NÃO EXECUTADO | idem |
-| `npm run build` | NÃO EXECUTADO | idem |
-| `npm run lint` | NÃO EXECUTADO | idem |
-| `npm test` | NÃO EXECUTADO | idem |
-| Android build/tests | NÃO EXECUTADO | idem |
+## 7. Validação local
 
-Esses itens não são convertidos artificialmente em PASS.
+**Não certificada nesta execução.** O agente atual possui acesso de leitura/escrita ao GitHub, mas não dispõe de um executor local conectado ao checkout privado para executar os comandos reais.
 
-## 7. CI
+| Comando | Estado |
+|---|---|
+| `npm ci` | NÃO EXECUTADO |
+| `npm run typecheck` | NÃO EXECUTADO |
+| `npm run build` | NÃO EXECUTADO |
+| `npm run lint` | NÃO EXECUTADO |
+| `npm test` | NÃO EXECUTADO |
+| Android build/testes | NÃO EXECUTADO |
 
-A camada CI já havia mostrado falha anterior antes da execução de steps: jobs sem steps executáveis e logs indisponíveis (`BlobNotFound`), com evidência anterior de runner não atribuído. Essa condição é registrada como infraestrutura e não como sucesso ou falha de código.
+Nenhum desses resultados é convertido em PASS sem execução observável.
 
-Esta revisão não usa a falha de CI para declarar código correto. Também não reabre PRs históricas nem cria nova PR.
+## 8. CI e fronteira de evidência
 
-## 8. Documentação
+Os runs anteriores já demonstraram condição de infraestrutura: jobs terminando antes de qualquer step executável, evidência anterior de `runner_id: 0`, `runner_name: ""` e logs `BlobNotFound`. Isso impede usar o CI como validação do código enquanto a execução não for provisionada.
 
-Atualizados/criados:
+## 9. Conclusão
 
-- `README.md` — arquitetura e comandos de validação;
-- `docs/EXECUTION-STATE.md` — continuidade operacional;
-- `docs/N01-HISTORICAL-CONSOLIDATION.md` — reconciliação histórica;
-- `docs/N01-architecture.md` — especificação arquitetural consolidada;
-- `CHANGELOG-N01.md` — histórico de mudanças;
-- este relatório.
+Os defeitos concretos encontrados na revisão de fonte foram corrigidos na própria `consolidacao-n01`, mantendo a PR #25 como única linha e preservando histórico.
 
-## 9. Critério de saída
+**N01 ainda NÃO está certificado como 100% concluído.** A certificação final continua condicionada à execução real de `npm ci`, typecheck, build, lint, `npm test`, Android e runtime Mesh.
 
-N01 **AINDA NÃO ESTÁ CERTIFICADO COMO 100% CONCLUÍDO**, porque a política de execução do projeto exige evidência real para `npm ci`, build, lint, testes, Android e runtime Mesh.
-
-Porém, os defeitos concretos encontrados nesta revisão de fonte foram corrigidos na própria `consolidacao-n01`, sem criar uma nova PR e sem apagar histórico.
-
-**Próxima única transição permitida:** executar os gates reais de validação sobre o HEAD atual da `consolidacao-n01`; qualquer falha de código encontrada deverá retornar para esta mesma PR #25 para correção antes da certificação final e antes do N02.
+**Próxima única transição permitida:** executar os gates reais sobre o HEAD atual. Qualquer falha real de código deve retornar para a mesma PR #25 antes de merge e antes do N02.
