@@ -1,6 +1,6 @@
-import { createEnvelope, verifyEnvelope, type SoulMeshEnvelope } from './SoulMeshEnvelope';
-import { resolveCanonicalTransport, frameCanonicalEnvelope, type CanonicalTransportFrame } from './CanonicalTransportAdapter';
-import type { TransportKind } from '../../../lib/soul-mesh/HybridTransportRegistry';
+import { createEnvelope, verifyEnvelope, type SoulMeshEnvelope } from './SoulMeshEnvelope.ts';
+import { resolveCanonicalTransport, frameCanonicalEnvelope, type CanonicalTransportFrame } from './CanonicalTransportAdapter.ts';
+import type { TransportKind } from '../../../lib/soul-mesh/HybridTransportRegistry.ts';
 
 export interface MeshPeer { id: SoulMeshEnvelope['source']; transports: readonly TransportKind[]; capabilities: readonly string[]; }
 export interface MeshRoute { source: SoulMeshEnvelope['source']; target: SoulMeshEnvelope['target']; transport: TransportKind; }
