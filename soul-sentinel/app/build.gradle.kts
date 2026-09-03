@@ -22,6 +22,13 @@ android {
         buildConfigField("String", "SOUL_MESH_N06_URL", "\"${System.getenv("SOUL_MESH_N06_URL") ?: ""}\"")
         buildConfigField("String", "SOUL_MESH_N07_URL", "\"${System.getenv("SOUL_MESH_N07_URL") ?: ""}\"")
     }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
+    }
     buildTypes {
         debug { isMinifyEnabled = false }
         release {
