@@ -105,6 +105,8 @@ jobs:
         run: npm run mesh:health:unit
       - name: Mesh async executor unit test
         run: npm run mesh:async:unit
+      - name: N01 5x5 structural diagnostic
+        run: npm run mesh:diagnose
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
@@ -180,7 +182,8 @@ jobs:
             scripts/test-n01-byok.mjs \
             scripts/test-supabase-vector-memory.mjs \
             scripts/test-canonical-transport.mjs \
-            scripts/diagnostics.mjs; do
+            scripts/diagnostics.mjs \
+            scripts/n01-5x5-diagnostic.mjs; do
             test -f "$file"
             node --check "$file"
           done
@@ -217,6 +220,10 @@ jobs:
         run: npm run mesh:contract:check
       - name: Fusion contract check
         run: npm run fusion:check
+      - name: SuperGPU contract check
+        run: npm run supergpu:check
+      - name: N01 5x5 structural diagnostic
+        run: npm run mesh:diagnose
       - name: Local Mesh runtime contract proof
         run: node scripts/soul-mesh-local-contract-check.mjs
       - name: Emergency diagnostics
