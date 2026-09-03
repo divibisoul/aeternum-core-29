@@ -1,10 +1,10 @@
-export type SoulNucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06';
+export type SoulNucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'N07';
 export type NeuralSignalKind = 'GOAL' | 'CONTEXT' | 'CAPABILITY' | 'RESULT' | 'ERROR' | 'FEEDBACK';
 export type NeuralSignal = { id: string; source: SoulNucleusId; target?: SoulNucleusId; kind: NeuralSignalKind; activation: number; features: readonly string[]; payload?: unknown; fast_inference?: boolean; timestamp: number };
 export type NeuralNode = { nucleus: SoulNucleusId; capabilities: readonly string[]; salience: number; load: number; available: boolean };
 export type NeuralRoute = { source: SoulNucleusId; target: SoulNucleusId; weight: number; reason: string };
 type LearnedEdge = { weight: number; attempts: number; successes: number; updatedAt: number };
-const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 const FAST_INFERENCE_NUCLEI: readonly SoulNucleusId[] = ['N02', 'N05'];
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 
@@ -17,7 +17,6 @@ export class SoulNeuralGraph {
   registerNode(node: NeuralNode): void { if (!NUCLEI.includes(node.nucleus)) throw new Error(`INVALID_SOUL_NUCLEUS:${node.nucleus}`); this.nodes.set(node.nucleus, { ...node, capabilities: [...new Set(node.capabilities)], salience: clamp(node.salience), load: clamp(node.load), available: Boolean(node.available) }); }
   emit(signal: NeuralSignal): void { if (!signal.id.trim()) throw new Error('INVALID_NEURAL_SIGNAL_ID'); if (!NUCLEI.includes(signal.source)) throw new Error(`INVALID_SIGNAL_SOURCE:${signal.source}`); this.signals.set(signal.id, { ...signal, activation: clamp(signal.activation), features: [...new Set(signal.features)], timestamp: signal.timestamp || Date.now() }); }
   getSignal(id: string): NeuralSignal | undefined { return this.signals.get(id); }
-
   route(signal: NeuralSignal, capability?: string): NeuralRoute[] {
     const candidates = [...this.nodes.values()].filter((node) => node.available && (!capability || node.capabilities.includes(capability)) && (node.nucleus !== signal.source || signal.target === signal.source));
     return candidates.map((node) => {
@@ -34,7 +33,6 @@ export class SoulNeuralGraph {
       return { source: signal.source, target: node.nucleus, weight, reason };
     }).sort((a, b) => b.weight - a.weight);
   }
-
   propagate(signal: NeuralSignal, capability?: string): NeuralRoute[] { this.emit(signal); return this.route(signal, capability); }
   learn(source: SoulNucleusId, target: SoulNucleusId, capability: string, success: boolean, confidence = 1): void { if (!NUCLEI.includes(source) || !NUCLEI.includes(target) || !capability.trim()) throw new Error('INVALID_NEURAL_LEARNING_EVENT'); const key = `${source}->${target}:${capability}`; const current = this.learnedEdges.get(key) ?? { weight: 0.5, attempts: 0, successes: 0, updatedAt: 0 }; current.attempts += 1; if (success) current.successes += 1; const reward = success ? clamp(confidence) : -clamp(confidence); current.weight = clamp(current.weight + this.learningRate * reward); current.updatedAt = Date.now(); this.learnedEdges.set(key, current); }
   exportLearningState(): string { return JSON.stringify([...this.learnedEdges.entries()]); }
