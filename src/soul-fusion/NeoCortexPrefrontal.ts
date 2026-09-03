@@ -2,7 +2,7 @@ import { SoulNeuralGraph, type NeuralSignal, type NeuralRoute, type SoulNucleusI
 import { SoulSuperGPU, type SuperGPUResult, type SuperGPUTask } from './SoulSuperGPU';
 import { SoulCognitiveFabric, type AgentDescriptor, type Evidence, type WorldFact } from './SoulCognitiveFabric';
 
-export type CognitiveGoal = { id: string; description: string; priority: number; deadline?: number; requiredCapabilities?: readonly string[]; context?: unknown };
+export type CognitiveGoal = { id: string; description: string; priority: number; deadline?: number; requiredCapabilities?: readonly string[]; context?: unknown; fast_inference?: boolean };
 export type WorkingMemoryItem = { id: string; value: unknown; salience: number; expiresAt?: number; source?: SoulNucleusId };
 export type ExecutiveDecision = { goalId: string; selectedNucleus?: SoulNucleusId; selectedCapability?: string; routes: readonly NeuralRoute[]; inhibited: boolean; reason: string };
 export type CortexSnapshot = { role: 'neocortex-prefrontal-executive-layer'; workingMemory: number; goals: number; neuralSignals: number; activeNuclei: number; gpuFabric: ReturnType<SoulSuperGPU['describe']>; gpuFedSignals: number; cognitiveFabric: ReturnType<SoulCognitiveFabric['describe']> };
@@ -21,24 +21,9 @@ export class NeoCortexPrefrontal {
   constructor(graph: SoulNeuralGraph, superGPU: SoulSuperGPU) { this.graph = graph; this.superGPU = superGPU; this.ingestSuperGPUCapabilityMap(); }
 
   setInhibitionThreshold(value: number): void { this.inhibitionThreshold = clamp(value); }
-
-  addGoal(goal: CognitiveGoal): void {
-    if (!goal.id.trim() || !goal.description.trim()) throw new Error('INVALID_COGNITIVE_GOAL');
-    this.goals.set(goal.id, { ...goal, priority: clamp(goal.priority) });
-    this.cognitiveFabric.remember(`goal:${goal.id}`, 'WORKING', goal, goal.priority, 'N01');
-  }
-
-  remember(item: WorkingMemoryItem): void {
-    if (!item.id.trim()) throw new Error('INVALID_WORKING_MEMORY_ID');
-    this.workingMemory.set(item.id, { ...item, salience: clamp(item.salience) });
-    this.cognitiveFabric.remember(item.id, 'WORKING', item.value, item.salience, item.source, item.expiresAt);
-  }
-
-  forgetExpired(now = Date.now()): void {
-    for (const [id, item] of this.workingMemory) if (item.expiresAt !== undefined && item.expiresAt <= now) this.workingMemory.delete(id);
-    this.cognitiveFabric.forgetExpired(now);
-  }
-
+  addGoal(goal: CognitiveGoal): void { if (!goal.id.trim() || !goal.description.trim()) throw new Error('INVALID_COGNITIVE_GOAL'); this.goals.set(goal.id, { ...goal, priority: clamp(goal.priority) }); this.cognitiveFabric.remember(`goal:${goal.id}`, 'WORKING', goal, goal.priority, 'N01'); }
+  remember(item: WorkingMemoryItem): void { if (!item.id.trim()) throw new Error('INVALID_WORKING_MEMORY_ID'); this.workingMemory.set(item.id, { ...item, salience: clamp(item.salience) }); this.cognitiveFabric.remember(item.id, 'WORKING', item.value, item.salience, item.source, item.expiresAt); }
+  forgetExpired(now = Date.now()): void { for (const [id, item] of this.workingMemory) if (item.expiresAt !== undefined && item.expiresAt <= now) this.workingMemory.delete(id); this.cognitiveFabric.forgetExpired(now); }
   registerAgent(agent: AgentDescriptor): void { this.cognitiveFabric.registerAgent(agent); }
   addWorldFact(fact: WorldFact): void { this.cognitiveFabric.addFact(fact); }
   addEvidence(key: string, evidence: Evidence): void { this.cognitiveFabric.addEvidence(key, evidence); }
@@ -49,22 +34,14 @@ export class NeoCortexPrefrontal {
 
   ingestSuperGPUCapabilityMap(): number {
     const signals = this.superGPU.feedCapabilityMap();
-    signals.forEach((input) => {
-      const signal: NeuralSignal = { id: `gpu:capability:${input.source}:${input.timestamp}`, source: input.source, kind: input.signal, activation: input.activation, features: input.features, payload: input.payload, timestamp: input.timestamp };
-      this.graph.propagate(signal);
-      this.cognitiveFabric.addEvidence(`capability:${input.source}`, { source: 'SUPERGPU', value: input.payload, confidence: input.activation, timestamp: input.timestamp });
-    });
+    signals.forEach((input) => { const signal: NeuralSignal = { id: `gpu:capability:${input.source}:${input.timestamp}`, source: input.source, kind: input.signal, activation: input.activation, features: input.features, payload: input.payload, timestamp: input.timestamp }; this.graph.propagate(signal); this.cognitiveFabric.addEvidence(`capability:${input.source}`, { source: 'SUPERGPU', value: input.payload, confidence: input.activation, timestamp: input.timestamp }); });
     this.gpuFedSignals += signals.length;
     return signals.length;
   }
 
   ingestSuperGPUResults(results: readonly SuperGPUResult[]): number {
     const feed = this.superGPU.feedPrefrontalCortex(results);
-    feed.signals.forEach((input) => {
-      const signal: NeuralSignal = { id: `gpu:result:${input.source}:${input.timestamp}:${input.features[0] ?? 'result'}`, source: input.source, kind: input.signal, activation: input.activation, features: input.features, payload: input.payload, timestamp: input.timestamp };
-      this.graph.propagate(signal);
-      this.remember({ id: signal.id, value: signal.payload, salience: signal.activation, source: signal.source });
-    });
+    feed.signals.forEach((input) => { const signal: NeuralSignal = { id: `gpu:result:${input.source}:${input.timestamp}:${input.features[0] ?? 'result'}`, source: input.source, kind: input.signal, activation: input.activation, features: input.features, payload: input.payload, timestamp: input.timestamp }; this.graph.propagate(signal); this.remember({ id: signal.id, value: signal.payload, salience: signal.activation, source: signal.source }); });
     this.gpuFedSignals += feed.signals.length;
     return feed.signals.length;
   }
@@ -74,7 +51,7 @@ export class NeoCortexPrefrontal {
     const goal = this.goals.get(goalId);
     if (!goal) throw new Error(`GOAL_NOT_FOUND:${goalId}`);
     const selectedCapability = capability ?? goal.requiredCapabilities?.[0];
-    const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, timestamp: Date.now() };
+    const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, fast_inference: goal.fast_inference === true, timestamp: Date.now() };
     const routes = this.graph.propagate(signal, selectedCapability);
     const candidates = selectedCapability ? this.cognitiveFabric.resolveCapability(selectedCapability) : [];
     const candidate = candidates[0];
@@ -89,19 +66,9 @@ export class NeoCortexPrefrontal {
     if (tasks.length === 0) return [];
     const results = await this.superGPU.executeParallel(tasks);
     this.ingestSuperGPUResults(results);
-    for (const result of results) {
-      const task = tasks.find((candidate) => candidate.id === result.taskId);
-      if (!task) continue;
-      const confidence = result.success ? 1 : 0;
-      this.cognitiveFabric.observe({ id: result.taskId, nucleus: result.nucleus, capability: task.capability, success: result.success, confidence, latencyMs: result.finishedAt - result.startedAt, timestamp: result.finishedAt, context: result.success ? result.output : result.error });
-      this.graph.learn('N01', result.nucleus, task.capability, result.success, confidence);
-      this.cognitiveFabric.addEvidence(`execution:${task.capability}`, { source: result.nucleus, value: result.success ? result.output : { error: result.error }, confidence, timestamp: result.finishedAt });
-    }
+    for (const result of results) { const task = tasks.find((candidate) => candidate.id === result.taskId); if (!task) continue; const confidence = result.success ? 1 : 0; this.cognitiveFabric.observe({ id: result.taskId, nucleus: result.nucleus, capability: task.capability, success: result.success, confidence, latencyMs: result.finishedAt - result.startedAt, timestamp: result.finishedAt, context: result.success ? result.output : result.error }); this.graph.learn('N01', result.nucleus, task.capability, result.success, confidence); this.cognitiveFabric.addEvidence(`execution:${task.capability}`, { source: result.nucleus, value: result.success ? result.output : { error: result.error }, confidence, timestamp: result.finishedAt }); }
     return results;
   }
 
-  describe(): CortexSnapshot {
-    const graph = this.graph.describe();
-    return { role: 'neocortex-prefrontal-executive-layer', workingMemory: this.workingMemory.size, goals: this.goals.size, neuralSignals: graph.signals, activeNuclei: graph.nodes.filter((node) => node.available).length, gpuFabric: this.superGPU.describe(), gpuFedSignals: this.gpuFedSignals, cognitiveFabric: this.cognitiveFabric.describe() };
-  }
+  describe(): CortexSnapshot { const graph = this.graph.describe(); return { role: 'neocortex-prefrontal-executive-layer', workingMemory: this.workingMemory.size, goals: this.goals.size, neuralSignals: graph.signals, activeNuclei: graph.nodes.filter((node) => node.available).length, gpuFabric: this.superGPU.describe(), gpuFedSignals: this.gpuFedSignals, cognitiveFabric: this.cognitiveFabric.describe() }; }
 }
