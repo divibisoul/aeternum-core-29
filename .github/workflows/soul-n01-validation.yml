@@ -2,9 +2,9 @@ name: SOUL N01 validation
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, consolidacao-n01]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -25,16 +25,7 @@ jobs:
         run: |
           set -u
           mkdir -p "$RUNNER_TEMP/n01-first-step"
-          {
-            date -u
-            uname -a || true
-            cat /etc/os-release || true
-            node --version || true
-            npm --version || true
-            df -hT || true
-            free -h || true
-            env | cut -d= -f1 | sort || true
-          } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/build.log"
+          { date -u; uname -a || true; cat /etc/os-release || true; node --version || true; npm --version || true; df -hT || true; free -h || true; env | cut -d= -f1 | sort || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/build.log"
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -42,6 +33,8 @@ jobs:
           cache: npm
       - name: Install dependencies from lockfile
         run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
       - name: Build
         run: npm run build
       - name: Emergency diagnostics
@@ -87,7 +80,7 @@ jobs:
           if-no-files-found: ignore
 
   mesh-unit:
-    name: Mesh unit checks
+    name: Mesh unit and canonical transport checks
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
@@ -104,10 +97,16 @@ jobs:
           cache: npm
       - name: Install dependencies from lockfile
         run: npm ci --no-audit --no-fund
+      - name: Canonical transport contract
+        run: npm run test:soul-transport
+      - name: Capability bridge self-test
+        run: node --experimental-strip-types --input-type=module -e "import { runN01CapabilityBridgeSelfTest } from './src/core/soul/N01CapabilityBridgeSelfTest.ts'; console.log(JSON.stringify(runN01CapabilityBridgeSelfTest()));"
       - name: Mesh health unit test
         run: npm run mesh:health:unit
       - name: Mesh async executor unit test
         run: npm run mesh:async:unit
+      - name: N01 5x5 structural diagnostic
+        run: npm run mesh:diagnose
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
@@ -179,9 +178,12 @@ jobs:
             scripts/supabase-vector-memory.mjs \
             scripts/test-n01-n06.mjs \
             scripts/soul-mesh-contract-check.mjs \
+            scripts/soul-fusion-contract-check.mjs \
             scripts/test-n01-byok.mjs \
             scripts/test-supabase-vector-memory.mjs \
-            scripts/diagnostics.mjs; do
+            scripts/test-canonical-transport.mjs \
+            scripts/diagnostics.mjs \
+            scripts/n01-5x5-diagnostic.mjs; do
             test -f "$file"
             node --check "$file"
           done
@@ -197,7 +199,7 @@ jobs:
           if-no-files-found: ignore
 
   contract:
-    name: Mesh contract checks
+    name: Mesh and fusion contract checks
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     steps:
@@ -216,6 +218,12 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Mesh contract check
         run: npm run mesh:contract:check
+      - name: Fusion contract check
+        run: npm run fusion:check
+      - name: SuperGPU contract check
+        run: npm run supergpu:check
+      - name: N01 5x5 structural diagnostic
+        run: npm run mesh:diagnose
       - name: Local Mesh runtime contract proof
         run: node scripts/soul-mesh-local-contract-check.mjs
       - name: Emergency diagnostics

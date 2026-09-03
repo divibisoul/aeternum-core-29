@@ -16,7 +16,7 @@ data class SoulMeshMessage(
     val timestamp: Long,
 ) {
     fun validate(): Result<Unit> = SoulMeshContract.validate(
-        protocol, contractVersion, id, correlationId, source, target, kind, capability
+        protocol, contractVersion, id, correlationId, source, target, kind, capability, timestamp
     )
 
     fun toJson(): JSONObject = JSONObject().apply {
@@ -47,7 +47,6 @@ data class SoulMeshMessage(
                 timestamp = json.optLong("timestamp", 0L),
             )
             message.validate().getOrThrow()
-            require(message.timestamp > 0L) { "Missing message timestamp" }
             return message
         }
     }

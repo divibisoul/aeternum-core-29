@@ -1,41 +1,49 @@
 # SOUL — LIVE EXECUTION STATE
 
-Last updated: 2026-08-28
+Last updated: 2026-09-03
 
-This is the execution control board. An item cannot remain OPEN without a concrete next action. Every completed item requires repository evidence and validation evidence.
+This is the N01 continuous execution control board. Every state transition requires repository evidence and validation evidence. A new prompt continues this state; it does not create a new project or parallel implementation.
 
 ## Current floor: N01
 
-| ID | Stage | Status | Done | Remaining | Why not complete |
-|---|---|---|---|---|---|
-| N01-01 | Baseline/source audit | COMPLETE | Existing N01 structure, Mesh registry, transports, provider/bridge direction inspected | None | Closed |
-| N01-02 | Capability Graph | IMPLEMENTED / VALIDATION OPEN | CapabilityGraph.ts exists with ownership, status, cost, privacy, dependencies and permissions | Runtime exposure + tests | Source structure exists; no executable proof yet |
-| N01-03 | CognitiveProvider contract | IMPLEMENTED / VALIDATION OPEN | Provider-neutral local/browser/cloud contract + fallback exists | Concrete local provider + tests | Dependency choice deferred until transport path is stable |
-| N01-04 | Browser Session bridge | IMPLEMENTED / VALIDATION OPEN | Session states and correlation IDs exist; credentials excluded | Secure extension boundary + tests | Browser messaging boundary still needs validation |
-| N01-05 | Hardware profiler | IMPLEMENTED / VALIDATION OPEN | WebGPU/WASM/CPU selection primitive exists | Runtime benchmark + tests | Detection is not benchmark proof |
-| N01-06 | Canonical Mesh envelope | IMPLEMENTED / VALIDATION OPEN | `src/core/soul/SoulMeshEnvelope.ts` added with v1.0 envelope, N01–N06/BROADCAST IDs, message types, timestamp, nonce, TTL, correlationId and HMAC-SHA256 verification | Adapt transport registry + execute validation | The new envelope is not yet wired into the existing transport registry |
-| N01-07 | Authorization | BLOCKED | Permission fields exist | Enforce permission before task dispatch | Requires canonical verified task path |
-| N01-08 | Executable tests | OPEN | CI build/lint workflow exists | Obtain successful run and add focused tests | Repository has no test runner; avoid adding a framework until necessary |
-| N01-09 | N01↔N02 transaction | BLOCKED | Target architecture defined | Real correlated capability request/result | Requires verified N01 transport and N02 contract |
-| N01-10 | Final N01 audit | BLOCKED | None | Before/after evidence and percentage | Cannot close before runtime proof |
+| ID | Stage | Status | Evidence / current state |
+|---|---|---|---|
+| N01-01 | Baseline/source audit | COMPLETE | Main `6c828648fb2d953f609218d612501102566684fc` and PR #25 lineage audited. |
+| N01-02 | Canonical transport | IMPLEMENTED / VALIDATION OPEN | `CanonicalTransportAdapter` is the only transport-selection authority and delegates to `HybridTransportRegistry`. |
+| N01-03 | Capability authority | IMPLEMENTED / VALIDATION OPEN | `N01CapabilityBridge` + self-test adapt the existing `CapabilityGraph`; no second registry created. |
+| N01-04 | Fast-inference routing | IMPLEMENTED / VALIDATION OPEN | Existing neural/prefrontal routing carries `fast_inference` priority without moving provider ownership into N01. |
+| N01-05 | Soul Sentinel | IMPLEMENTED / VALIDATION OPEN | Watchdog, integrity snapshot, metrics, bounded restart and boot/package-replacement startup are implemented. Android runtime proof remains pending. |
+| N01-06 | Seven-nucleus topology | CORRECTED / VALIDATION OPEN | 7 nuclei × 6 peers = 42 directed links and 21 bidirectional pairs. |
+| N01-07 | Environment/security | PRESENT | Secrets remain template-only; no real secret values added. |
+| N01-08 | Source review | CORRECTED / VALIDATION OPEN | 43 current PR paths reviewed; concrete envelope, router, Android JVM, capability-name, protocol-duplication and diagnostic robustness defects corrected on the same branch. |
+| N01-09 | Regression validation | BLOCKED BY EXECUTION ENVIRONMENT | Full local commands cannot be run in this agent environment; GitHub Actions also previously failed before steps with runner-unassigned evidence. |
+| N01-10 | N01↔N02 runtime transaction | OPEN | Requires actual deployed peer endpoints and a real correlated request/response. |
+| N01-11 | Final N01 certification | BLOCKED | No PASS/HEALTHY/ONLINE/merged claim is permitted without executable evidence. |
 
-## Confirmed commits in this execution
+## Source-review corrections recorded in this continuation
 
-- `c8b4574f6fc1e0967e9ee8cbf3c59c7e4cfccfc6`: added `SoulMeshEnvelope.ts`.
-- Earlier control artifacts remain in repository history; they are documentation only and are not counted as functional progress.
+- `bcf365e931b802debeb156de5c0f2a7c47cdd828` — canonical envelope compatibility facade.
+- `638e8d0fe5787fe5ae6357760fc0ac2be07abf22` — MeshRouter canonical task creation.
+- `8d1d18373e50467499c4e8b2241bad4de0db2920` — canonical transport integration test async assertion fix.
+- `a12a62af03811d149cba6e5c65e400b5c212f629` — package scripts with dependency baseline restored.
+- `5784ecdad14d7663d7f83943966cc4e9bf3861bc` — Android capability names aligned with gateway.
+- `d0e9de540dc74c39aeaa68da1a15f3826167af89` — Android Java 17/Kotlin 17 restoration.
+- `39231d686dba9f4d82ff80f734991121373882c1` — canonical protocol constants in N01 contract.
+- `cc1678630318724b41bba74b3803c560caa169b4` — cancellable/safe Mesh diagnostics.
+- `87d4cfd1dc9d6a1ac8e757b2cda456a620a5c268` — deterministic, correlation-safe runtime fusion probe.
+- `acb2b31f061b7fa9068f8947830760de5956a96a` — N01 architecture specification.
+- `a8f22aa8884a3dd3fccebc0216eafc19c4102d40` — N01 changelog.
+- `426a0a842a4dcb4024890f9ba98836612b0bea77` — complete review report with current 43-file inventory.
+- `6a34a56c6fd47594cdb429b0e83750f061222734` — README validation/documentation closure.
 
-## Important correction
+## Canonical PR
 
-The earlier execution board listed stale/mismatched commit SHAs. This file supersedes those references. Only commit SHAs verified from the GitHub write response should be treated as execution evidence.
-
-## Exit criterion for N01
-
-N01 is finished only when: capability discovery is executable; canonical envelope is wired into transport; authentication/integrity is tested; authorization is enforced; provider fallback is executable; browser bridge has a secure boundary; build/typecheck passes; and at least one real N01↔N02 correlated transaction succeeds.
-
-## Next single executable action
-
-Adapt the existing `HybridTransportRegistry` to accept/emit the canonical envelope without deleting the registry, then run the repository's available build/lint validation. If validation fails, fix the failure before adding another architectural feature.
+PR #25 remains the only N01 consolidation PR. Its current verified head is `6a34a56c6fd47594cdb429b0e83750f061222734`, base remains `main` at `6c828648fb2d953f609218d612501102566684fc`, state `open`, not merged.
 
 ## Anti-loop rule
 
-After each code change, update this file with the verified commit SHA, validation result, state, blocker (if any), and exactly one next executable action. Never repeat an analysis cycle without changing the evidence state.
+Before every subsequent N01 action, re-read this file, compare `consolidacao-n01` against `main`, inspect the latest GitHub execution evidence, and continue from the latest verified SHA. Never restart analysis from an old prompt, never create a third solution for an existing responsibility, and never claim PASS/ONLINE without execution evidence.
+
+## Single next executable action
+
+Run the real N01 validation gates against the current HEAD. Because this agent cannot execute the private checkout locally and the hosted Actions path previously failed before runner assignment, no local PASS is claimed here. Once an executor is available, any source-level failure returns to this same PR #25 for correction before merge and before N02.

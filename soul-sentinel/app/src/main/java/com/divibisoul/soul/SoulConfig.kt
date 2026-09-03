@@ -19,7 +19,8 @@ class SoulConfig(context: Context) {
     var lowBatteryRule: Boolean
         get() = prefs.getBoolean("lowBatteryRule", true)
         set(v) = prefs.edit().putBoolean("lowBatteryRule", v).apply()
+    /** Sentinel is enabled by default; the user can explicitly disable it. */
     var enabled: Boolean
-        get() = prefs.getBoolean("enabled", false)
+        get() = prefs.getBoolean("enabled", true)
         set(v) = prefs.edit().putBoolean("enabled", v).apply()
 }
