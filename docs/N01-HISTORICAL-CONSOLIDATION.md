@@ -52,7 +52,7 @@ The canonical `mesh:diagnose` command executes a 25-check structural matrix acro
 
 ## Verification boundary
 
-The current branch is not certified ONLINE merely because source checks are present. CI execution must produce concrete successful job evidence. Previous N01 runs with zero executable job steps are retained as runner/infrastructure evidence, not counted as passing tests. GitHub Actions documentation confirms that job logs and check runs are the execution evidence used to diagnose workflow failures. citeturn0search9
+The current branch is not certified ONLINE merely because source checks are present. CI execution must produce concrete successful job evidence. Previous N01 runs with zero executable job steps are retained as runner/infrastructure evidence, not counted as passing tests.
 
 ## Continuity rule
 
