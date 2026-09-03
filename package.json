@@ -17,7 +17,8 @@
     "fusion:check": "node scripts/soul-fusion-contract-check.mjs",
     "supergpu:check": "node scripts/soul-supergpu-check.mjs",
     "byok:check": "node scripts/test-n01-byok.mjs",
-    "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs"
+    "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs",
+    "test:soul-transport": "node --experimental-strip-types scripts/test-canonical-transport.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
