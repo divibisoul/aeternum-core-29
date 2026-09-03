@@ -7,9 +7,9 @@ import org.junit.Test
 
 class SoulSystemIntegrationTest {
     @Test
-    fun bootstrapRegistersAllSixNuclei() {
+    fun bootstrapRegistersAllSevenNuclei() {
         val runtime = SoulMeshBootstrap.create()
-        assertEquals(setOf("N01", "N02", "N03", "N04", "N05", "N06"), runtime.registeredNuclei())
+        assertEquals(setOf("N01", "N02", "N03", "N04", "N05", "N06", "N07"), runtime.registeredNuclei())
     }
 
     @Test
@@ -22,5 +22,12 @@ class SoulSystemIntegrationTest {
             assertEquals(target, result.source)
             assertTrue(result.correlationId.isNotBlank())
         }
+    }
+
+    @Test
+    fun sentinelIsEnabledByDefault() {
+        val config = SoulConfig(SoulTestContext.create())
+        assertTrue(config.enabled)
+        assertTrue(config.checkIntervalMs > 0)
     }
 }
