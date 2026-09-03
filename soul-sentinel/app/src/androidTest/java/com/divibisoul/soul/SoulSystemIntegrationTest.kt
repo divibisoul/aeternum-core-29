@@ -1,5 +1,7 @@
 package com.divibisoul.soul
 
+import android.content.Context
+import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -25,8 +27,9 @@ class SoulSystemIntegrationTest {
     }
 
     @Test
-    fun sentinelIsEnabledByDefault() {
-        val config = SoulConfig(SoulTestContext.create())
+    fun sentinelConfigEnablesWatchdogByDefault() {
+        val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
+        val config = SoulConfig(context)
         assertTrue(config.enabled)
         assertTrue(config.checkIntervalMs > 0)
     }
