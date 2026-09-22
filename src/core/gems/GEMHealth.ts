@@ -135,7 +135,7 @@ export class GEMHealth {
     if (recent) return;
 
     const alert: HealthAlert = {
-      id: `health_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: `health_${Date.now()}_${crypto.randomUUID()}`,
       type, metric, value, threshold, message,
       timestamp: Date.now(),
     };
