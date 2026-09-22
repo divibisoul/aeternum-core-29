@@ -39,3 +39,19 @@ Adapt the existing `HybridTransportRegistry` to accept/emit the canonical envelo
 ## Anti-loop rule
 
 After each code change, update this file with the verified commit SHA, validation result, state, blocker (if any), and exactly one next executable action. Never repeat an analysis cycle without changing the evidence state.
+
+
+---
+
+## Branch overlay — 2026-09-22 — Soul Admin Plus forensic recovery
+
+This section is additive to the historical execution board above; it does not invalidate prior records.
+
+- Branch audited: `feat/soul-admin-android-plus-final`
+- Base relation at audit: `main` 480ad4d8ed8814e4aa2c3d69043390d90658e52c; branch 86 commits ahead, 0 behind.
+- Current front: Soul Admin Plus implementation exists; runtime validation remains OPEN.
+- Corrected in the latest recovery pass: N07 transport contract/correlation, token clearing, queue priority/failure evidence, shared cockpit runtime, concurrent auth state, shell command validation, NPU evidence semantics, dashboard update serialization, log retention, watchdog ANR/snapshot/load reduction, legacy P-256 key preservation.
+- CI remains BLOCKED/UNMEASURABLE: recent reruns finish in failure with empty steps and BlobNotFound logs.
+- Android field commissioning remains OPEN: no verified APK installation/execution evidence in this environment.
+- OctaCore remains BLOCKED until the authoritative eight-component processor specification is recovered.
+- Next executable gate: restore observable CI, then build/test and live device/backend commissioning.
