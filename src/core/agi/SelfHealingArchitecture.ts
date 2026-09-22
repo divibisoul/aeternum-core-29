@@ -7,6 +7,7 @@ import { SafeSelfImprovementCore } from './SafeSelfImprovementCore';
 export interface SystemHealth {
   overallScore: number;
   moduleScores: Record<string, number>;
+  unmeasurableModules: string[];
   criticalIssues: string[];
   warnings: string[];
   recommendations: string[];
@@ -16,16 +17,17 @@ export interface SystemHealth {
 export interface ModuleHealth {
   name: string;
   status: 'healthy' | 'degraded' | 'failed' | 'recovering';
-  performance: number;
-  memoryUsage: number;
-  errorRate: number;
+  performance: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
   uptime: number;
+  livenessObserved: boolean;
 }
 
 export type ModuleHealthProvider = () => {
-  performance: number;
-  memoryUsage: number;
-  errorRate: number;
+  performance: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
   healthy: boolean;
 };
 
@@ -39,10 +41,11 @@ export class IntegrityScanner {
     this.moduleRegistry.set(name, {
       name,
       status: 'degraded',
-      performance: 0,
-      memoryUsage: 0,
-      errorRate: 0,
+      performance: null,
+      memoryUsage: null,
+      errorRate: null,
       uptime: Date.now(),
+      livenessObserved: false,
     });
   }
 
@@ -52,6 +55,7 @@ export class IntegrityScanner {
     const warnings: string[] = [];
     const recommendations: string[] = [];
     let totalScore = 0, count = 0;
+    const unmeasurableModules: string[] = [];
 
     for (const [name, health] of this.moduleRegistry) {
       const provider = this.providers.get(name);
@@ -61,30 +65,48 @@ export class IntegrityScanner {
       }
       try {
         const observed = provider();
-        health.performance = Math.max(0, Math.min(1, observed.performance));
-        health.memoryUsage = Math.max(0, Math.min(1, observed.memoryUsage));
-        health.errorRate = Math.max(0, Math.min(1, observed.errorRate));
-        health.status = !observed.healthy ? 'failed' : health.performance < 0.5 ? 'degraded' : 'healthy';
+        health.performance = observed.performance == null ? null : Math.max(0, Math.min(1, observed.performance));
+        health.memoryUsage = observed.memoryUsage == null ? null : Math.max(0, Math.min(1, observed.memoryUsage));
+        health.errorRate = observed.errorRate == null ? null : Math.max(0, Math.min(1, observed.errorRate));
+        health.livenessObserved = true;
+        health.status = !observed.healthy
+          ? 'failed'
+          : health.performance != null && health.performance < 0.5
+          ? 'degraded'
+          : 'healthy';
       } catch (error) {
         health.status = 'failed';
         health.errorRate = 1;
+        health.livenessObserved = false;
         criticalIssues.push(name + ' - health provider failed: ' + String(error));
       }
 
-      const score = health.performance * 0.5 + (1 - health.errorRate) * 0.3 + (1 - health.memoryUsage) * 0.2;
+      const components: Array<{ value: number; weight: number }> = [];
+      if (health.performance != null) components.push({ value: health.performance, weight: 0.5 });
+      if (health.errorRate != null) components.push({ value: 1 - health.errorRate, weight: 0.3 });
+      if (health.memoryUsage != null) components.push({ value: 1 - health.memoryUsage, weight: 0.2 });
+
+      if (components.length === 0) {
+        unmeasurableModules.push(name);
+        warnings.push(name + ' - desempenho/memória/erro não mensurados');
+        continue;
+      }
+
+      const weight = components.reduce((sum, part) => sum + part.weight, 0);
+      const score = components.reduce((sum, part) => sum + part.value * part.weight, 0) / weight;
       moduleScores[name] = score;
       totalScore += score;
       count++;
 
-      if (score < 0.5) criticalIssues.push(`${name} crítico (${(score * 100).toFixed(1)}%)`);
-      else if (score < 0.7) warnings.push(`${name} degradado (${(score * 100).toFixed(1)}%)`);
-      if (health.errorRate > 0.05) recommendations.push(`Reinicializar ${name}`);
+      if (score < 0.5) criticalIssues.push(name + ' crítico (' + (score * 100).toFixed(1) + '%)');
+      else if (score < 0.7) warnings.push(name + ' degradado (' + (score * 100).toFixed(1) + '%)');
+      if (health.errorRate != null && health.errorRate > 0.05) recommendations.push('Reinicializar ' + name);
     }
 
     const overallScore = count > 0 ? totalScore / count : 0;
     if (count === 0) criticalIssues.push('NO_OBSERVED_HEALTH_PROVIDERS');
     const result: SystemHealth = {
-      overallScore, moduleScores, criticalIssues,
+      overallScore, moduleScores, unmeasurableModules, criticalIssues,
       warnings, recommendations, lastScanTimestamp: Date.now()
     };
     this.scanHistory.push(result);
