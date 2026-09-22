@@ -20,7 +20,8 @@ data class EndpointConfig(
     val feedbackSyncUrl: String? = null,
     val requestTimeoutMs: Long = 10_000L,
     val saraTokenConfigured: Boolean = false,
-    val n07TokenConfigured: Boolean = false
+    val n07TokenConfigured: Boolean = false,
+    val logRetentionDays: Int = 30
 )
 
 class SecureEndpointConfigStore(private val context: Context) {
@@ -65,7 +66,8 @@ class SecureEndpointConfigStore(private val context: Context) {
             feedbackSyncUrl = p[FEEDBACK_SYNC_URL],
             requestTimeoutMs = p[TIMEOUT]?.toLongOrNull() ?: 10_000L,
             saraTokenConfigured = p[SARA_TOKEN] != null,
-            n07TokenConfigured = p[N07_TOKEN] != null
+            n07TokenConfigured = p[N07_TOKEN] != null,
+            logRetentionDays = p[LOG_RETENTION_DAYS]?.toIntOrNull()?.coerceIn(1, 3650) ?: 30
         )
     }
 
@@ -75,6 +77,12 @@ class SecureEndpointConfigStore(private val context: Context) {
 
     suspend fun setTimeout(ms: Long) {
         context.endpointDataStore.edit { it[TIMEOUT] = ms.coerceIn(1000L, 120_000L).toString() }
+    }
+
+    suspend fun setLogRetentionDays(days: Int) {
+        context.endpointDataStore.edit {
+            it[LOG_RETENTION_DAYS] = days.coerceIn(1, 3650)
+        }
     }
 
     private fun key() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.let { ks ->
@@ -123,5 +131,6 @@ class SecureEndpointConfigStore(private val context: Context) {
         private val ROOT_ENABLED = booleanPreferencesKey("root_enabled")
         private val FEEDBACK_SYNC_URL = stringPreferencesKey("feedback_sync_url")
         private val TIMEOUT = stringPreferencesKey("timeout_ms")
+        private val LOG_RETENTION_DAYS = intPreferencesKey("log_retention_days")
     }
 }
