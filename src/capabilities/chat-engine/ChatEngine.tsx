@@ -673,7 +673,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                         <span className="text-muted-foreground">|</span>
                         <span className="text-red-400">SAIIC:{(message.eru_data.saiic_integrity * 100).toFixed(0)}%</span>
                         <span className="text-muted-foreground">|</span>
-                        <span className="text-pink-400">♥:{(message.eru_data.gem_health_stress * 100).toFixed(0)}%</span>
+                        <span className="text-pink-400">♥:{typeof message.eru_data.gem_health_stress === 'number' ? (message.eru_data.gem_health_stress * 100).toFixed(0) + '%' : '—'}</span>
                         <span className="text-muted-foreground">|</span>
                         <span className={message.eru_data.gem_device_connected ? 'text-cyan-400' : 'text-muted-foreground'}>
                           📱:{message.eru_data.gem_device_connected ? 'ON' : 'OFF'}
