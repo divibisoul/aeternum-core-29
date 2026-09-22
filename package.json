@@ -20,7 +20,8 @@
     "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs",
     "sara:federation:check": "node scripts/sara-federation.test.mjs",
     "clareira:contract:check": "node scripts/clareira-contract-check.mjs",
-    "clareira:android:contract:check": "node scripts/clareira-android-contract-check.mjs"
+    "clareira:android:contract:check": "node scripts/clareira-android-contract-check.mjs",
+    "soul:runtime:reality:check": "node scripts/soul-runtime-reality-check.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
