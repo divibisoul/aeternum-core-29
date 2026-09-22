@@ -13,6 +13,12 @@ object SoulCapabilityCatalog {
         SoulCapability("chat.tools", "N05", Execution.WEB_SESSION),
         SoulCapability("ai.generate", "N06", Execution.WEB_SESSION),
         SoulCapability("data.remote", "N01", Execution.REMOTE_SERVICE),
+        SoulCapability("clareira.android.snapshot", "N01", Execution.LOCAL),
+        SoulCapability("clareira.android.brightness", "N01", Execution.LOCAL),
+        SoulCapability("clareira.android.kill_background", "N01", Execution.LOCAL),
+        SoulCapability("clareira.android.wifi_panel", "N01", Execution.LOCAL),
+        SoulCapability("clareira.android.bluetooth_request", "N01", Execution.LOCAL),
+        SoulCapability("clareira.android.airplane_settings", "N01", Execution.LOCAL),
     )
 
     fun owner(capability: String): SoulCapability =
