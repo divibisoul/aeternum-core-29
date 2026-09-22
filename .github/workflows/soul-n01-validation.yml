@@ -233,3 +233,6 @@ jobs:
           name: n01-contract-diagnostics-${{ github.run_id }}
           path: .diagnostics/
           if-no-files-found: ignore
+
+      - name: Runtime reality and anti-simulation gate
+        run: npm run soul:runtime:reality:check
