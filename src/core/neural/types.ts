@@ -136,6 +136,7 @@ export interface SystemMetrics {
   vagalTone: number;
   activeVagusBranches: number;
   timestamp: number;
+  redundantVagusBranches?: number;
 }
 
 export interface ClareiraSnapshot {
