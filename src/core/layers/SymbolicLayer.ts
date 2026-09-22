@@ -155,7 +155,7 @@ export class BarramentoQuantico {
       evento,
       dados,
       timestamp: Date.now(),
-      probabilidade: Math.random(), // Probabilidade quântica simulada
+      probabilidade: subs && subs.length > 0 ? 1 : 0, // score determinístico de entrega; não é probabilidade física
     };
     
     this.eventosSupepostos.push(eventoSuperposto);
