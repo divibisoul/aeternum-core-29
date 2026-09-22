@@ -79,9 +79,8 @@ export type { DeviceMetrics, DeviceStatus } from '@/core/gems/GEMDevice';
 /**
  * AeternumAGI - Orquestrador Central (17 motores, primeiro plano contínuo)
  * 
- * CONECTIVIDADE UNIVERSAL: Cada módulo tem canal direto de comunicação
- * com qualquer outro via barramento EventBus full-mesh.
- * Latência máxima entre módulos: < 10ms.
+ * CONECTIVIDADE: módulos registrados no EventBus e em adaptadores de Mesh.
+ * Latência real precisa ser medida pelo transporte; não há garantia estrutural < 10ms.
  * 
  * PRIMEIRO PLANO CONTÍNUO: Todos os módulos executam seus loops
  * sem interrupção. Nenhum módulo é "ativado sob demanda" -
