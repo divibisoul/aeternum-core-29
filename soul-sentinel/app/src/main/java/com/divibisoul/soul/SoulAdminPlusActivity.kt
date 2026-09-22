@@ -241,7 +241,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
                             val allowed = gate.authenticate(
                                 this@SoulAdminPlusActivity,
                                 LocalRole.OPERATOR,
-                                "Diagnóstico privilegiado: somente leitura"
+                                "diagnostic"
                             )
                             if (!allowed) {
                                 output = "PRIVILEGED_AUTH_DENIED"
