@@ -15,6 +15,7 @@ const OPERATION_ROUTES = Object.freeze({
   'sara.regenerate': { method: 'POST', path: '/v1/regenerate' },
   'sara.trace': { method: 'GET', path: '/v1/trace/{cycle_id}' },
   'sara.clareira.state': { method: 'POST', path: '/v1/clareira/state' },
+  'sara.clareira.audit': { method: 'GET', path: '/v1/clareira/audit' },
   'sara.clareira.vagus': { method: 'POST', path: '/v1/clareira/vagus' },
   'sara.clareira.vagus.pending': { method: 'GET', path: '/v1/clareira/vagus/pending' },
   'sara.clareira.vagus.ack': { method: 'POST', path: '/v1/clareira/vagus/ack' },
