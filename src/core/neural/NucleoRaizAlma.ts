@@ -55,9 +55,11 @@ export class NucleoRaizAlma extends ProcessingNode {
       const decision = this.makeDecision(requestData);
       
       // Atualizar métricas
-      this.decisionsProcessed++;
       const decisionTime = Date.now() - startTime;
-      this.avgDecisionTime = (this.avgDecisionTime + decisionTime) / 2;
+      this.decisionsProcessed += 1;
+      this.avgDecisionTime += (
+        (decisionTime - this.avgDecisionTime) / this.decisionsProcessed
+      );
 
       console.log(`[NucleoRaizAlma] Decisão tomada em ${decisionTime}ms:`, decision.action);
 
