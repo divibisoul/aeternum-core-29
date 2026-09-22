@@ -16,6 +16,7 @@ data class EndpointConfig(
     val saraBaseUrl: String? = null,
     val n07BaseUrl: String? = null,
     val n07Enabled: Boolean = false,
+    val rootEnabled: Boolean = false,
     val feedbackSyncUrl: String? = null,
     val requestTimeoutMs: Long = 10_000L,
     val saraTokenConfigured: Boolean = false,
@@ -29,6 +30,13 @@ class SecureEndpointConfigStore(private val context: Context) {
         context.endpointDataStore.edit {
             it[SARA_URL] = baseUrl.trimEnd('/')
             if (!token.isNullOrBlank()) it[SARA_TOKEN] = encrypt(token)
+        }
+    }
+
+    suspend fun setFeatureFlags(rootEnabled: Boolean, n07Enabled: Boolean) {
+        context.endpointDataStore.edit {
+            it[ROOT_ENABLED] = rootEnabled
+            it[N07_ENABLED] = n07Enabled
         }
     }
 
@@ -53,6 +61,7 @@ class SecureEndpointConfigStore(private val context: Context) {
             saraBaseUrl = p[SARA_URL],
             n07BaseUrl = p[N07_URL],
             n07Enabled = p[N07_ENABLED] == true,
+            rootEnabled = p[ROOT_ENABLED] == true,
             feedbackSyncUrl = p[FEEDBACK_SYNC_URL],
             requestTimeoutMs = p[TIMEOUT]?.toLongOrNull() ?: 10_000L,
             saraTokenConfigured = p[SARA_TOKEN] != null,
@@ -111,6 +120,7 @@ class SecureEndpointConfigStore(private val context: Context) {
         private val N07_URL = stringPreferencesKey("n07_url")
         private val N07_TOKEN = stringPreferencesKey("n07_token_enc")
         private val N07_ENABLED = booleanPreferencesKey("n07_enabled")
+        private val ROOT_ENABLED = booleanPreferencesKey("root_enabled")
         private val FEEDBACK_SYNC_URL = stringPreferencesKey("feedback_sync_url")
         private val TIMEOUT = stringPreferencesKey("timeout_ms")
     }
