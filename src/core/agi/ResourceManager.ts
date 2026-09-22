@@ -38,7 +38,9 @@ export interface ResourceMetrics {
   totalMemoryUsage: number;
   rebalanceCount: number;
   avgQuantumSliceMs: number;
-  hotModules: string[]; // modules consuming most resources
+  hotModules: string[]; // modules with highest configured allocation
+  cpuMeasurementSource: 'JS_EXECUTION_WINDOW' | 'UNMEASURED';
+  memoryMeasurementSource: 'PERFORMANCE_MEMORY' | 'UNMEASURED';
 }
 
 export class ResourceManager {
@@ -226,6 +228,8 @@ export class ResourceManager {
       moduleProfiles: new Map(this.moduleProfiles),
       rebalanceCount: this._rebalanceCount,
       quantumSliceMs: this._quantumSliceMs,
+      cpuMeasurementSource: this._executionWindowMs > 0 ? 'JS_EXECUTION_WINDOW' : 'UNMEASURED',
+      memoryMeasurementSource: ((globalThis.performance as Performance & { memory?: unknown }).memory) ? 'PERFORMANCE_MEMORY' : 'UNMEASURED',
     };
   }
 }
