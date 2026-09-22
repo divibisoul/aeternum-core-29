@@ -14,8 +14,9 @@ class RootGate {
     private val allowed = setOf("id", "getenforce", "dumpsys", "pm", "am", "settings", "top", "logcat")
 
     fun status(): RootStatus {
-        val shell = runCatching { Shell.getShell() }.getOrNull()
-        val root = shell?.isRoot == true
+        val cachedRoot = Shell.getCachedShell()?.isRoot == true
+        val granted = Shell.isAppGrantedRoot() == true
+        val root = cachedRoot || granted
         val selinux = runLibsu("getenforce").getOrNull()?.contains("Enforcing", true)
         val magisk = runLibsu("command -v magisk").isSuccess
         return RootStatus(root, selinux, magisk)
