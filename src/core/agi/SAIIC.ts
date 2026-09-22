@@ -16,8 +16,8 @@ import { EventBus } from '@/core/EventBus';
 export interface ModuleDiagnostic {
   moduleId: string;
   healthy: boolean;
-  cpuLoad: number;
-  memoryUsage: number;
+  cpuLoad: number | null;
+  memoryUsage: number | null;
   errorRate: number | null;
   lastHeartbeat: number;
   measured: boolean;
