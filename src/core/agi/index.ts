@@ -563,6 +563,8 @@ export class AeternumAGI {
         initialized: this._initialized,
         running: this._running,
         godelLoopActive: this._godelContinuousInterval !== null,
+        safeCoreActive: this.safeCore.isActive(),
+        healingRunning: this.selfHealing.isRunning,
         subsystems: 17,
         activeSubsystems: [
           this.consciousness.isRunning,
