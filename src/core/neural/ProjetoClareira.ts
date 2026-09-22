@@ -16,6 +16,7 @@ import { InformationChannel } from './InformationChannel';
 import {
   type SystemMetrics,
   type ClareiraSnapshot,
+  type ClareiraDeviceState,
 } from './types';
 import { VagusNerve } from './VagusNerve';
 import { ClareiraSaraBridge } from './ClareiraSaraBridge';
@@ -329,6 +330,10 @@ class ProjetoClareiraSystem {
     };
   }
 
+  updateDeviceState(state: ClareiraDeviceState): void {
+    this.homeostasis.updateDeviceState(state);
+  }
+
   getSnapshot(): ClareiraSnapshot {
     const status = this.getStatus();
     return {
@@ -341,6 +346,7 @@ class ProjetoClareiraSystem {
       channels: status.channels,
       homeostasis: status.homeostasis,
       vagus: this.vagus.snapshot(),
+      deviceState: this.homeostasis.getDeviceState() ?? undefined,
     };
   }
 
