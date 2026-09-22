@@ -4,6 +4,7 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 
 class PrivilegedAuthGate(private val auth: AuthAndSignature) {
@@ -14,6 +15,7 @@ class PrivilegedAuthGate(private val auth: AuthAndSignature) {
             BiometricManager.Authenticators.BIOMETRIC_STRONG or
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
+        var continuation: Continuation<Boolean>? = null
         val prompt = BiometricPrompt(
             activity,
             activity.mainExecutor,
@@ -48,7 +50,4 @@ class PrivilegedAuthGate(private val auth: AuthAndSignature) {
             prompt.authenticate(info)
         }
     }
-
-    @Volatile
-    private var continuation: kotlin.coroutines.Continuation<Boolean>? = null
 }
