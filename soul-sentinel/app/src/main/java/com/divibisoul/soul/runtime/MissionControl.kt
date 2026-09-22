@@ -14,7 +14,6 @@ import com.divibisoul.soul.SoulRuntimeBusHolder
 import com.divibisoul.soul.core.SoulEvent
 import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.data.FeedbackRepository
-import com.divibisoul.soul.data.LogSynchronizer
 import com.divibisoul.soul.network.SaraClient
 import com.divibisoul.soul.network.SecureEndpointConfigStore
 import kotlinx.coroutines.CancellationException
