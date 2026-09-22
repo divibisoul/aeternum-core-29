@@ -234,6 +234,9 @@ export class VagusNerve {
     signalsIn: number;
     signalsOut: number;
     branches: VagusBranchMetrics[];
+    activeNodeBranches: number;
+    redundantBranches: number;
+    observedLatencyMs: number | null;
   } {
     const branches = this.plexus.all();
     const uniqueNodeIds = new Set(
