@@ -28,6 +28,7 @@ class MissionControl(context: Context) {
     val paused: StateFlow<Boolean> = _paused.asStateFlow()
 
     fun enqueueCycleMission(input: String, cycleId: String? = null): UUID {
+        if (_paused.value) throw IllegalStateException("MISSIONS_PAUSED")
         val request = OneTimeWorkRequestBuilder<CycleMissionWorker>()
             .addTag("soul-mission")
             .setInputData(
@@ -42,6 +43,8 @@ class MissionControl(context: Context) {
         work.enqueueUniqueWork("soul-cycle-" + (cycleId ?: UUID.randomUUID()), ExistingWorkPolicy.APPEND_OR_REPLACE, request)
         return request.id
     }
+
+    fun isPaused(): Boolean = _paused.value
 
     fun pause(reason: String) {
         _paused.value = true
