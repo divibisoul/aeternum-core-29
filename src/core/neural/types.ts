@@ -75,6 +75,12 @@ export interface VagalSignal {
   payload: Record<string, unknown>;
   priority: number;
   timestamp: number;
+  cpuFreqMhz?: number | null;
+  ramUsedMb?: number | null;
+  ramTotalMb?: number | null;
+  foregroundPackage?: string | null;
+  wifiEnabled?: boolean;
+  bluetoothEnabled?: boolean;
 }
 
 export interface VagalCommand {
