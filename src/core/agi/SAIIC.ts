@@ -55,6 +55,7 @@ export interface SAIICMetrics {
   loopsDetected: number;
   inconsistenciesResolved: number;
   avgScanLatencyMs: number;
+  evidenceBasis: 'NOT_MEASURED' | 'MODULE_LIVENESS_AND_ERROR_SIGNALS';
 }
 
 type HealthProvider = () => {
@@ -412,11 +413,12 @@ export class SAIIC {
       totalAnticorpoActions: this.anticorpoHistory.length,
       modulesMonitored: this.healthProviders.size,
       isolatedModules: this.isolatedModules.size,
-      overallIntegrity: latestReport?.overallIntegrity ?? 1,
+      overallIntegrity: latestReport?.overallIntegrity ?? 0,
       lastScanTimestamp: latestReport?.timestamp ?? 0,
       loopsDetected: this._loopsDetected,
       inconsistenciesResolved: this._inconsistenciesResolved,
       avgScanLatencyMs: this._avgScanLatency,
+      evidenceBasis: latestReport ? 'MODULE_LIVENESS_AND_ERROR_SIGNALS' : 'NOT_MEASURED',
     };
   }
 
