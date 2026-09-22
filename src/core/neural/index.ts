@@ -16,5 +16,7 @@ export { ProcessingNode } from './ProcessingNode';
 export { NucleoRaizAlma } from './NucleoRaizAlma';
 export { HomeostasisManager, homeostasisManager } from './HomeostasisManager';
 export { InformationChannel } from './InformationChannel';
+export { VagusNerve } from './VagusNerve';
+export * from './SpecializedNuclei';
 
 export * from './types';
