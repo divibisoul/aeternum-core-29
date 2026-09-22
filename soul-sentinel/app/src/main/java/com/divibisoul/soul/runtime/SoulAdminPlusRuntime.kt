@@ -49,6 +49,7 @@ class SoulAdminPlusRuntime(
         if (job != null) return
         missions.resume()
         intentQueue.start()
+        shizuku.start()
         job = scope.launch(Dispatchers.Default) {
             dashboard.load()
             refreshHardware()
@@ -173,6 +174,7 @@ class SoulAdminPlusRuntime(
         job?.cancel()
         job = null
         intentQueue.stop()
+        shizuku.stop()
         missions.pause("RUNTIME_STOPPED")
     }
 }
