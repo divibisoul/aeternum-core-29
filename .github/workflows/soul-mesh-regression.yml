@@ -22,6 +22,8 @@ jobs:
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Run canonical Mesh contract check
         run: node scripts/soul-mesh-contract-check.mjs
+      - name: Run SARA federation adapter check
+        run: node scripts/sara-federation.test.mjs
       - name: Run Health tests
         run: node --experimental-strip-types lib/soul-mesh/SoulMeshHealth.test.ts
       - name: Run peer resilience tests
