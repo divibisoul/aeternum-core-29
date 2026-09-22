@@ -169,6 +169,82 @@ export class AeternumAGI {
       this.connectivity.registerNode(id, 'agi-engine');
     });
 
+    // IntegrityScanner usa os mesmos sinais observáveis do runtime; sem módulos fantasma.
+    const healingProvider = (
+      performance: number,
+      memoryUsage = 0,
+      errorRate = 0,
+      healthy = performance > 0,
+    ) => ({ performance, memoryUsage, errorRate, healthy });
+
+    this.selfHealing.integrity_scanner.registerModule('consciousness', () => {
+      const healthy = this.consciousness.isRunning;
+      return healingProvider(healthy ? 1 : 0, 0, healthy ? 0 : 1, healthy);
+    });
+    this.selfHealing.integrity_scanner.registerModule('godel_agent', () => {
+      const state = this.godelAgent.getMetaCognitionState();
+      return healingProvider(
+        Math.max(0, Math.min(1, state.modelingAccuracy)),
+        0,
+        0,
+        this._godelContinuousInterval !== null,
+      );
+    });
+    this.selfHealing.integrity_scanner.registerModule('recursive_lattice', () => {
+      const metrics = this.neuralLattice.getMetrics();
+      return healingProvider(Math.max(0, Math.min(1, metrics.globalFitness)), 0, 0, this.neuralLattice.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('darwin_machine', () => {
+      const metrics = this.darwinMachine.getMetrics();
+      return healingProvider(Math.max(0, Math.min(1, metrics.avgFitness)), 0, 0, this.darwinMachine.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('ethics_guardian', () => {
+      const metrics = this.ethicalOptimizer.getMetrics();
+      const score = Number(metrics.auditMetrics?.avgScore);
+      const bounded = Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : 0;
+      return healingProvider(bounded, 0, 1 - bounded, this.ethicalOptimizer.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('safety_system', () => {
+      const report = this.safetySystem.getLatestReport();
+      const score = Number(report?.overallHealth ?? 0);
+      return healingProvider(Math.max(0, Math.min(1, score)), 0, 1 - Math.max(0, Math.min(1, score)), this.safetySystem.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('nip', () => {
+      const report = this.nip.getRelatorio();
+      const healthy = report.saudeEpistemologica === 'saudavel';
+      return healingProvider(healthy ? 1 : 0.5, 0, healthy ? 0 : 0.5, this.nip.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('quantum_bridge', () => {
+      const status = this.quantumNeural.getInterfaceStatus();
+      return healingProvider(status.neural.isActive ? 1 : 0, 0, 0, status.initialized);
+    });
+    this.selfHealing.integrity_scanner.registerModule('safe_core', () => {
+      const active = this.safeCore.isActive();
+      return healingProvider(active ? 1 : 0, 0, active ? 0 : 1, active);
+    });
+    this.selfHealing.integrity_scanner.registerModule('self_healing', () => {
+      return healingProvider(this.selfHealing.isRunning ? 1 : 0, 0, 0, this.selfHealing.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('saiic', () => {
+      const metrics = this.saiic.getMetrics();
+      return healingProvider(metrics.overallIntegrity, 0, 1 - metrics.overallIntegrity, metrics.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('resource_manager', () => {
+      return healingProvider(this.resourceManager.isRunning ? 1 : 0, 0, 0, this.resourceManager.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemHealth', () => {
+      return healingProvider(this.gemHealth.isRunning ? 1 : 0, 0, 0, this.gemHealth.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemResearch', () => {
+      return healingProvider(this.gemResearch.isRunning ? 1 : 0, 0, 0, this.gemResearch.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemMusic', () => {
+      return healingProvider(this.gemMusic.isRunning ? 1 : 0, 0, 0, this.gemMusic.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemDevice', () => {
+      return healingProvider(this.gemDevice.isRunning ? 1 : 0, 0, 0, this.gemDevice.isRunning);
+    });
+
     // Register all modules in ResourceManager with priorities
     const modulePriorities: [string, number][] = [
       ['saiic', 1.0],
