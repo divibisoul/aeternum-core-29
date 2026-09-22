@@ -1,9 +1,8 @@
 package com.divibisoul.soul
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
@@ -61,7 +60,7 @@ class ClareiraAndroidCapabilities(private val context: Context) {
         val batteryManager = context.getSystemService(BatteryManager::class.java)
         val batteryIntent = context.registerReceiver(
             null,
-            android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
         )
         val batteryPercent = batteryManager
             ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
