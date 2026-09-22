@@ -63,6 +63,7 @@ class SoulAdminPlusRuntime(
     )
     private var job: Job? = null
 
+    @Synchronized
     fun start() {
         if (job != null) return
         missions.resume()
@@ -196,6 +197,7 @@ class SoulAdminPlusRuntime(
     fun n07(): N07Client = n07
     fun feedback(): FeedbackRepository = feedback
 
+    @Synchronized
     fun stop() {
         job?.cancel()
         job = null
