@@ -13,7 +13,11 @@ import {
   type NodeState,
   type HomeostasisReport,
   THERMAL_STRESS_WARN,
+  STRESS_THRESHOLD_WARNING,
+  STRESS_THRESHOLD_CRITICAL,
   TURBO_MAX_STRESS,
+  TURBO_MIN_ENERGY_SCORE,
+  STRESS_THRESHOLD_OPTIMAL,
   TURBO_COOLDOWN_SECONDS,
   TURBO_DURATION_SECONDS,
   TURBO_PROCESSING_MULTIPLIER,
@@ -192,6 +196,7 @@ export class HomeostasisManager {
     // ======= MODO TURBO =======
     const turboConditions = (
       this.globalStress < TURBO_MAX_STRESS &&
+      this.energyScore >= TURBO_MIN_ENERGY_SCORE &&
       (currentTime - this.lastTurboActivation) / 1000 > TURBO_COOLDOWN_SECONDS
     );
 
@@ -236,12 +241,26 @@ export class HomeostasisManager {
       }
     }
 
-    // ======= THROTTLING DE EMERGÊNCIA =======
-    if (this.globalStress > TURBO_MAX_STRESS * 2) {
+    // ======= REGULAÇÃO POR FAIXA =======
+    if (this.globalStress >= STRESS_THRESHOLD_CRITICAL) {
       console.warn('[HomeostasisManager] ⚠️ STRESS CRÍTICO - Throttling ativo');
-      
+      this.turboActive = false;
       for (const node of this.allNodes) {
-        node.setHomeostasisMultiplier(0.9);
+        node.setHomeostasisMultiplier(node.level === 'Central' ? 0.65 : 0.5);
+      }
+      return;
+    }
+
+    if (this.globalStress >= STRESS_THRESHOLD_WARNING) {
+      for (const node of this.allNodes) {
+        node.setHomeostasisMultiplier(0.8);
+      }
+      return;
+    }
+
+    if (!this.turboActive && this.globalStress <= STRESS_THRESHOLD_OPTIMAL) {
+      for (const node of this.allNodes) {
+        node.setHomeostasisMultiplier(1.0);
       }
     }
   }
