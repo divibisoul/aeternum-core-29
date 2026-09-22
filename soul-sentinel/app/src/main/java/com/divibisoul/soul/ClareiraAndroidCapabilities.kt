@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.app.ActivityManager
 import android.os.BatteryManager
 import android.os.PowerManager
 import org.json.JSONObject
@@ -99,6 +100,43 @@ class ClareiraAndroidCapabilities(private val context: Context) {
             "ERROR"
         }
 
+        val memory = context.getSystemService(ActivityManager::class.java)
+        val memoryInfo = ActivityManager.MemoryInfo().also { info ->
+            memory?.getMemoryInfo(info)
+        }
+        val ramTotalMb = memoryInfo.totalMem.takeIf { it > 0 }?.div(1024L * 1024L)
+        val ramAvailableMb = memoryInfo.availMem.takeIf { it >= 0 }?.div(1024L * 1024L)
+        val ramUsedMb = if (ramTotalMb != null && ramAvailableMb != null) {
+            (ramTotalMb - ramAvailableMb).coerceAtLeast(0)
+        } else null
+        val cpuFreqMhz = try {
+            java.io.File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+                .takeIf { it.canRead() }
+                ?.readText()
+                ?.trim()
+                ?.toLongOrNull()
+                ?.div(1000.0)
+        } catch (_: Throwable) {
+            null
+        }
+        val foregroundPackage = try {
+            SoulCortex(context, SoulConfig(context)).foregroundPackage()
+        } catch (_: Throwable) {
+            null
+        }
+        val bluetoothEnabled = try {
+            context.getSystemService(android.bluetooth.BluetoothManager::class.java)
+                ?.adapter?.isEnabled == true
+        } catch (_: Throwable) {
+            false
+        }
+        val wifiEnabled = try {
+            context.getSystemService(android.net.wifi.WifiManager::class.java)
+                ?.isWifiEnabled == true
+        } catch (_: Throwable) {
+            false
+        }
+
         return JSONObject()
             .put("batteryPercent", batteryPercent)
             .put("charging", charging)
@@ -106,6 +144,12 @@ class ClareiraAndroidCapabilities(private val context: Context) {
             .put("screenOn", power?.isInteractive ?: false)
             .put("network", network)
             .put("shizukuStatus", shizukuStatus)
+            .put("cpuFreqMhz", cpuFreqMhz)
+            .put("ramUsedMb", ramUsedMb)
+            .put("ramTotalMb", ramTotalMb)
+            .put("foregroundPackage", foregroundPackage)
+            .put("wifiEnabled", wifiEnabled)
+            .put("bluetoothEnabled", bluetoothEnabled)
             .put("timestamp", System.currentTimeMillis())
     }
 }
