@@ -59,8 +59,10 @@ class VagusPlexus {
 
   getActive(nodeId: string): VagusBranch | null {
     const main = this.primary.get(nodeId);
-    if (main?.active) return main;
-    return (this.backups.get(nodeId) ?? []).find(branch => branch.active) ?? null;
+    if (main?.active && main.node.active) return main;
+    return (this.backups.get(nodeId) ?? []).find(
+      branch => branch.active && branch.node.active
+    ) ?? null;
   }
 
   all(): VagusBranch[] {
@@ -94,7 +96,9 @@ export class VagusNerve {
   registerNode(node: ProcessingNode): void {
     if (this.plexus.getActive(node.id)) return;
     const branch = new VagusBranch(node);
+    const backup = new VagusBranch(node);
     this.plexus.register(branch);
+    this.plexus.register(backup);
     node.setVagusAfferentReporter((signalType, payload, priority = 0.5) => {
       this.publishAfferent(node.id, signalType, payload, priority);
     });
@@ -158,6 +162,13 @@ export class VagusNerve {
   private tick(): void {
     const afferentBatch = this.takePriority(this.afferentQueue, 64);
     for (const signal of afferentBatch) {
+      for (const branch of this.plexus.all()) {
+        const index = branch.afferentQueue.findIndex(item => item.id === signal.id);
+        if (index >= 0) {
+          branch.afferentQueue.splice(index, 1);
+          break;
+        }
+      }
       this.homeostasis.receiveVagalAfferent(signal);
     }
 
