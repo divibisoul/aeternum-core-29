@@ -174,6 +174,7 @@ export class QuantumNeuralInterface {
     neuralSignal: NeuralSignal;
     quantumCoherence: number;
     quantumFidelity: number;
+    quantumAvailable: boolean;
     hybridActive: boolean;
   } {
     // Generate neural signal from message semantics
@@ -194,6 +195,7 @@ export class QuantumNeuralInterface {
       neuralSignal: signal,
       quantumCoherence: qm.coherence,
       quantumFidelity: qm.fidelity,
+      quantumAvailable: qm.measurementAvailable,
       hybridActive: this.hybridMode
     };
   }
