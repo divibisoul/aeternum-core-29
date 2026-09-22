@@ -16,7 +16,6 @@ class ShizukuOrchestrator {
         const val PERMISSION_REQUEST_CODE = 7401
     }
 
-    private val allowed = setOf("id", "getenforce", "dumpsys", "pm", "am", "settings", "top", "logcat")
 
     private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
         lastBinderState = true
@@ -61,13 +60,12 @@ class ShizukuOrchestrator {
     }
 
     fun execute(command: String): String {
-        val binary = command.trim().split(Regex("\s+")).firstOrNull().orEmpty()
-        if (binary !in allowed) throw SecurityException("SHIZUKU_COMMAND_NOT_ALLOWED:" + binary)
+        val safeCommand = PrivilegedCommandValidator.validate(command)
         val s = state()
         if (!s.running) throw RootUnavailableException("SHIZUKU_UNAVAILABLE")
         if (!s.permissionGranted) throw SecurityException("SHIZUKU_PERMISSION_REQUIRED")
 
-        val process = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
+        val process = Shizuku.newProcess(arrayOf("sh", "-c", safeCommand), null, null)
         val output = BufferedReader(InputStreamReader(process.inputStream)).readText().trim()
         val error = BufferedReader(InputStreamReader(process.errorStream)).readText().trim()
         val code = process.waitFor()
