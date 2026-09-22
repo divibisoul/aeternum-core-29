@@ -385,6 +385,18 @@ class ProjetoClareiraSystem {
     return this.saraBridge.syncState(this.getSnapshot(), correlationId);
   }
 
+  async pullVagalCommandsFromSara(limit = 16) {
+    return this.saraBridge.pullAndApplyVagalCommands(
+      (nodeId, command, payload) => {
+        const node = this.allNodes.find(item => item.id === nodeId);
+        if (!node || !node.active) return false;
+        node.applyVagalCommand(command, payload);
+        return true;
+      },
+      limit,
+    );
+  }
+
   async dispatchVagalCommandToSara(
     nodeId: string,
     command: 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
