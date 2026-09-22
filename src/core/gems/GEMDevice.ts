@@ -134,11 +134,14 @@ export class GEMDevice {
       this._ws.onclose = () => {
         this._status.connected = false;
         this._status.connectionType = 'none';
+        this._status.metricsAvailable = false;
         console.log('[GEM-Device] Desconectado do companion app');
       };
 
       this._ws.onerror = () => {
         this._status.connected = false;
+        this._status.connectionType = 'none';
+        this._status.metricsAvailable = false;
       };
     } catch (e) {
       console.warn('[GEM-Device] Falha na conexão:', e);
@@ -152,6 +155,7 @@ export class GEMDevice {
     }
     this._status.connected = false;
     this._status.connectionType = 'none';
+    this._status.metricsAvailable = false;
   }
 
   /**
