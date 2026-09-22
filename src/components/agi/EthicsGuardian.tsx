@@ -20,7 +20,7 @@ export function EthicsGuardian() {
     const update = () => {
       const metrics = AeternumAGI.getInstance().ethicalOptimizer.getMetrics();
       const audit = metrics.auditMetrics;
-      setOverall(Number.isFinite(audit.avgScore) ? Math.max(0, Math.min(1, audit.avgScore)) : null);
+      setOverall(audit.observed === true && Number.isFinite(audit.avgScore) ? Math.max(0, Math.min(1, audit.avgScore)) : null);
       setViolationsCount(Number.isFinite(audit.violations) ? audit.violations : 0);
     };
     update();
