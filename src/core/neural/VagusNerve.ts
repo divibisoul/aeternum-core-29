@@ -6,6 +6,7 @@
  * runtime Clareira e deixa integrações externas em adaptadores explícitos.
  */
 import type { VagalCommand, VagalSignal } from './types';
+import { VAGUS_BRANCH_QUEUE_SIZE } from './types';
 import type { HomeostasisManager } from './HomeostasisManager';
 import type { ProcessingNode } from './ProcessingNode';
 
@@ -22,6 +23,7 @@ class VagusBranch {
   readonly node: ProcessingNode;
   readonly afferentQueue: VagalSignal[] = [];
   readonly efferentQueue: VagalCommand[] = [];
+
   active = true;
   signalsIn = 0;
   signalsOut = 0;
@@ -80,6 +82,8 @@ export class VagusNerve {
   private lastToneUpdate = 0;
   private signalsIn = 0;
   private signalsOut = 0;
+  private observedLatencyTotalMs = 0;
+  private observedLatencySamples = 0;
 
   constructor(private readonly homeostasis: HomeostasisManager) {}
 
@@ -118,6 +122,9 @@ export class VagusNerve {
       priority: Math.max(0, Math.min(1, priority)),
       timestamp: Date.now(),
     };
+    if (branch.afferentQueue.length >= VAGUS_BRANCH_QUEUE_SIZE || this.afferentQueue.length >= VAGUS_BRANCH_QUEUE_SIZE * 16) {
+      return;
+    }
     branch.afferentQueue.push(signal);
     branch.signalsIn += 1;
     this.afferentQueue.push(signal);
@@ -140,6 +147,9 @@ export class VagusNerve {
       priority: Math.max(0, Math.min(1, priority)),
       timestamp: Date.now(),
     };
+    if (branch.efferentQueue.length >= VAGUS_BRANCH_QUEUE_SIZE || this.efferentQueue.length >= VAGUS_BRANCH_QUEUE_SIZE * 16) {
+      return false;
+    }
     branch.efferentQueue.push(cmd);
     this.efferentQueue.push({ nodeId, command: cmd });
     return true;
@@ -167,6 +177,8 @@ export class VagusNerve {
           break;
         }
       }
+      this.observedLatencyTotalMs += Math.max(0, Date.now() - signal.timestamp);
+      this.observedLatencySamples += 1;
       this.homeostasis.receiveVagalAfferent(signal);
     }
 
@@ -240,6 +252,9 @@ export class VagusNerve {
       branches: branches.map(branch => branch.snapshot()),
       activeNodeBranches: uniqueNodeIds.size,
       redundantBranches: Math.max(0, branches.length - uniqueNodeIds.size),
+      observedLatencyMs: this.observedLatencySamples > 0
+        ? Number((this.observedLatencyTotalMs / this.observedLatencySamples).toFixed(3))
+        : null,
     };
   }
 }
