@@ -6,13 +6,14 @@ export interface CrossLayerHealthReport {
   timestamp: number;
   overallHealth: number;
   layerHealth: {
-    consciousness: number;
-    ethics: number;
-    selfHealing: number;
-    evolution: number;
-    lattice: number;
+    consciousness: number | null;
+    ethics: number | null;
+    selfHealing: number | null;
+    evolution: number | null;
+    lattice: number | null;
   };
   unmeasuredLayers: string[];
+  observedHealth: boolean;
   criticalAlerts: string[];
   warnings: string[];
 }
@@ -21,9 +22,9 @@ export class HyperSafetySystem {
   private reports: CrossLayerHealthReport[] = [];
   private _isRunning = false;
   private monitorInterval: number | null = null;
-  private healthProviders: Map<string, () => number> = new Map();
+  private healthProviders: Map<string, () => number | null> = new Map();
 
-  registerHealthProvider(name: string, provider: () => number): void {
+  registerHealthProvider(name: string, provider: () => number | null): void {
     this.healthProviders.set(name, provider);
   }
 
@@ -44,22 +45,23 @@ export class HyperSafetySystem {
 
   generateReport(): CrossLayerHealthReport {
     const names = ['consciousness', 'ethics', 'selfHealing', 'evolution', 'lattice'] as const;
-    const unmeasuredLayers = names.filter(name => !this.healthProviders.has(name));
     const layerHealth = {
-      consciousness: this.healthProviders.get('consciousness')?.() ?? 0,
-      ethics: this.healthProviders.get('ethics')?.() ?? 0,
-      selfHealing: this.healthProviders.get('selfHealing')?.() ?? 0,
-      evolution: this.healthProviders.get('evolution')?.() ?? 0,
-      lattice: this.healthProviders.get('lattice')?.() ?? 0,
+      consciousness: this.healthProviders.get('consciousness')?.() ?? null,
+      ethics: this.healthProviders.get('ethics')?.() ?? null,
+      selfHealing: this.healthProviders.get('selfHealing')?.() ?? null,
+      evolution: this.healthProviders.get('evolution')?.() ?? null,
+      lattice: this.healthProviders.get('lattice')?.() ?? null,
     };
-
-    const values = Object.values(layerHealth);
-    const overallHealth = values.reduce((s, v) => s + v, 0) / values.length;
+    const unmeasuredLayers = names.filter(name => layerHealth[name] == null);
+    const values = Object.values(layerHealth).filter((value): value is number => value != null);
+    const overallHealth = values.length > 0 ? values.reduce((s, v) => s + v, 0) / values.length : 0;
+    const observedHealth = values.length > 0;
 
     const criticalAlerts: string[] = [];
     const warnings: string[] = [];
 
     Object.entries(layerHealth).forEach(([layer, health]) => {
+      if (health == null) return;
       if (health < 0.3) criticalAlerts.push(`${layer} crítico (${(health * 100).toFixed(1)}%)`);
       else if (health < 0.6) warnings.push(`${layer} degradado (${(health * 100).toFixed(1)}%)`);
     });
@@ -69,6 +71,7 @@ export class HyperSafetySystem {
       overallHealth,
       layerHealth,
       unmeasuredLayers,
+      observedHealth,
       criticalAlerts,
       warnings,
     };
