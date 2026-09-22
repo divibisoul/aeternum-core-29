@@ -15,7 +15,9 @@ data class HardwareSnapshot(
     val soc: String?,
     val cpuCores: Int,
     val apiLevel: Int,
-    val hasNpu: Boolean,
+    /** Physical NPU presence is not generically observable through public Android APIs. Null means unknown. */
+    val hasNpu: Boolean?,
+    val nnapiAvailable: Boolean,
     val thermalZones: List<String>,
     val batteryTempC: Double?,
     val batteryLevel: Int?
@@ -30,7 +32,8 @@ class AndroidHardwareAbstraction(private val context: Context) {
         } else null,
         cpuCores = Runtime.getRuntime().availableProcessors(),
         apiLevel = Build.VERSION.SDK_INT,
-        hasNpu = hasNnapiDelegate(),
+        hasNpu = detectNpuEvidence(),
+        nnapiAvailable = hasNnapiDelegate(),
         thermalZones = readThermalZones(),
         batteryTempC = getBatteryTemp(),
         batteryLevel = getBatteryLevel()
@@ -48,13 +51,20 @@ class AndroidHardwareAbstraction(private val context: Context) {
         return listOf("status=$status", "zones=${readThermalZones().size}")
     }
 
-    fun hasNpu(): Boolean = hasNnapiDelegate()
+    fun hasNpu(): Boolean? = detectNpuEvidence()
 
     private fun getBatteryLevel(): Int? = runCatching {
         context.getSystemService(BatteryManager::class.java)
             .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
             .takeIf { it >= 0 }
     }.getOrNull()
+
+    /**
+     * Android exposes NNAPI, but NNAPI availability alone is not proof of a
+     * physical NPU because the delegate may execute on CPU. Keep NPU evidence
+     * explicitly unknown unless a generic, non-vendor-specific signal exists.
+     */
+    private fun detectNpuEvidence(): Boolean? = null
 
     private fun hasNnapiDelegate(): Boolean = runCatching {
         NnApiDelegate().close()
