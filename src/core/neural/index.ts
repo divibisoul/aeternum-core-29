@@ -23,3 +23,5 @@ export * from './SpecializedNuclei';
 export * from './types';
 
 export { InputTransducer } from './InputTransducer';
+
+export { ClareiraAndroidBridge } from './ClareiraAndroidBridge';
