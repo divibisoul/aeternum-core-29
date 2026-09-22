@@ -8,14 +8,19 @@
 
 export const THERMAL_STRESS_WARN = 0.7;
 export const THERMAL_STRESS_CRITICAL = 0.9;
-export const TURBO_MAX_STRESS = 3.0;
-export const TURBO_COOLDOWN_SECONDS = 30;
-export const TURBO_DURATION_SECONDS = 10;
+export const STRESS_THRESHOLD_OPTIMAL = 3.0;
+export const STRESS_THRESHOLD_WARNING = 10.0;
+export const STRESS_THRESHOLD_CRITICAL = 20.0;
+export const TURBO_MAX_STRESS = 8.0;
+export const TURBO_MIN_ENERGY_SCORE = 70.0;
+export const TURBO_COOLDOWN_SECONDS = 60;
+export const TURBO_DURATION_SECONDS = 30;
 export const TURBO_PROCESSING_MULTIPLIER = 2.0;
-export const RECOVERY_STRESS_THRESHOLD = 1.0;
-export const RECOVERY_CHANCE_PER_CHECK = 0.3;
+export const RECOVERY_STRESS_THRESHOLD = 8.0;
+export const RECOVERY_MIN_FAILURE_MS = 10_000;
 export const HOMEOSTASIS_CHECK_INTERVAL = 1000; // ms
 export const MAX_QUEUE_SIZE = 100;
+export const VAGUS_BRANCH_QUEUE_SIZE = 64;
 export const REPORT_INTERVAL = 2000; // ms
 
 // ============= TIPOS E INTERFACES =============
@@ -137,6 +142,9 @@ export interface SystemMetrics {
   activeVagusBranches: number;
   timestamp: number;
   redundantVagusBranches?: number;
+  vagalSignalLatencyMs?: number;
+  droppedPackets?: number;
+  dropRate?: number;
 }
 
 export interface ClareiraSnapshot {
