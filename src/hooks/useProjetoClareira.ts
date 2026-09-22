@@ -28,6 +28,7 @@ export function useProjetoClareira() {
     };
 
     window.addEventListener('soul:device-state', handleDeviceState);
+    void readInitialDeviceState();
 
     // Atualizar métricas periodicamente
     const interval = setInterval(async () => {
