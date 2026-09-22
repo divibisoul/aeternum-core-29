@@ -7,6 +7,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 class N07Exception(val code: String, message: String) : Exception(message)
@@ -14,7 +15,12 @@ class N07Exception(val code: String, message: String) : Exception(message)
 class N07Client(private val configStore: SecureEndpointConfigStore) {
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
-    private suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject = withContext(Dispatchers.IO) {
+    private suspend fun request(
+        method: String,
+        path: String,
+        body: JSONObject? = null,
+        correlationId: String = UUID.randomUUID().toString()
+    ): JSONObject = withContext(Dispatchers.IO) {
         val cfg = configStore.read()
         val base = cfg.n07BaseUrl ?: throw N07Exception("N07_DISABLED", "N07_BASE_URL not configured")
         val token = configStore.n07Token() ?: throw N07Exception("N07_UNAUTHORIZED", "N07_TOKEN not configured")
@@ -22,6 +28,7 @@ class N07Client(private val configStore: SecureEndpointConfigStore) {
             .url(base + path)
             .header("Authorization", "Bearer " + token)
             .header("Content-Type", "application/json")
+            .header("X-Correlation-ID", correlationId)
 
         if (method == "POST") builder.post((body ?: JSONObject()).toString().toRequestBody(jsonMedia))
         else builder.get()
@@ -63,7 +70,8 @@ class N07Client(private val configStore: SecureEndpointConfigStore) {
             JSONObject()
                 .put("operation", operation)
                 .put("payload", payload)
-                .put("metadata", JSONObject().put("correlation_id", correlationId))
+                .put("metadata", JSONObject().put("correlation_id", correlationId)),
+            correlationId = correlationId
         )
 
     suspend fun intent(input: String, correlationId: String) =
@@ -72,6 +80,7 @@ class N07Client(private val configStore: SecureEndpointConfigStore) {
             "/v1/intent",
             JSONObject()
                 .put("input", input)
-                .put("metadata", JSONObject().put("correlation_id", correlationId))
+                .put("metadata", JSONObject().put("correlation_id", correlationId)),
+            correlationId = correlationId
         )
 }
