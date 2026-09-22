@@ -32,11 +32,9 @@ class SoulAdminService : Service() {
         createChannel()
         startForeground(NOTIFICATION_ID, notification("Soul Admin active — observing Android"))
 
-        plus = SoulAdminPlusRuntime(
+        plus = com.divibisoul.soul.runtime.SoulAdminPlusRuntimeRegistry.get(
             context = this,
-            bus = SoulRuntimeBusHolder.bus
-                ?: SoulRuntimeBusHolder.create(),
-            scope = scope
+            bus = SoulRuntimeBusHolder.bus ?: SoulRuntimeBusHolder.create()
         )
         plus.start()
         plus.watchdog().let(::registerComponentCallbacks)
