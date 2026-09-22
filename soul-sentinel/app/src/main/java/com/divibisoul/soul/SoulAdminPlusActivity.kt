@@ -21,6 +21,7 @@ import com.divibisoul.soul.core.security.LocalRole
 import com.divibisoul.soul.core.security.PrivilegedAuthGate
 import com.divibisoul.soul.core.security.RootGate
 import com.divibisoul.soul.core.security.ShizukuOrchestrator
+import com.divibisoul.soul.runtime.SoulAdminPlusRuntime
 import com.divibisoul.soul.runtime.SoulAdminPlusRuntimeRegistry
 import com.divibisoul.soul.core.federation.FederationStatusMatrix
 import com.divibisoul.soul.core.state.DashboardState
@@ -39,13 +40,17 @@ class SoulAdminPlusActivity : FragmentActivity() {
     private lateinit var dashboard: DashboardStateStore
     private lateinit var sara: SaraClient
     private lateinit var n07: N07Client
+    private lateinit var runtime: SoulAdminPlusRuntime
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         config = SecureEndpointConfigStore(this)
-        dashboard = DashboardStateStore(this)
-        sara = SaraClient(config)
-        n07 = N07Client(config)
+        val bus = SoulRuntimeBusHolder.bus ?: SoulRuntimeBusHolder.create()
+        runtime = SoulAdminPlusRuntimeRegistry.get(this, bus)
+        dashboard = runtime.dashboard()
+        sara = runtime.sara()
+        n07 = runtime.n07()
+        runtime.start()
 
         androidx.core.content.ContextCompat.startForegroundService(
             this,
