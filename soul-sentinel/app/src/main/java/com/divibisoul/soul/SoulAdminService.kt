@@ -41,8 +41,9 @@ class SoulAdminService : Service() {
 
         scope.launch {
             while (isActive) {
-                runCycle()
-                delay(config.checkIntervalMs)
+                val reduced = plus.watchdog().isLoadReduced()
+                if (!reduced) runCycle()
+                delay(if (reduced) 60_000L else config.checkIntervalMs)
             }
         }
     }
