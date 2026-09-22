@@ -515,10 +515,7 @@ export class AeternumAGI {
 
     // 6. Record execution for resource management
     const execMs = performance.now() - startMs;
-    this.resourceManager.recordExecution('consciousness', execMs * 0.3);
-    this.resourceManager.recordExecution('neuralLattice', execMs * 0.2);
-    this.resourceManager.recordExecution('nip', execMs * 0.15);
-    this.resourceManager.recordExecution('quantumNeural', execMs * 0.15);
+    this.resourceManager.recordObservedExecution(execMs);
 
     return {
       intention,
