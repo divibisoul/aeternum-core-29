@@ -28,7 +28,7 @@ class SecureEndpointConfigStore(private val context: Context) {
 
     suspend fun setSara(baseUrl: String, token: String?) {
         context.endpointDataStore.edit {
-            it[SARA_URL] = baseUrl.trimEnd('/')
+            if (baseUrl.isBlank()) it.remove(SARA_URL) else it[SARA_URL] = baseUrl.trimEnd('/')
             if (!token.isNullOrBlank()) it[SARA_TOKEN] = encrypt(token) else it.remove(SARA_TOKEN)
         }
     }
