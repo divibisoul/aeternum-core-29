@@ -40,7 +40,7 @@ class SoulAdminPlusRuntime(
     private val root = RootGate()
     private val shizuku = ShizukuOrchestrator()
     private val missions = MissionControl(appContext)
-    private val watchdog = AndroidWatchdog(appContext, bus, missions)
+    private val watchdog = AndroidWatchdog(appContext, bus, missions, dashboard, scope)
     private val feedback = FeedbackRepository(appContext)
     private val intentQueue = IntentQueueManager(
         scope = scope,
