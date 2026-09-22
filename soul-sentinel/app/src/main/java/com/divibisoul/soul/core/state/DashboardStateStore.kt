@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 private val Context.dashboardDataStore by preferencesDataStore("soul_dashboard")
 
@@ -23,20 +25,25 @@ data class DashboardState(
 )
 
 class DashboardStateStore(private val context: Context) {
+    private val mutex = Mutex()
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
-    suspend fun load() {
+    suspend fun load() = mutex.withLock {
         val p = context.dashboardDataStore.data.first()
         _state.value = fromPrefs(p)
     }
 
-    suspend fun set(state: DashboardState) {
+    suspend fun set(state: DashboardState) = mutex.withLock {
         _state.value = state
         context.dashboardDataStore.edit { p -> writePrefs(p, state) }
     }
 
-    suspend fun patch(transform: (DashboardState) -> DashboardState) = set(transform(_state.value))
+    suspend fun patch(transform: (DashboardState) -> DashboardState) = mutex.withLock {
+        val next = transform(_state.value)
+        _state.value = next
+        context.dashboardDataStore.edit { p -> writePrefs(p, next) }
+    }
 
     private fun fromPrefs(p: Preferences) = DashboardState(
         hardware = p[HARDWARE] ?: "UNAVAILABLE",
