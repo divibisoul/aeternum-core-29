@@ -3,8 +3,8 @@
  * Fully typed async event bus for decoupled component communication.
  */
 export interface AeternumEvents {
-  'system:init': { timestamp: number };
-  'system:ready': { modules: string[] };
+  'system:init': { timestamp: number; blueprintVersion?: string; nodes?: number; channels?: number };
+  'system:ready': { modules: string[]; vagus?: boolean; homeostasis?: boolean };
   'system:error': { error: string; context?: string };
   'module:registered': { id: string; name: string };
   'module:unregistered': { id: string };
@@ -40,7 +40,7 @@ export interface AeternumEvents {
   'nav:settings:open': void;
   'soul:mesh:message': unknown;
 }
-export interface TelemetryData { latencyMs: number; tokensPerSecond: number; activeModules: number; memoryUsage: number; uptime: number; }
+export interface TelemetryData { latencyMs: number; tokensPerSecond: number; activeModules: number; memoryUsage: number; uptime: number; stateCriticality?: number; nodeId?: string; stale?: boolean; energyScore?: number; }
 type EventCallback<T> = (data: T) => void | Promise<void>;
 type UnsubscribeFn = () => void;
 interface Subscription { id: number; callback: EventCallback<unknown>; once: boolean; }
