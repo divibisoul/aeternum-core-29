@@ -171,7 +171,7 @@ export class GEMDevice {
     }
 
     const action: DeviceAction = {
-      id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: `act_${Date.now()}_${crypto.randomUUID()}`,
       type, target, command,
       status: 'pending',
       timestamp: Date.now(),
@@ -189,7 +189,6 @@ export class GEMDevice {
         command,
         actionId: action.id,
       });
-      this._actionsExecuted++;
     }
 
     return action.id;
@@ -219,8 +218,13 @@ export class GEMDevice {
         if (action) {
           action.status = data.success ? 'success' : 'failed';
           action.result = data.result;
-          if (data.ramFreedMb) this._ramFreedMb += data.ramFreedMb;
-          if (data.cpuReductionPct) this._cpuReductionPct += data.cpuReductionPct;
+          if (data.success) {
+            this._actionsExecuted++;
+            this._optimizationCycles++;
+            this._lastOptimization = Date.now();
+          }
+          if (Number.isFinite(data.ramFreedMb)) this._ramFreedMb += Number(data.ramFreedMb);
+          if (Number.isFinite(data.cpuReductionPct)) this._cpuReductionPct += Number(data.cpuReductionPct);
         }
         break;
     }
@@ -234,18 +238,10 @@ export class GEMDevice {
       this.sendCommand({ type: 'status_request' });
     }
 
-    // Simulate device metrics when disconnected (for UI testing)
-    if (!this._status.connected) {
-      this._status.cpu = 15 + Math.random() * 30;
-      this._status.ramUsedMb = 2048 + Math.random() * 2048;
-      this._status.ramTotalMb = 6144;
-      this._status.batteryPct = Math.max(10, this._status.batteryPct - Math.random() * 0.1);
-      this._status.temperature = 28 + Math.random() * 10;
-      this._status.runningProcesses = 80 + Math.floor(Math.random() * 40);
+    // Desconectado: nenhum sensor é sintetizado. O estado permanece no último valor observado.
+    if (this._status.connected) {
+      this.sendCommand({ type: 'status_request' });
     }
-
-    this._lastOptimization = Date.now();
-    this._optimizationCycles++;
   }
 
   getMetrics(): DeviceMetrics {
