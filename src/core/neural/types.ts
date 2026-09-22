@@ -31,6 +31,13 @@ export const REPORT_INTERVAL = 2000; // ms
  */
 export type NodeLevel = 'Central' | 'Primary' | 'Secondary' | 'Peripheral';
 
+export const ENERGY_CAPACITY_BY_LEVEL: Record<NodeLevel, number> = {
+  Central: 30_000,
+  Primary: 6_000,
+  Secondary: 1_200,
+  Peripheral: 600,
+};
+
 export const LEVEL_MAP: Record<NodeLevel, number> = {
   'Central': 0,
   'Primary': 1,
@@ -186,8 +193,8 @@ export function createInformationPacket(
   return {
     id: `pkt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     data,
-    informationalValue,
-    criticality,
+    informationalValue: Math.max(0, informationalValue),
+    criticality: Math.max(0, Math.min(1, criticality)),
     packetType,
     sourceId,
     destinationHint,
