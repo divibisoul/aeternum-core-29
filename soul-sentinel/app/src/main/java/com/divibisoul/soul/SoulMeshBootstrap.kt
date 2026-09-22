@@ -1,29 +1,35 @@
 package com.divibisoul.soul
 
+import android.content.Context
 import org.json.JSONObject
 
 /** Builds the six-nucleus runtime and preserves native ownership while enabling peer routing. */
 object SoulMeshBootstrap {
     fun create(
-        webDelegate: (SoulMeshMessage) -> SoulMeshMessage,
+        webDelegate: (SoulMeshMessage) -> SoulMeshMessage = { delegateToWeb(it) },
         peerEndpoints: Map<String, String> = emptyMap(),
+        androidContext: Context? = null,
     ): SoulMeshRuntime {
         val runtime = SoulMeshRuntime()
         val remote = SoulMeshTransport(peerEndpoints)
         val executor = SoulHybridCapabilityExecutor(webDelegate, remote)
+        val nativeClareira = androidContext?.let { ClareiraAndroidCapabilities(it) }
 
         SoulMeshChannels.nuclei.forEach { nucleus ->
             val handlers = SoulCapabilityCatalog.capabilities
                 .filter { it.owner == nucleus && it.execution == Execution.LOCAL }
                 .associate { capability ->
                     capability.id to { payload: JSONObject ->
-                        if (capability.id == "mesh.ping") {
-                            JSONObject().put("ok", true).put("runtime", "android").put("nucleus", nucleus)
-                        } else {
-                            JSONObject()
-                                .put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED")
-                                .put("capability", capability.id)
-                                .put("owner", nucleus)
+                        when {
+                            capability.id == "mesh.ping" ->
+                                JSONObject().put("ok", true).put("runtime", "android").put("nucleus", nucleus)
+                            nativeClareira != null && capability.id.startsWith("clareira.android.") ->
+                                nativeClareira.execute(capability.id, payload)
+                            else ->
+                                JSONObject()
+                                    .put("error", "LOCAL_CAPABILITY_NOT_IMPLEMENTED")
+                                    .put("capability", capability.id)
+                                    .put("owner", nucleus)
                         }
                     }
                 }

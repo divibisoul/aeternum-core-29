@@ -14,6 +14,11 @@ const OPERATION_ROUTES = Object.freeze({
   'sara.audit': { method: 'POST', path: '/v1/audit' },
   'sara.regenerate': { method: 'POST', path: '/v1/regenerate' },
   'sara.trace': { method: 'GET', path: '/v1/trace/{cycle_id}' },
+  'sara.clareira.state': { method: 'POST', path: '/v1/clareira/state' },
+  'sara.clareira.audit': { method: 'GET', path: '/v1/clareira/audit' },
+  'sara.clareira.vagus': { method: 'POST', path: '/v1/clareira/vagus' },
+  'sara.clareira.vagus.pending': { method: 'GET', path: '/v1/clareira/vagus/pending' },
+  'sara.clareira.vagus.ack': { method: 'POST', path: '/v1/clareira/vagus/ack' },
 });
 
 function normalize(value) {
@@ -98,6 +103,50 @@ function buildBody(capability, payload, correlationId) {
       cycle_id: typeof payload.cycle_id === 'string' && payload.cycle_id.trim()
         ? payload.cycle_id.trim()
         : correlationId,
+    };
+  }
+
+  if (capability === 'sara.clareira.state') {
+    if (!isRecord(payload)) throw new Error('SARA_CLAREIRA_SNAPSHOT_REQUIRED');
+    const snapshot = isRecord(payload.snapshot) ? payload.snapshot : payload;
+    if (!isRecord(snapshot.metrics) || !Array.isArray(snapshot.nodes) || !Array.isArray(snapshot.channels)) {
+      throw new Error('SARA_CLAREIRA_SNAPSHOT_INVALID');
+    }
+    return {
+      correlation_id: correlationId,
+      source: payload.source || 'SOUL_N01',
+      snapshot,
+    };
+  }
+
+  if (capability === 'sara.clareira.vagus.pending') {
+    if (!isRecord(payload)) return undefined;
+    return undefined;
+  }
+
+  if (capability === 'sara.clareira.vagus.ack') {
+    if (!isRecord(payload) || typeof payload.event_id !== 'string' || !payload.event_id.trim()) {
+      throw new Error('SARA_CLAREIRA_VAGAL_EVENT_REQUIRED');
+    }
+    if (typeof payload.executed !== 'boolean') {
+      throw new Error('SARA_CLAREIRA_VAGAL_EXECUTED_REQUIRED');
+    }
+    if (typeof payload.execution_status !== 'string' || !payload.execution_status.trim()) {
+      throw new Error('SARA_CLAREIRA_VAGAL_STATUS_REQUIRED');
+    }
+    return { ...payload };
+  }
+
+  if (capability === 'sara.clareira.vagus') {
+    if (!isRecord(payload) || typeof payload.node_id !== 'string' || !payload.node_id.trim()) {
+      throw new Error('SARA_CLAREIRA_NODE_REQUIRED');
+    }
+    if (typeof payload.command !== 'string' || !payload.command.trim()) {
+      throw new Error('SARA_CLAREIRA_COMMAND_REQUIRED');
+    }
+    return {
+      ...payload,
+      correlation_id: correlationId,
     };
   }
 

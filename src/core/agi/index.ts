@@ -79,9 +79,8 @@ export type { DeviceMetrics, DeviceStatus } from '@/core/gems/GEMDevice';
 /**
  * AeternumAGI - Orquestrador Central (17 motores, primeiro plano contínuo)
  * 
- * CONECTIVIDADE UNIVERSAL: Cada módulo tem canal direto de comunicação
- * com qualquer outro via barramento EventBus full-mesh.
- * Latência máxima entre módulos: < 10ms.
+ * CONECTIVIDADE: módulos registrados no EventBus e em adaptadores de Mesh.
+ * Latência real precisa ser medida pelo transporte; não há garantia estrutural < 10ms.
  * 
  * PRIMEIRO PLANO CONTÍNUO: Todos os módulos executam seus loops
  * sem interrupção. Nenhum módulo é "ativado sob demanda" -
@@ -159,15 +158,98 @@ export class AeternumAGI {
     this.quantumNeural.initialize();
     this.connectivity.initialize();
 
-    // Establish FULL-MESH quantum entanglement
+    // Registrar participantes da conectividade não implica conexão física.
     const allSubsystemIds = [
       'consciousness', 'godel', 'darwin', 'lattice',
       'safeCore', 'selfHealing', 'ethics', 'hyperSafety',
       'nip', 'saiic', 'resourceManager'
     ];
     allSubsystemIds.forEach(id => {
-      this.quantumNeural.establishEntanglement(id);
       this.connectivity.registerNode(id, 'agi-engine');
+    });
+
+    // IntegrityScanner usa os mesmos sinais observáveis do runtime; sem módulos fantasma.
+    const healingProvider = (
+      performance: number | null,
+      memoryUsage: number | null = null,
+      errorRate: number | null = null,
+      healthy = true,
+    ) => ({ performance, memoryUsage, errorRate, healthy });
+
+    this.selfHealing.integrity_scanner.registerModule('consciousness', () => {
+      const healthy = this.consciousness.isRunning;
+      return healingProvider(null, null, null, healthy);
+    });
+    this.selfHealing.integrity_scanner.registerModule('godel_agent', () => {
+      const state = this.godelAgent.getMetaCognitionState();
+      return healingProvider(
+        Number.isFinite(state.modelingAccuracy) ? Math.max(0, Math.min(1, state.modelingAccuracy)) : null,
+        null,
+        null,
+        this._godelContinuousInterval !== null,
+      );
+    });
+    this.selfHealing.integrity_scanner.registerModule('recursive_lattice', () => {
+      const metrics = this.neuralLattice.getMetrics();
+      return healingProvider(Math.max(0, Math.min(1, metrics.globalFitness)), null, null, this.neuralLattice.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('darwin_machine', () => {
+      const metrics = this.darwinMachine.getMetrics();
+      return healingProvider(Math.max(0, Math.min(1, metrics.avgFitness)), null, null, this.darwinMachine.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('ethics_guardian', () => {
+      const metrics = this.ethicalOptimizer.getMetrics();
+      const score = Number(metrics.auditMetrics?.avgScore);
+      const bounded = Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : 0;
+      return healingProvider(metrics.auditMetrics?.observed === true ? bounded : null, null, metrics.auditMetrics?.observed === true ? 1 - bounded : null, this.ethicalOptimizer.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('safety_system', () => {
+      const report = this.safetySystem.getLatestReport();
+      const score = Number(report?.overallHealth);
+      const bounded = report?.observedHealth === true && Number.isFinite(score)
+        ? Math.max(0, Math.min(1, score))
+        : null;
+      return healingProvider(
+        bounded,
+        null,
+        bounded == null ? null : 1 - bounded,
+        this.safetySystem.isRunning && report?.observedHealth === true,
+      );
+    });
+    this.selfHealing.integrity_scanner.registerModule('nip', () => {
+      const report = this.nip.getRelatorio();
+      const healthy = report.saudeEpistemologica === 'saudavel';
+      return healingProvider(null, null, null, this.nip.isRunning && healthy);
+    });
+    this.selfHealing.integrity_scanner.registerModule('quantum_bridge', () => {
+      const status = this.quantumNeural.getInterfaceStatus();
+      return healingProvider(null, null, null, status.neural.isActive);
+    });
+    this.selfHealing.integrity_scanner.registerModule('safe_core', () => {
+      const active = this.safeCore.isActive();
+      return healingProvider(null, null, null, active);
+    });
+    this.selfHealing.integrity_scanner.registerModule('self_healing', () => {
+      return healingProvider(null, null, null, this.selfHealing.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('saiic', () => {
+      const metrics = this.saiic.getMetrics();
+      return healingProvider(metrics.lastScanTimestamp > 0 ? metrics.overallIntegrity : null, null, metrics.lastScanTimestamp > 0 ? 1 - metrics.overallIntegrity : null, metrics.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('resource_manager', () => {
+      return healingProvider(null, null, null, this.resourceManager.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemHealth', () => {
+      return healingProvider(null, null, null, this.gemHealth.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemResearch', () => {
+      return healingProvider(null, null, null, this.gemResearch.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemMusic', () => {
+      return healingProvider(null, null, null, this.gemMusic.isRunning);
+    });
+    this.selfHealing.integrity_scanner.registerModule('gemDevice', () => {
+      return healingProvider(null, null, null, this.gemDevice.isRunning);
     });
 
     // Register all modules in ResourceManager with priorities
@@ -194,99 +276,67 @@ export class AeternumAGI {
       this.resourceManager.registerModule(id, priority);
     });
 
-    // Register ALL modules in SAIIC for continuous health monitoring
-    this.saiic.registerModule('consciousness', () => ({
-      healthy: this.consciousness.isRunning,
-      cpuLoad: 0.1 + Math.random() * 0.1,
-      memoryUsage: 0.05 + Math.random() * 0.05,
-      errorRate: this.consciousness.isRunning ? Math.random() * 0.02 : 0.5,
-    }));
-    this.saiic.registerModule('godelAgent', () => ({
-      healthy: true,
-      cpuLoad: 0.08 + Math.random() * 0.12,
-      memoryUsage: 0.04 + Math.random() * 0.04,
-      errorRate: Math.random() * 0.01,
-    }));
-    this.saiic.registerModule('darwinMachine', () => ({
-      healthy: this.darwinMachine.isRunning,
-      cpuLoad: 0.15 + Math.random() * 0.1,
-      memoryUsage: 0.08 + Math.random() * 0.06,
-      errorRate: this.darwinMachine.isRunning ? Math.random() * 0.02 : 0.3,
-    }));
-    this.saiic.registerModule('neuralLattice', () => ({
-      healthy: this.neuralLattice.isRunning,
-      cpuLoad: 0.12 + Math.random() * 0.1,
-      memoryUsage: 0.06 + Math.random() * 0.05,
-      errorRate: this.neuralLattice.isRunning ? Math.random() * 0.02 : 0.3,
-    }));
-    this.saiic.registerModule('selfHealing', () => ({
-      healthy: this.selfHealing.isRunning,
-      cpuLoad: 0.05 + Math.random() * 0.05,
-      memoryUsage: 0.03 + Math.random() * 0.03,
-      errorRate: Math.random() * 0.01,
-    }));
-    this.saiic.registerModule('ethicalOptimizer', () => ({
-      healthy: this.ethicalOptimizer.isRunning,
-      cpuLoad: 0.04 + Math.random() * 0.04,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: Math.random() * 0.005,
-    }));
-    this.saiic.registerModule('safetySystem', () => ({
-      healthy: this.safetySystem.isRunning,
-      cpuLoad: 0.06 + Math.random() * 0.05,
-      memoryUsage: 0.03 + Math.random() * 0.03,
-      errorRate: Math.random() * 0.01,
-    }));
+    // SAIIC recebe somente sinais observáveis dos módulos.
+    // CPU/memória de cada módulo permanecem 0 quando não há telemetria nativa disponível;
+    // isso significa UNMEASURED, não consumo zero do dispositivo.
+    const observed = (healthy: boolean, errorRate: number | null = null) => ({
+      healthy,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: Number.isFinite(errorRate ?? Number.NaN) ? Math.max(0, Math.min(1, errorRate as number)) : null,
+    });
+
+    this.saiic.registerModule('consciousness', () => observed(
+      this.consciousness.isRunning,
+    ));
+    this.saiic.registerModule('godelAgent', () => {
+      const state = this.godelAgent.getMetaCognitionState();
+      return observed(
+        Number.isFinite(state.modelingAccuracy) && Number.isFinite(state.selfAwareness),
+      );
+    });
+    this.saiic.registerModule('darwinMachine', () => observed(
+      this.darwinMachine.isRunning,
+    ));
+    this.saiic.registerModule('neuralLattice', () => observed(
+      this.neuralLattice.isRunning,
+    ));
+    this.saiic.registerModule('selfHealing', () => observed(
+      this.selfHealing.isRunning,
+    ));
+    this.saiic.registerModule('ethicalOptimizer', () => {
+      const metrics = this.ethicalOptimizer.getMetrics();
+      const score = Number(metrics.auditMetrics?.avgScore);
+      return observed(this.ethicalOptimizer.isRunning, Number.isFinite(score) ? 1 - Math.max(0, Math.min(1, score)) : null);
+    });
+    this.saiic.registerModule('safetySystem', () => observed(
+      this.safetySystem.isRunning,
+    ));
     this.saiic.registerModule('nip', () => {
       const report = this.nip.getRelatorio();
-      return {
-        healthy: this.nip.isRunning,
-        cpuLoad: 0.03 + Math.random() * 0.04,
-        memoryUsage: 0.02 + Math.random() * 0.02,
-        errorRate: report.saudeEpistemologica === 'paralisada' ? 0.3 : Math.random() * 0.02,
-      };
+      const healthy = report.saudeEpistemologica === 'saudavel';
+      return observed(healthy, null);
     });
     this.saiic.registerModule('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
-      return {
-        healthy: status.initialized,
-        cpuLoad: 0.05 + Math.random() * 0.05,
-        memoryUsage: 0.04 + Math.random() * 0.03,
-        errorRate: status.quantum.errorRate,
-      };
+      return observed(status.initialized);
     });
-    this.saiic.registerModule('connectivity', () => ({
-      healthy: this.connectivity.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.01 + Math.random() * 0.02,
-      errorRate: this.connectivity.isRunning ? Math.random() * 0.005 : 0.2,
-    }));
+    this.saiic.registerModule('connectivity', () => observed(
+      this.connectivity.isRunning,
+    ));
 
-    // Register GEM modules in SAIIC
-    this.saiic.registerModule('gemHealth', () => ({
-      healthy: this.gemHealth.isRunning,
-      cpuLoad: 0.03 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemHealth.isRunning ? Math.random() * 0.01 : 0.2,
-    }));
-    this.saiic.registerModule('gemResearch', () => ({
-      healthy: this.gemResearch.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemResearch.isRunning ? Math.random() * 0.01 : 0.2,
-    }));
-    this.saiic.registerModule('gemMusic', () => ({
-      healthy: this.gemMusic.isRunning,
-      cpuLoad: 0.01 + Math.random() * 0.02,
-      memoryUsage: 0.01 + Math.random() * 0.01,
-      errorRate: Math.random() * 0.005,
-    }));
-    this.saiic.registerModule('gemDevice', () => ({
-      healthy: this.gemDevice.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemDevice.isRunning ? Math.random() * 0.01 : 0.15,
-    }));
+    this.saiic.registerModule('gemHealth', () => observed(
+      this.gemHealth.isRunning,
+    ));
+    this.saiic.registerModule('gemResearch', () => observed(
+      this.gemResearch.isRunning,
+    ));
+    this.saiic.registerModule('gemMusic', () => observed(
+      this.gemMusic.isRunning,
+    ));
+    this.saiic.registerModule('gemDevice', () => observed(
+      this.gemDevice.isRunning,
+    ));
 
     // Register GEM connectivity nodes
     ['gemHealth', 'gemResearch', 'gemMusic', 'gemDevice'].forEach(id => {
@@ -294,23 +344,17 @@ export class AeternumAGI {
     });
 
     // Register health providers for HyperSafetySystem (cross-layer)
-    this.safetySystem.registerHealthProvider('consciousness', () => {
-      const metrics = this.consciousness.getMetrics();
-      return metrics.isRunning ? 0.9 : 0.5;
-    });
+    this.safetySystem.registerHealthProvider('consciousness', () => null);
     this.safetySystem.registerHealthProvider('ethics', () => {
-      return this.ethicalOptimizer.getMetrics().auditMetrics.avgScore;
+      const audit = this.ethicalOptimizer.getMetrics().auditMetrics;
+      return audit.observed === true && Number.isFinite(audit.avgScore) ? audit.avgScore : null;
     });
     this.safetySystem.registerHealthProvider('selfHealing', () => {
       const health = this.selfHealing.getLatestHealth();
-      return health?.overallScore ?? 0.8;
+      return health ? health.overallScore : null;
     });
-    this.safetySystem.registerHealthProvider('evolution', () => {
-      return this.darwinMachine.getMetrics().avgFitness;
-    });
-    this.safetySystem.registerHealthProvider('lattice', () => {
-      return this.neuralLattice.getMetrics().globalFitness;
-    });
+    this.safetySystem.registerHealthProvider('evolution', () => null);
+    this.safetySystem.registerHealthProvider('lattice', () => null);
     this.safetySystem.registerHealthProvider('nip', () => {
       const report = this.nip.getRelatorio();
       return report.saudeEpistemologica === 'saudavel' ? 0.95
@@ -318,13 +362,14 @@ export class AeternumAGI {
     });
     this.safetySystem.registerHealthProvider('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
-      return status.quantum.coherence;
+      return status.quantum.measurementAvailable ? status.quantum.coherence : null;
     });
     this.safetySystem.registerHealthProvider('connectivity', () => {
       return this.connectivity.getMetrics().reliability;
     });
     this.safetySystem.registerHealthProvider('saiic', () => {
-      return this.saiic.getMetrics().overallIntegrity;
+      const metrics = this.saiic.getMetrics();
+      return metrics.lastScanTimestamp > 0 ? metrics.overallIntegrity : null;
     });
 
     this._initialized = true;
@@ -375,7 +420,9 @@ export class AeternumAGI {
     // GEM cross-collaboration: Health → Music adaptation
     this._gemCollabInterval = setInterval(() => {
       const health = this.gemHealth.metrics;
-      this.gemMusic.adaptToHealth(health.stressLevel, health.fatigueIndex);
+      if (health.observed) {
+        this.gemMusic.adaptToHealth(health.stressLevel, health.fatigueIndex);
+      }
     }, 10000);
 
     // Gödel Agent continuous self-improvement
@@ -472,10 +519,7 @@ export class AeternumAGI {
 
     // 6. Record execution for resource management
     const execMs = performance.now() - startMs;
-    this.resourceManager.recordExecution('consciousness', execMs * 0.3);
-    this.resourceManager.recordExecution('neuralLattice', execMs * 0.2);
-    this.resourceManager.recordExecution('nip', execMs * 0.15);
-    this.resourceManager.recordExecution('quantumNeural', execMs * 0.15);
+    this.resourceManager.recordObservedExecution(execMs);
 
     return {
       intention,
@@ -504,9 +548,12 @@ export class AeternumAGI {
       healing: this.selfHealing.getLatestHealth(),
       ethics: this.ethicalOptimizer.getMetrics(),
       safety: this.safetySystem.getLatestReport(),
+      safetyRunning: this.safetySystem.isRunning,
       nip: this.nip.getRelatorio(),
+      nipRunning: this.nip.isRunning,
       quantumNeural: this.quantumNeural.getInterfaceStatus(),
       connectivity: this.connectivity.getMetrics(),
+      connectivityRunning: this.connectivity.isRunning,
       saiic: this.saiic.getMetrics(),
       resources: this.resourceManager.getMetrics(),
       gemHealth: this.gemHealth.metrics,
@@ -517,6 +564,9 @@ export class AeternumAGI {
       overall: {
         initialized: this._initialized,
         running: this._running,
+        godelLoopActive: this._godelContinuousInterval !== null,
+        safeCoreActive: this.safeCore.isActive(),
+        healingRunning: this.selfHealing.isRunning,
         subsystems: 17,
         activeSubsystems: [
           this.consciousness.isRunning,
@@ -526,12 +576,12 @@ export class AeternumAGI {
           this.ethicalOptimizer.isRunning,
           this.safetySystem.isRunning,
           this.nip.isRunning,
-          this.quantumNeural.getInterfaceStatus().initialized,
+          this.quantumNeural.getInterfaceStatus().neural.isActive,
           this.connectivity.isRunning,
           this.saiic.isRunning,
           this.resourceManager.isRunning,
-          true, // GodelAgent
-          true, // SafeCore
+          this._godelContinuousInterval !== null,
+          this.safeCore.isActive(),
           this.gemHealth.isRunning,
           this.gemResearch.isRunning,
           this.gemMusic.isRunning,

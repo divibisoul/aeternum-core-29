@@ -68,7 +68,7 @@ export function AGIDashboard() {
               Aeternum AGI
               {metrics && (
                 <Badge className="bg-emerald-500/20 text-emerald-400 text-[10px]">
-                  {metrics.overall.activeSubsystems}/{metrics.overall.subsystems} ONLINE
+                  {metrics.overall.activeSubsystems}/{metrics.overall.subsystems} ATIVOS
                 </Badge>
               )}
             </CardTitle>
@@ -87,8 +87,8 @@ export function AGIDashboard() {
               <span className="text-amber-400">L:{((metrics.lattice?.globalFitness ?? 0) * 100).toFixed(0)}%</span>
               <span className="text-primary">Ε:{((metrics.ethics?.auditMetrics?.avgScore ?? 0) * 100).toFixed(0)}%</span>
               <span className="text-orange-400">NIP:{metrics.nip?.saudeEpistemologica ?? '?'}</span>
-              <span className="text-cyan-400">Q:{((metrics.quantumNeural?.quantum?.coherence ?? 0) * 100).toFixed(0)}%</span>
-              <span className="text-red-400">SAIIC:{((metrics.saiic?.overallIntegrity ?? 0) * 100).toFixed(0)}%</span>
+              <span className="text-cyan-400">Q:{metrics.quantumNeural?.quantum?.measurementAvailable ? ((metrics.quantumNeural.quantum.coherence * 100).toFixed(0) + "%") : "—"}</span>
+              <span className="text-red-400">SAIIC:{metrics.saiic?.evidenceBasis === "NOT_MEASURED" ? "—" : ((metrics.saiic?.overallIntegrity ?? 0) * 100).toFixed(0) + "%"}</span>
             </div>
           )}
         </CardHeader>
@@ -116,17 +116,17 @@ export function AGIDashboard() {
                       {[
                         { name: 'SAIIC', status: metrics?.saiic?.isRunning, metric: metrics?.saiic?.overallIntegrity, priority: true },
                         { name: 'ResourceMgr', status: metrics?.resources?.isRunning, metric: null, label: `${metrics?.resources?.modulesManaged ?? 0} mods` },
-                        { name: 'GodelAgent', status: true, metric: metrics?.godelMeta?.selfAwareness },
+                        { name: 'GodelAgent', status: metrics?.overall?.godelLoopActive === true, metric: metrics?.godelMeta?.selfAwareness },
                         { name: 'DarwinMachine', status: metrics?.darwin?.isRunning, metric: metrics?.darwin?.avgFitness },
                         { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                         { name: 'Consciousness', status: metrics?.consciousness?.isRunning, metric: null },
-                        { name: 'SafeCore', status: true, metric: null },
-                        { name: 'SelfHealing', status: metrics?.healing !== null, metric: metrics?.healing?.overallScore },
+                        { name: 'SafeCore', status: metrics?.overall?.safeCoreActive === true, metric: null },
+                        { name: 'SelfHealing', status: metrics?.healingRunning === true, metric: metrics?.healing?.overallScore },
                         { name: 'EthicalOpt', status: metrics?.ethics?.isRunning, metric: metrics?.ethics?.auditMetrics?.avgScore },
-                        { name: 'HyperSafety', status: metrics?.safety !== null, metric: metrics?.safety?.overallHealth },
-                        { name: 'NIP', status: metrics?.nip !== undefined, metric: null, label: metrics?.nip?.saudeEpistemologica },
-                        { name: 'QuantumNeural', status: metrics?.quantumNeural?.initialized, metric: metrics?.quantumNeural?.quantum?.coherence },
-                        { name: 'Connectivity', status: metrics?.connectivity !== undefined, metric: metrics?.connectivity?.reliability },
+                        { name: 'HyperSafety', status: metrics?.safetyRunning === true, metric: metrics?.safety?.overallHealth },
+                        { name: 'NIP', status: metrics?.nipRunning === true, metric: null, label: metrics?.nip?.saudeEpistemologica },
+                        { name: 'QuantumNeural', status: metrics?.quantumNeural?.initialized === true, metric: metrics?.quantumNeural?.quantum?.measurementAvailable === true ? metrics?.quantumNeural?.quantum?.coherence : null, label: metrics?.quantumNeural?.quantum?.measurementAvailable === true ? undefined : 'UNMEASURED' },
+                        { name: 'Connectivity', status: metrics?.connectivityRunning === true, metric: metrics?.connectivity?.reliability ?? null },
                       ].map((engine, i) => (
                         <div key={i} className="flex items-center justify-between text-[10px]">
                           <span className="flex items-center gap-1.5">

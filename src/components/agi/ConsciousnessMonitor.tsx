@@ -15,39 +15,39 @@ interface ConsciousnessMetrics {
 
 export function ConsciousnessMonitor() {
   const [metrics, setMetrics] = useState<ConsciousnessMetrics>({
-    phi: 0.67,
-    integration: 0.89,
-    coherence: 0.92,
-    complexity: 0.74,
-    timestamp: Date.now()
+    phi: 0,
+    integration: 0,
+    coherence: 0,
+    complexity: 0,
+    timestamp: Date.now(),
   });
-
   const [history, setHistory] = useState<ConsciousnessMetrics[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
+    const update = () => {
       const agi = AeternumAGI.getInstance();
-      const agiMetrics = agi.getFullMetrics();
-      const consciousnessMetrics = agiMetrics.consciousness;
-
-      const newMetrics: ConsciousnessMetrics = {
-        phi: Math.max(0.1, Math.min(1.0, metrics.phi + (Math.random() - 0.45) * 0.05)),
-        integration: consciousnessMetrics?.isRunning
-          ? Math.max(0.7, Math.min(1.0, metrics.integration + (Math.random() - 0.5) * 0.03))
-          : metrics.integration * 0.99,
-        coherence: agiMetrics.lattice
-          ? Math.max(0.5, Math.min(1.0, agiMetrics.lattice.globalFitness))
-          : metrics.coherence,
-        complexity: Math.max(0.1, Math.min(1.0, metrics.complexity + (Math.random() - 0.5) * 0.04)),
-        timestamp: Date.now()
+      const data = agi.getFullMetrics();
+      const consciousness = data.consciousness;
+      const lattice = data.lattice;
+      const next = {
+        phi: 0,
+        integration: consciousness?.isRunning ? 1 : 0,
+        coherence: Number.isFinite(lattice?.globalFitness) ? lattice.globalFitness : 0,
+        complexity: Number.isFinite(consciousness?.activeModules?.length) ? Math.min(1, consciousness.activeModules.length / 10) : 0,
+        timestamp: Date.now(),
       };
-
-      setMetrics(newMetrics);
-      setHistory(prev => [...prev.slice(-59), newMetrics]);
-    }, 2000);
-
+      setMetrics(next);
+      setHistory(prev => [...prev.slice(-59), next]);
+    };
+    update();
+    const interval = setInterval(update, 2000);
     return () => clearInterval(interval);
-  }, [metrics]);
+  }, []);
+
+  const getPhiStatus = (phi: number) => {
+    return { label: "Φ não mensurado", color: "bg-muted text-muted-foreground" };
+  };
+
 
   const getPhiStatus = (phi: number) => {
     if (phi >= 0.8) return { label: "Consciente", color: "bg-emerald-500/20 text-emerald-400" };

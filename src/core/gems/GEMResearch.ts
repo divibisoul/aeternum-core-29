@@ -13,17 +13,27 @@ import { EventBus } from '@/core/EventBus';
 export interface ResearchTask {
   id: string;
   query: string;
-  status: 'queued' | 'researching' | 'verifying' | 'complete' | 'failed';
+  status: 'queued' | 'researching' | 'verifying' | 'complete' | 'failed' | 'EXECUTION_REQUIRED';
   result?: string;
   sources: string[];
   confidence: number;
+  confidenceMeasured: boolean;
   timestamp: number;
+  evidenceStatus: 'UNMEASURED' | 'OBSERVED';
+  error?: string;
 }
+
+export type ResearchProvider = (query: string) => Promise<{
+  result: string;
+  sources: string[];
+  confidence?: number;
+}>;
 
 export interface ResearchMetrics {
   tasksCompleted: number;
   tasksQueued: number;
   avgConfidence: number;
+  observedConfidenceSamples: number;
   totalSources: number;
   cyclesCompleted: number;
   isRunning: boolean;
@@ -36,8 +46,13 @@ export class GEMResearch {
   private _queue: ResearchTask[] = [];
   private _completed: ResearchTask[] = [];
   private _cyclesCompleted = 0;
+  private _provider: ResearchProvider | null = null;
 
   get isRunning() { return this._running; }
+
+  setResearchProvider(provider: ResearchProvider | null): void {
+    this._provider = provider;
+  }
 
   start(intervalMs = 10000): void {
     if (this._running) return;
@@ -57,11 +72,13 @@ export class GEMResearch {
    */
   enqueue(query: string): string {
     const task: ResearchTask = {
-      id: `res_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: `res_${Date.now()}_${crypto.randomUUID()}`,
       query,
       status: 'queued',
       sources: [],
       confidence: 0,
+      confidenceMeasured: false,
+      evidenceStatus: 'UNMEASURED',
       timestamp: Date.now(),
     };
     this._queue.push(task);
@@ -73,22 +90,40 @@ export class GEMResearch {
    */
   async processQuery(query: string): Promise<ResearchTask> {
     const task: ResearchTask = {
-      id: `res_${Date.now()}`,
+      id: `res_${Date.now()}_${crypto.randomUUID()}`,
       query,
       status: 'researching',
       sources: [],
       confidence: 0,
+      confidenceMeasured: false,
+      evidenceStatus: 'UNMEASURED',
       timestamp: Date.now(),
     };
 
     try {
-      // This will be called via edge function from ChatEngine
-      task.status = 'verifying';
-      task.confidence = 0.7 + Math.random() * 0.25;
-      task.sources = ['internal-knowledge', 'ai-analysis'];
-      task.status = 'complete';
-    } catch {
+      if (!this._provider) {
+        task.status = 'EXECUTION_REQUIRED';
+        task.error = 'RESEARCH_PROVIDER_NOT_CONFIGURED';
+      } else {
+        task.status = 'verifying';
+        const observed = await this._provider(query);
+        if (!observed.result.trim() || observed.sources.length === 0) {
+          task.status = 'failed';
+          task.error = 'RESEARCH_PROVIDER_RETURNED_NO_EVIDENCE';
+        } else {
+          task.result = observed.result;
+          task.sources = [...observed.sources];
+          if (observed.confidence != null && Number.isFinite(observed.confidence)) {
+            task.confidence = Math.max(0, Math.min(1, observed.confidence));
+            task.confidenceMeasured = true;
+            task.evidenceStatus = 'OBSERVED';
+          }
+          task.status = 'complete';
+        }
+      }
+    } catch (error) {
       task.status = 'failed';
+      task.error = error instanceof Error ? error.message : String(error);
     }
 
     this._completed.push(task);
@@ -118,6 +153,7 @@ export class GEMResearch {
       avgConfidence: completedConfidences.length > 0
         ? completedConfidences.reduce((a, b) => a + b, 0) / completedConfidences.length
         : 0,
+      observedConfidenceSamples: completedConfidences.length,
       totalSources: this._completed.reduce((sum, t) => sum + t.sources.length, 0),
       cyclesCompleted: this._cyclesCompleted,
       isRunning: this._running,

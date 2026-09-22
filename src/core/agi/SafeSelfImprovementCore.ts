@@ -85,7 +85,7 @@ export class VerificationSandbox {
       pulse.complexity !== 'advanced' || pulse.safetyScore > 0.8,
       pulse.targetModules.length <= 3,
       pulse.expectedImprovement > 0 && pulse.expectedImprovement <= 0.3,
-      Math.random() > 0.1
+      Number.isFinite(pulse.safetyScore) && pulse.safetyScore >= 0
     ];
     const isValid = checks.every(c => c === true);
     this.testResults.set(pulse.id, isValid);
@@ -102,7 +102,7 @@ export class PulseSynthesizerCore {
     _constraints: SafetyConstraints
   ): EvolutionaryPulse {
     const pulse: EvolutionaryPulse = {
-      id: `pulse_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `pulse_${Date.now()}_${crypto.randomUUID()}`,
       type: cognitiveGaps.some(g => g.includes('architecture'))
         ? 'architecture_optimization'
         : cognitiveGaps.some(g => g.includes('knowledge'))
@@ -110,7 +110,7 @@ export class PulseSynthesizerCore {
           : 'cognitive_enhancement',
       complexity,
       targetModules: cognitiveGaps.slice(0, 2),
-      expectedImprovement: ({ minimal: 0.05, moderate: 0.1, optimal: 0.15, advanced: 0.25 }[complexity]) + Math.random() * 0.05,
+      expectedImprovement: ({ minimal: 0.05, moderate: 0.1, optimal: 0.15, advanced: 0.25 }[complexity]),
       safetyScore: Math.max(0.5, 1.0 - ({ minimal: 0, moderate: 0.1, optimal: 0.15, advanced: 0.3 }[complexity]) - cognitiveGaps.length * 0.05),
       timestamp: Date.now()
     };
@@ -126,15 +126,19 @@ export class ParadoxEngine {
     'self_reference_paradox', 'optimization_plateau', 'knowledge_uncertainty',
     'recursive_improvement_limit', 'consciousness_emergence'
   ];
+  private challengeIndex = 0;
 
   generateCognitiveChallenge(): string {
-    return `Resolva: ${this.paradoxCatalogue[Math.floor(Math.random() * this.paradoxCatalogue.length)].replace(/_/g, ' ')}`;
+    const challenge = this.paradoxCatalogue[this.challengeIndex % this.paradoxCatalogue.length];
+    this.challengeIndex++;
+    return 'Resolva: ' + challenge.replace(/_/g, ' ');
   }
 
   processParadox(paradox: string): { solution: string; improvement: number } {
+    const improvement = Math.min(0.1, Math.max(0.01, paradox.trim().length / 1000));
     return {
-      solution: `Aplicação de meta-cognição para ${paradox}`,
-      improvement: Math.random() * 0.1 + 0.05
+      solution: 'Aplicação de meta-cognição para ' + paradox,
+      improvement,
     };
   }
 }

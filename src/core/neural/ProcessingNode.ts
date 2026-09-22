@@ -17,6 +17,7 @@ import {
   LEVEL_MAP,
   MAX_QUEUE_SIZE,
   REPORT_INTERVAL,
+  ENERGY_CAPACITY_BY_LEVEL,
 } from './types';
 
 /**
@@ -32,10 +33,13 @@ export class ProcessingNode {
   protected energyCapacity = 100;
   protected thermalSensorReading = 0.3;
   protected _processingRateMultiplier = 1.0;
+  private homeostasisMultiplier = 1.0;
+  private vagalMultiplier = 1.0;
   
   // Filas
   protected inputQueue: InformationPacket[] = [];
   protected outputChannels: Map<string, InformationChannel> = new Map();
+  protected inputChannels: Map<string, InformationChannel> = new Map();
   
   // Referência ao HomeostasisManager (será definida pelo setup)
   protected homeostasisReportCallback?: (report: NodeState) => void;
@@ -45,10 +49,18 @@ export class ProcessingNode {
   private reportInterval: ReturnType<typeof setInterval> | null = null;
   private packetsProcessed = 0;
   private lastProcessingTime = 0;
+  private inactiveSince = 0;
+  protected vagusAfferentReporter?: (
+    signalType: import('./types').VagalSignalType,
+    payload: Record<string, unknown>,
+    priority?: number
+  ) => void;
 
   constructor(id: string, level: NodeLevel) {
     this.id = id;
     this.level = level;
+    this.energyCapacity = ENERGY_CAPACITY_BY_LEVEL[level];
+    this.currentEnergy = this.energyCapacity * 0.6;
 
     EventBus.emit('module:registered', {
       id: this.id,
@@ -63,11 +75,17 @@ export class ProcessingNode {
   }
 
   get processingRateMultiplier(): number {
-    return this._processingRateMultiplier;
+    return Math.max(
+      0.05,
+      Math.min(
+        8.0,
+        this._processingRateMultiplier * this.homeostasisMultiplier * this.vagalMultiplier
+      )
+    );
   }
 
   set processingRateMultiplier(value: number) {
-    this._processingRateMultiplier = value;
+    this._processingRateMultiplier = Math.max(0.05, Math.min(8.0, value));
   }
 
   /**
@@ -83,7 +101,7 @@ export class ProcessingNode {
       if (this._active) {
         this.processLoop();
       }
-    }, Math.round(100 / this._processingRateMultiplier));
+    }, 100);
 
     // Loop de report para homeostase
     this.reportInterval = setInterval(() => {
@@ -119,10 +137,67 @@ export class ProcessingNode {
    */
   setActive(active: boolean): void {
     if (active && !this._active) {
+      this.inactiveSince = 0;
       this.start();
     } else if (!active && this._active) {
+      this.inactiveSince = Date.now();
       this.stop();
+      this.vagusAfferentReporter?.('fault', {
+        nodeId: this.id,
+        inactiveSince: this.inactiveSince,
+      }, 0.9);
     }
+  }
+
+  getInactiveSince(): number {
+    return this.inactiveSince;
+  }
+
+  setVagusAfferentReporter(
+    reporter: (
+      signalType: import('./types').VagalSignalType,
+      payload: Record<string, unknown>,
+      priority?: number
+    ) => void
+  ): void {
+    this.vagusAfferentReporter = reporter;
+  }
+
+  setHomeostasisMultiplier(multiplier: number): void {
+    this.homeostasisMultiplier = Math.max(0.1, Math.min(4.0, multiplier));
+  }
+
+  setVagalMultiplier(multiplier: number): void {
+    this.vagalMultiplier = Math.max(0.1, Math.min(3.0, multiplier));
+  }
+
+  applyVagalCommand(
+    command: import('./types').VagalCommand['command'],
+    payload: Record<string, unknown> = {}
+  ): void {
+    switch (command) {
+      case 'calm':
+        this.setVagalMultiplier(0.7);
+        break;
+      case 'turbo':
+        this.setVagalMultiplier(Number(payload.multiplier ?? 1.5));
+        break;
+      case 'reduce_thermal':
+        this.setVagalMultiplier(0.5);
+        this.thermalSensorReading = Math.max(0.1, this.thermalSensorReading - 0.05);
+        break;
+      case 'shutdown':
+        if (this.level !== 'Central') this.setActive(false);
+        break;
+      case 'resume':
+        this.setVagalMultiplier(1.0);
+        if (!this._active) this.setActive(true);
+        break;
+    }
+  }
+
+  addInputChannel(channel: InformationChannel): void {
+    this.inputChannels.set(channel.sourceId, channel);
   }
 
   /**
@@ -212,6 +287,8 @@ export class ProcessingNode {
       activeModules: this._active ? 1 : 0,
       memoryUsage: loadRatio * 100,
       uptime: Date.now(),
+      stateCriticality,
+      nodeId: this.id,
     });
   }
 
@@ -269,7 +346,19 @@ export class ProcessingNode {
    * Loop de processamento principal
    */
   protected processLoop(): void {
-    if (this.inputQueue.length === 0) return;
+    for (const channel of this.inputChannels.values()) {
+      if (!channel.active) continue;
+      let incoming = channel.receive();
+      while (incoming && this.inputQueue.length < MAX_QUEUE_SIZE) {
+        this.inputQueue.push(incoming);
+        incoming = channel.receive();
+      }
+    }
+
+    if (this.inputQueue.length === 0) {
+      this.currentEnergy = Math.min(this.energyCapacity, this.currentEnergy + 0.25);
+      return;
+    }
 
     const startTime = Date.now();
 
@@ -277,37 +366,43 @@ export class ProcessingNode {
     this.inputQueue.sort((a, b) => b.criticality - a.criticality);
     
     // Processar pacote mais crítico
-    const packet = this.inputQueue.shift();
-    if (!packet) return;
+    const batchSize = Math.max(1, Math.min(8, Math.ceil(this.processingRateMultiplier)));
+    for (let processed = 0; processed < batchSize && this.inputQueue.length > 0; processed++) {
+      const packet = this.inputQueue.shift();
+      if (!packet) break;
 
-    // Processamento específico do nó
-    const result = this.nodeSpecificProcessing(packet);
-    
-    // Consumir energia
-    this.consumeEnergy(packet.criticality * 5);
-    
-    // Atualizar temperatura
+      // Processamento específico do nó
+      const result = this.nodeSpecificProcessing(packet);
+      
+      // Custo metabólico depende do tamanho e criticidade do pacote.
+      this.consumeEnergy(
+        packet.data.length * 0.008 * (1 + packet.criticality * 0.5)
+      );
+      
+      // Atualizar temperatura
     this.updateTemperature(packet.criticality);
 
-    // Se houver resultado, criar e enviar resposta
-    if (result) {
-      const responsePacket = createInformationPacket(
-        result.data,
-        packet.informationalValue * 0.9,
-        result.criticality,
-        result.packetType,
-        this.id,
-        result.destinationHint,
-        result.metadata
-      );
+      // Se houver resultado, criar e enviar resposta
+      if (result) {
+        const responsePacket = createInformationPacket(
+          result.data,
+          packet.informationalValue * 0.9,
+          result.criticality,
+          result.packetType,
+          this.id,
+          result.destinationHint,
+          result.metadata
+        );
 
-      const channel = this.selectOutputChannel(responsePacket);
-      if (channel) {
-        channel.transmit(responsePacket);
+        const channel = this.selectOutputChannel(responsePacket);
+        if (channel) {
+          channel.transmit(responsePacket);
+        }
       }
+
+      this.packetsProcessed++;
     }
 
-    this.packetsProcessed++;
     this.lastProcessingTime = Date.now() - startTime;
   }
 
@@ -330,13 +425,14 @@ export class ProcessingNode {
    * Consome energia baseado no processamento
    */
   protected consumeEnergy(amount: number): void {
-    this.currentEnergy = Math.max(0, this.currentEnergy - amount * 0.1);
-    
-    // Regenerar lentamente
-    this.currentEnergy = Math.min(
-      this.energyCapacity, 
-      this.currentEnergy + 0.5
-    );
+    this.currentEnergy = Math.max(0, this.currentEnergy - Math.max(0, amount));
+
+    if (this.currentEnergy / Math.max(1, this.energyCapacity) < 0.1) {
+      this.vagusAfferentReporter?.('energy_low', {
+        energy: this.currentEnergy,
+        capacity: this.energyCapacity,
+      }, 0.9);
+    }
   }
 
   /**
@@ -355,9 +451,15 @@ export class ProcessingNode {
     // Verificar stress térmico
     if (this.thermalSensorReading >= THERMAL_STRESS_CRITICAL) {
       console.warn(`[ProcessingNode] ${this.id} em stress térmico crítico!`);
-      this._processingRateMultiplier *= 0.8; // Throttle
+      this.setHomeostasisMultiplier(0.5); // Throttle via regulatory layer
+      this.vagusAfferentReporter?.('thermal_critical', {
+        temperature: this.thermalSensorReading,
+      }, 0.95);
     } else if (this.thermalSensorReading >= THERMAL_STRESS_WARN) {
       console.warn(`[ProcessingNode] ${this.id} temperatura elevada`);
+      this.vagusAfferentReporter?.('health', {
+        temperature: this.thermalSensorReading,
+      }, 0.75);
     }
   }
 
@@ -389,6 +491,7 @@ export class ProcessingNode {
     packetsProcessed: number;
     queueSize: number;
     outputChannels: number;
+    inputChannels: number;
   } {
     return {
       id: this.id,
@@ -400,6 +503,7 @@ export class ProcessingNode {
       packetsProcessed: this.packetsProcessed,
       queueSize: this.inputQueue.length,
       outputChannels: this.outputChannels.size,
+      inputChannels: this.inputChannels.size,
     };
   }
 }

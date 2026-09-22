@@ -16,5 +16,12 @@ export { ProcessingNode } from './ProcessingNode';
 export { NucleoRaizAlma } from './NucleoRaizAlma';
 export { HomeostasisManager, homeostasisManager } from './HomeostasisManager';
 export { InformationChannel } from './InformationChannel';
+export { VagusNerve } from './VagusNerve';
+export { ClareiraSaraBridge } from './ClareiraSaraBridge';
+export * from './SpecializedNuclei';
 
 export * from './types';
+
+export { InputTransducer } from './InputTransducer';
+
+export { ClareiraAndroidBridge } from './ClareiraAndroidBridge';

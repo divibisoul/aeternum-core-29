@@ -51,9 +51,9 @@ export function SystemStatusIndicator() {
         {
           name: 'Arquitetura Quadrangular',
           icon: Activity,
-          active: true,
+          active: false,
           processing: false,
-          metric: '4 lados ativos',
+          metric: 'não mensurável nesta camada',
           color: 'blue',
         },
       ];

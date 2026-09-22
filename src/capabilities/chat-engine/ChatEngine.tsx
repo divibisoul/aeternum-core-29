@@ -61,7 +61,8 @@ interface Message {
     lattice_coherence: number;
     saiic_integrity: number;
     resource_cpu: number;
-    gem_health_stress: number;
+    gem_health_stress: number | null;
+    gem_health_observed: boolean;
     gem_device_connected: boolean;
   };
 }
@@ -203,28 +204,20 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
       unifier: 'idle',
     });
     
-    // Phase 1: Interception
-    await new Promise(r => setTimeout(r, 100));
-    setPipelineStatus(prev => ({ ...prev, interceptor: 'complete', intent: 'processing' }));
-    
-    // Phase 2: Intent Analysis
-    await new Promise(r => setTimeout(r, 100));
-    setPipelineStatus(prev => ({ ...prev, intent: 'complete', vault: 'processing' }));
-    
-    // Phase 3: Code Vault
-    await new Promise(r => setTimeout(r, 100));
-    setPipelineStatus(prev => ({ ...prev, vault: 'complete', alpha: 'processing', beta: 'processing' }));
-    
-    // Phase 4: Multi-hemispheric processing
+    // Fases preparatórias ficam em estado de processamento até o pipeline real responder.
     const processed = await PrecisionEngine.process(userInput, browserLang);
+    setPipelineStatus(prev => ({
+      ...prev,
+      interceptor: 'complete',
+      intent: 'complete',
+      vault: 'complete',
+      alpha: 'complete',
+      beta: 'complete',
+      gamma: 'processing',
+    }));
     currentRequestRef.current = processed;
     
-    // Phase 5: Gamma contextualization
-    setPipelineStatus(prev => ({ ...prev, alpha: 'complete', beta: 'complete', gamma: 'processing' }));
-    await new Promise(r => setTimeout(r, 100));
-    
-    // Phase 6: Unification
-    setPipelineStatus(prev => ({ ...prev, gamma: 'complete', unifier: 'processing' }));
+    // Gamma/unificação são concluídas somente após o retorno real da resposta.
     
     return processed;
   }, [browserLang]);
@@ -290,7 +283,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
       const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
-      while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
+      while (experiencia.length < 10) experiencia.push(0);
       
       const conscienciaResult = ConscienciaAlgoritmicaInstance.processar(experiencia, userInput);
       console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
@@ -304,14 +297,15 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         self_scan_coherence: conscienciaResult.metricas.coerenciaMedia,
         causal_reversal_efficiency: agiResult.godelState.modelingAccuracy,
         ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? 0.95,
-        quantum_validation: agiResult.quantumResult.quantumCoherence > 0.9 && agiResult.latticeOutput.every(v => v > 0.1),
+        quantum_validation: agiResult.quantumResult.quantumAvailable === true && agiResult.latticeOutput.every(v => v > 0.1),
         agi_subsystems_active: agi.getFullMetrics().overall.activeSubsystems,
         godel_self_awareness: agiResult.godelState.selfAwareness,
         darwin_fitness: agiResult.evolutionMetrics.avgFitness,
         lattice_coherence: agiResult.latticeOutput.reduce((a, b) => a + b, 0) / Math.max(1, agiResult.latticeOutput.length),
         saiic_integrity: agiResult.saiicMetrics.overallIntegrity,
         resource_cpu: agiResult.resourceMetrics.totalCpuUsage,
-        gem_health_stress: agi.gemHealth.metrics.stressLevel,
+        gem_health_stress: agi.gemHealth.metrics.observed ? agi.gemHealth.metrics.stressLevel : null,
+        gem_health_observed: agi.gemHealth.metrics.observed,
         gem_device_connected: agi.gemDevice.connected,
       };
 
@@ -435,7 +429,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
           // === INTEGRAÇÃO: Feedback para ConscienciaAlgoritmica ===
           // Processar resposta para aprendizado contínuo
           const respostaExperiencia = fullContent.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
-          while (respostaExperiencia.length < 10) respostaExperiencia.push(Math.random() * 0.3);
+          while (respostaExperiencia.length < 10) respostaExperiencia.push(0);
           ConscienciaAlgoritmicaInstance.processar(respostaExperiencia, 'resposta-sucesso');
 
           // Store assistant response in memory
@@ -679,7 +673,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                         <span className="text-muted-foreground">|</span>
                         <span className="text-red-400">SAIIC:{(message.eru_data.saiic_integrity * 100).toFixed(0)}%</span>
                         <span className="text-muted-foreground">|</span>
-                        <span className="text-pink-400">♥:{(message.eru_data.gem_health_stress * 100).toFixed(0)}%</span>
+                        <span className="text-pink-400">♥:{typeof message.eru_data.gem_health_stress === 'number' ? (message.eru_data.gem_health_stress * 100).toFixed(0) + '%' : '—'}</span>
                         <span className="text-muted-foreground">|</span>
                         <span className={message.eru_data.gem_device_connected ? 'text-cyan-400' : 'text-muted-foreground'}>
                           📱:{message.eru_data.gem_device_connected ? 'ON' : 'OFF'}
