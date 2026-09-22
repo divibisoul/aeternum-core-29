@@ -62,6 +62,12 @@ class SoulHybridActivity : ComponentActivity() {
             .put("screenOn", snapshot.screenOn)
             .put("network", snapshot.network)
             .put("shizukuStatus", snapshot.shizukuStatus)
+            .put("cpuFreqMhz", snapshot.cpuFreqMhz)
+            .put("ramUsedMb", snapshot.ramUsedMb)
+            .put("ramTotalMb", snapshot.ramTotalMb)
+            .put("foregroundPackage", snapshot.foregroundPackage)
+            .put("wifiEnabled", snapshot.wifiEnabled)
+            .put("bluetoothEnabled", snapshot.bluetoothEnabled)
             .put("timestamp", snapshot.timestamp)
             .toString()
         webView.evaluateJavascript(
