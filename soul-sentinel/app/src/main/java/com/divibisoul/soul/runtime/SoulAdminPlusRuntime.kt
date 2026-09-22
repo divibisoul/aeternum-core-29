@@ -86,13 +86,17 @@ class SoulAdminPlusRuntime(
             dashboard.patch { it.copy(n07Health = "DISABLED") }
         }
 
+        val cfgForPrivilege = config.read()
         val z = shizuku.state()
         if (z.running && z.permissionGranted) {
             dashboard.patch { it.copy(rootStatus = "SHIZUKU_AVAILABLE") }
             bus.publish(SoulEvent.ShizukuChanged("AVAILABLE"))
-        } else if (root.status().available) {
+        } else if (cfgForPrivilege.rootEnabled && root.status().available) {
             dashboard.patch { it.copy(rootStatus = "ROOT_AVAILABLE") }
             bus.publish(SoulEvent.RootStateChanged("AVAILABLE"))
+        } else if (!cfgForPrivilege.rootEnabled) {
+            dashboard.patch { it.copy(rootStatus = "ROOT_DISABLED") }
+            bus.publish(SoulEvent.RootStateChanged("DISABLED"))
         } else {
             dashboard.patch { it.copy(rootStatus = "NO_PRIVILEGED_CHANNEL") }
             bus.publish(SoulEvent.RootStateChanged("UNAVAILABLE"))
