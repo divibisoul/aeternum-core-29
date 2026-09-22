@@ -34,6 +34,7 @@ class IntentQueueManager(
     private val sequence = AtomicLong()
     private var worker: Job? = null
 
+    @Synchronized
     fun start() {
         if (worker != null) return
         worker = scope.launch(Dispatchers.Default) {
@@ -60,6 +61,7 @@ class IntentQueueManager(
 
     suspend fun depth(): Int = mutex.withLock { pending.size }
 
+    @Synchronized
     fun stop() {
         worker?.cancel()
         worker = null
