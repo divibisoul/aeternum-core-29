@@ -19,6 +19,7 @@ class LogSynchronizer(
         val cfg = configStore.feedbackSyncUrl() ?: return@withContext Result.failure(
             IllegalStateException("FEEDBACK_SYNC_UNCONFIGURED")
         )
+        repository.purge(configStore.read().logRetentionDays)
         val pending = repository.pending()
         if (pending.isEmpty()) return@withContext Result.success(0)
 
