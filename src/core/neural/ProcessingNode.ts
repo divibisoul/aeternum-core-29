@@ -483,6 +483,7 @@ export class ProcessingNode {
     packetsProcessed: number;
     queueSize: number;
     outputChannels: number;
+    inputChannels: number;
   } {
     return {
       id: this.id,
