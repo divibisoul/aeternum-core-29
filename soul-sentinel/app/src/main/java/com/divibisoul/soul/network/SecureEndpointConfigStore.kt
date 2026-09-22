@@ -29,7 +29,7 @@ class SecureEndpointConfigStore(private val context: Context) {
     suspend fun setSara(baseUrl: String, token: String?) {
         context.endpointDataStore.edit {
             it[SARA_URL] = baseUrl.trimEnd('/')
-            if (!token.isNullOrBlank()) it[SARA_TOKEN] = encrypt(token)
+            if (!token.isNullOrBlank()) it[SARA_TOKEN] = encrypt(token) else it.remove(SARA_TOKEN)
         }
     }
 
@@ -43,7 +43,7 @@ class SecureEndpointConfigStore(private val context: Context) {
     suspend fun setN07(baseUrl: String?, token: String?) {
         context.endpointDataStore.edit {
             if (baseUrl.isNullOrBlank()) it.remove(N07_URL) else it[N07_URL] = baseUrl.trimEnd('/')
-            if (!token.isNullOrBlank()) it[N07_TOKEN] = encrypt(token)
+            if (!token.isNullOrBlank()) it[N07_TOKEN] = encrypt(token) else it.remove(N07_TOKEN)
             it[N07_ENABLED] = !baseUrl.isNullOrBlank()
         }
     }
