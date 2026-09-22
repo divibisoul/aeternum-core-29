@@ -18,8 +18,9 @@ export interface ModuleDiagnostic {
   healthy: boolean;
   cpuLoad: number;
   memoryUsage: number;
-  errorRate: number;
+  errorRate: number | null;
   lastHeartbeat: number;
+  measured: boolean;
   loopDetected: boolean;
   inconsistencies: string[];
 }
@@ -62,7 +63,7 @@ type HealthProvider = () => {
   healthy: boolean;
   cpuLoad: number;
   memoryUsage: number;
-  errorRate: number;
+  errorRate: number | null;
 };
 
 export class SAIIC {
@@ -96,11 +97,12 @@ export class SAIIC {
     this.healthProviders.set(moduleId, provider);
     this.moduleDiagnostics.set(moduleId, {
       moduleId,
-      healthy: true,
-      cpuLoad: 0,
-      memoryUsage: 0,
-      errorRate: 0,
-      lastHeartbeat: Date.now(),
+      healthy: false,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
+      lastHeartbeat: 0,
+      measured: false,
       loopDetected: false,
       inconsistencies: [],
     });
@@ -168,12 +170,17 @@ export class SAIIC {
         diag.memoryUsage = health.memoryUsage;
         diag.errorRate = health.errorRate;
         diag.lastHeartbeat = Date.now();
-        diag.healthy = health.healthy && health.errorRate < 0.1;
+        diag.measured = true;
+        diag.healthy = health.healthy && (health.errorRate == null || health.errorRate < 0.1);
 
         // Check for loops (same output pattern repeated)
         const stateHash = this.computeStateHash(health);
-        this.recordPattern(moduleId, stateHash);
-        diag.loopDetected = this.detectLoop(moduleId);
+        if (stateHash !== null) {
+          this.recordPattern(moduleId, stateHash);
+          diag.loopDetected = this.detectLoop(moduleId);
+        } else {
+          diag.loopDetected = false;
+        }
         
         if (diag.loopDetected) {
           this._loopsDetected++;
@@ -197,6 +204,8 @@ export class SAIIC {
         const diag = this.moduleDiagnostics.get(moduleId)!;
         diag.healthy = false;
         diag.errorRate = 1.0;
+        diag.measured = true;
+        diag.lastHeartbeat = Date.now();
         criticalAlerts.push(`[SAIIC] ${moduleId} - Falha no health check: ${error}`);
       }
     }
@@ -206,8 +215,9 @@ export class SAIIC {
 
     // Calculate overall integrity
     const diagnostics = Array.from(this.moduleDiagnostics.values());
-    const healthyCount = diagnostics.filter(d => d.healthy).length;
-    const overallIntegrity = diagnostics.length > 0 ? healthyCount / diagnostics.length : 1;
+    const measuredDiagnostics = diagnostics.filter(d => d.measured);
+    const healthyCount = measuredDiagnostics.filter(d => d.healthy).length;
+    const overallIntegrity = measuredDiagnostics.length > 0 ? healthyCount / measuredDiagnostics.length : 0;
 
     // Idade do heartbeat não é latência de rede.
     const heartbeatAges = diagnostics.map(d => Date.now() - d.lastHeartbeat);
@@ -251,7 +261,7 @@ export class SAIIC {
   private async executeAnticorpoSweep(): Promise<void> {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
       // Uma anomalia só pode ser corrigida por um executor real.
-      if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
+      if (diag.errorRate != null && diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
         const handler = this.recoveryHandlers.get(moduleId);
         let recovered = false;
         if (handler) {
@@ -270,7 +280,7 @@ export class SAIIC {
         if (recovered) this._inconsistenciesResolved++;
       }
 
-      if (diag.memoryUsage > 0.85) {
+      if (diag.memoryUsage != null && diag.memoryUsage > 0.85) {
         const handler = this.recoveryHandlers.get(moduleId);
         let recovered = false;
         if (handler) {
@@ -311,7 +321,7 @@ export class SAIIC {
       }
 
       // Isolate critically unhealthy modules
-      if (!diag.healthy && diag.errorRate > 0.5 && !this.isolatedModules.has(moduleId)) {
+      if (diag.measured && !diag.healthy && diag.errorRate != null && diag.errorRate > 0.5 && !this.isolatedModules.has(moduleId)) {
         this.isolatedModules.add(moduleId);
         const action: AnticorpoAction = {
           timestamp: Date.now(),
@@ -346,7 +356,7 @@ export class SAIIC {
         const d2 = diags[j];
         
         // If one is very healthy and the other very unhealthy, flag inconsistency
-        if (Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
+        if (d1.errorRate != null && d2.errorRate != null && Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
           const lower = d1.errorRate > d2.errorRate ? d1 : d2;
           if (!lower.inconsistencies.includes(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`)) {
             lower.inconsistencies.push(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`);
@@ -389,10 +399,11 @@ export class SAIIC {
   /**
    * Simple state hash for pattern detection
    */
-  private computeStateHash(health: { cpuLoad: number; memoryUsage: number; errorRate: number }): number {
-    return Math.round(health.cpuLoad * 100) * 10000 +
-           Math.round(health.memoryUsage * 100) * 100 +
-           Math.round(health.errorRate * 100);
+  private computeStateHash(health: { cpuLoad: number | null; memoryUsage: number | null; errorRate: number | null }): number | null {
+    if (health.cpuLoad == null && health.memoryUsage == null && health.errorRate == null) return null;
+    return Math.round((health.cpuLoad ?? 0) * 100) * 10000 +
+           Math.round((health.memoryUsage ?? 0) * 100) * 100 +
+           Math.round((health.errorRate ?? 0) * 100);
   }
 
   /**
