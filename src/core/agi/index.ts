@@ -170,15 +170,15 @@ export class AeternumAGI {
 
     // IntegrityScanner usa os mesmos sinais observáveis do runtime; sem módulos fantasma.
     const healingProvider = (
-      performance: number,
-      memoryUsage = 0,
-      errorRate = 0,
-      healthy = performance > 0,
+      performance: number | null,
+      memoryUsage: number | null = null,
+      errorRate: number | null = null,
+      healthy = true,
     ) => ({ performance, memoryUsage, errorRate, healthy });
 
     this.selfHealing.integrity_scanner.registerModule('consciousness', () => {
       const healthy = this.consciousness.isRunning;
-      return healingProvider(healthy ? 1 : 0, 0, healthy ? 0 : 1, healthy);
+      return healingProvider(null, null, null, healthy);
     });
     this.selfHealing.integrity_scanner.registerModule('godel_agent', () => {
       const state = this.godelAgent.getMetaCognitionState();
@@ -201,47 +201,48 @@ export class AeternumAGI {
       const metrics = this.ethicalOptimizer.getMetrics();
       const score = Number(metrics.auditMetrics?.avgScore);
       const bounded = Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : 0;
-      return healingProvider(bounded, 0, 1 - bounded, this.ethicalOptimizer.isRunning);
+      return healingProvider(metrics.auditMetrics?.observed === true ? bounded : null, null, metrics.auditMetrics?.observed === true ? 1 - bounded : null, this.ethicalOptimizer.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('safety_system', () => {
       const report = this.safetySystem.getLatestReport();
       const score = Number(report?.overallHealth ?? 0);
-      return healingProvider(Math.max(0, Math.min(1, score)), 0, 1 - Math.max(0, Math.min(1, score)), this.safetySystem.isRunning);
+      const bounded = Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : null;
+      return healingProvider(bounded, null, bounded == null ? null : 1 - bounded, this.safetySystem.isRunning && report != null);
     });
     this.selfHealing.integrity_scanner.registerModule('nip', () => {
       const report = this.nip.getRelatorio();
       const healthy = report.saudeEpistemologica === 'saudavel';
-      return healingProvider(healthy ? 1 : 0.5, 0, healthy ? 0 : 0.5, this.nip.isRunning);
+      return healingProvider(null, null, null, this.nip.isRunning && healthy);
     });
     this.selfHealing.integrity_scanner.registerModule('quantum_bridge', () => {
       const status = this.quantumNeural.getInterfaceStatus();
-      return healingProvider(status.neural.isActive ? 1 : 0, 0, 0, status.initialized);
+      return healingProvider(null, null, null, status.neural.isActive);
     });
     this.selfHealing.integrity_scanner.registerModule('safe_core', () => {
       const active = this.safeCore.isActive();
       return healingProvider(active ? 1 : 0, 0, active ? 0 : 1, active);
     });
     this.selfHealing.integrity_scanner.registerModule('self_healing', () => {
-      return healingProvider(this.selfHealing.isRunning ? 1 : 0, 0, 0, this.selfHealing.isRunning);
+      return healingProvider(null, null, null, this.selfHealing.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('saiic', () => {
       const metrics = this.saiic.getMetrics();
-      return healingProvider(metrics.overallIntegrity, 0, 1 - metrics.overallIntegrity, metrics.isRunning);
+      return healingProvider(metrics.lastScanTimestamp > 0 ? metrics.overallIntegrity : null, null, metrics.lastScanTimestamp > 0 ? 1 - metrics.overallIntegrity : null, metrics.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('resource_manager', () => {
-      return healingProvider(this.resourceManager.isRunning ? 1 : 0, 0, 0, this.resourceManager.isRunning);
+      return healingProvider(null, null, null, this.resourceManager.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('gemHealth', () => {
-      return healingProvider(this.gemHealth.isRunning ? 1 : 0, 0, 0, this.gemHealth.isRunning);
+      return healingProvider(null, null, null, this.gemHealth.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('gemResearch', () => {
-      return healingProvider(this.gemResearch.isRunning ? 1 : 0, 0, 0, this.gemResearch.isRunning);
+      return healingProvider(null, null, null, this.gemResearch.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('gemMusic', () => {
-      return healingProvider(this.gemMusic.isRunning ? 1 : 0, 0, 0, this.gemMusic.isRunning);
+      return healingProvider(null, null, null, this.gemMusic.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('gemDevice', () => {
-      return healingProvider(this.gemDevice.isRunning ? 1 : 0, 0, 0, this.gemDevice.isRunning);
+      return healingProvider(null, null, null, this.gemDevice.isRunning);
     });
 
     // Register all modules in ResourceManager with priorities
