@@ -233,12 +233,7 @@ export class GEMDevice {
   private cycle(): void {
     this._cyclesCompleted++;
 
-    // Request status update from companion
-    if (this._status.connected) {
-      this.sendCommand({ type: 'status_request' });
-    }
-
-    // Desconectado: nenhum sensor é sintetizado. O estado permanece no último valor observado.
+    // Somente solicita uma nova leitura quando há conexão real.
     if (this._status.connected) {
       this.sendCommand({ type: 'status_request' });
     }
