@@ -98,3 +98,25 @@ Executar CI, corrigir primeiro erro real, repetir até obter execução verde e 
 - Execução E3: bloqueada por evidência insuficiente do runner/log.
 - Validação E4/E5: pendente até haver execução reproduzível com logs/steps.
 - PRs permanecem abertos e não mesclados.
+## Continuação da auditoria forense — 19:51–20:02 BRT
+
+- Releitura feita contra o HEAD corrente do branch, não contra SHAs históricos.
+- Comparações GitHub confirmaram: nenhum arquivo com status `removed` nos branches N01, SARA, N02, N03, N04, N05 ou N06; alterações existentes são adições/modificações dentro de arquivos.
+- N01: telemetria sintética permanece bloqueada nos componentes críticos auditados; SafeCore/SelfHealing/HyperSafety/NIP/Connectivity agora expõem estado de execução separado de evidência observada.
+- N01: GEM-Health sem wearable não alimenta mais GEM-Music; a adaptação só recebe dados quando `metrics.observed === true`.
+- N01: ponte quântica não exibe qubits/fidelidade/operações fabricados; sem backend observado permanece UNMEASURED.
+- N02: capacidades declaradas e operações sem executor permanecem não medidas/EXECUTION_REQUIRED; estado persistido legado não é reutilizado como prova.
+- N03: `/api/cognitive` autentica via Supabase e encaminha por N02/Soul Mesh real; falha de backend retorna erro, não sucesso sintético.
+- N05/N06: corrigido uso de helper inexistente `saraRequest()` em `saraClareiraAudit()`; ambos passam a usar o helper definido.
+- N06 possui evidência real recente de build, lint, testes N05/N06, testes Mesh e authority check verdes; isso comprova somente esses escopos.
+- N01 continua sem logs/steps expostos nos jobs falhos; a causa não pode ser atribuída ao código.
+- N02 Runner Forensics continua sem steps/logs expostos.
+- Dependency Review de N04/N06 falha por infraestrutura do GitHub: Dependency Graph desabilitado no repositório; não foi mascarado com continue-on-error.
+- ERU/MMD/RGO/Tríade permanecem sob as autoridades existentes; nenhuma segunda ERU foi criada.
+
+### Estado de evidência desta continuação
+
+E2 — confirmado por inspeção de código/branches.
+E3 — confirmado apenas onde GitHub expôs execução real, especialmente N06.
+E4 — confirmado apenas para testes que efetivamente executaram e passaram.
+E5 — ainda não promovido: integração final, reauditoria e CI completo dos fronts ainda não estão verdes.
