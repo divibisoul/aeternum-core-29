@@ -21,6 +21,14 @@ export function useProjetoClareira() {
     
     setRunning(ProjetoClareira.running);
 
+    const handleDeviceState = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail || typeof detail !== 'object') return;
+      ProjetoClareira.updateDeviceState(detail);
+    };
+
+    window.addEventListener('soul:device-state', handleDeviceState);
+
     // Atualizar métricas periodicamente
     const interval = setInterval(async () => {
       setMetrics(ProjetoClareira.getMetrics());
@@ -35,6 +43,7 @@ export function useProjetoClareira() {
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('soul:device-state', handleDeviceState);
     };
   }, []);
 
