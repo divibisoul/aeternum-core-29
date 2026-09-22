@@ -59,6 +59,22 @@ async function handle(req,res){ const url=new URL(req.url,`http://${req.headers.
       return json(res,200,{ok:true,nucleus:SELF,correlationId,capability:'sara.clareira.state',result:result.payload});
     }catch(error){ return json(res,502,{ok:false,nucleus:SELF,capability:'sara.clareira.state',error:error instanceof Error?error.message:'SARA_CLAREIRA_STATE_FAILED'}); }
   }
+  if(req.method==='GET'&&url.pathname==='/api/clareira/vagus/pending'){
+    try{
+      const correlationId=typeof req.headers['x-correlation-id']==='string'&&req.headers['x-correlation-id'].trim()?req.headers['x-correlation-id'].trim():crypto.randomUUID();
+      const limit=Math.max(1,Math.min(32,Number(url.searchParams.get('limit')||'32')));
+      const result=await requestSara('sara.clareira.vagus.pending',{limit},correlationId);
+      return json(res,200,{ok:true,nucleus:SELF,correlationId,capability:'sara.clareira.vagus.pending',result:result.payload});
+    }catch(error){ return json(res,502,{ok:false,nucleus:SELF,capability:'sara.clareira.vagus.pending',error:error instanceof Error?error.message:'SARA_CLAREIRA_VAGAL_PENDING_FAILED'}); }
+  }
+  if(req.method==='POST'&&url.pathname==='/api/clareira/vagus/ack'){
+    try{
+      const body=await readBody(req);
+      const correlationId=typeof req.headers['x-correlation-id']==='string'&&req.headers['x-correlation-id'].trim()?req.headers['x-correlation-id'].trim():crypto.randomUUID();
+      const result=await requestSara('sara.clareira.vagus.ack',body,correlationId);
+      return json(res,200,{ok:true,nucleus:SELF,correlationId,capability:'sara.clareira.vagus.ack',result:result.payload});
+    }catch(error){ return json(res,502,{ok:false,nucleus:SELF,capability:'sara.clareira.vagus.ack',error:error instanceof Error?error.message:'SARA_CLAREIRA_VAGAL_ACK_FAILED'}); }
+  }
   if(req.method==='POST'&&url.pathname==='/api/clareira/vagus'){
     try{
       const body=await readBody(req);
