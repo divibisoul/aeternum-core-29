@@ -420,7 +420,9 @@ export class AeternumAGI {
     // GEM cross-collaboration: Health → Music adaptation
     this._gemCollabInterval = setInterval(() => {
       const health = this.gemHealth.metrics;
-      this.gemMusic.adaptToHealth(health.stressLevel, health.fatigueIndex);
+      if (health.observed) {
+        this.gemMusic.adaptToHealth(health.stressLevel, health.fatigueIndex);
+      }
     }, 10000);
 
     // Gödel Agent continuous self-improvement
