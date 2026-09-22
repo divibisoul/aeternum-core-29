@@ -128,7 +128,7 @@ export class SAIIC {
 
     // Anticorpo Digital loop - searches and repairs
     this._anticorpoInterval = setInterval(() => {
-      this.executeAnticorpoSweep();
+      void this.executeAnticorpoSweep();
     }, 2000);
 
     // Initial scan
@@ -247,7 +247,7 @@ export class SAIIC {
   /**
    * ANTICORPO DIGITAL - Sweeps through modules and repairs anomalies
    */
-  private executeAnticorpoSweep(): void {
+  private async executeAnticorpoSweep(): Promise<void> {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
       // Uma anomalia só pode ser corrigida por um executor real.
       if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
