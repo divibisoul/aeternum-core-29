@@ -16,6 +16,8 @@ const OPERATION_ROUTES = Object.freeze({
   'sara.trace': { method: 'GET', path: '/v1/trace/{cycle_id}' },
   'sara.clareira.state': { method: 'POST', path: '/v1/clareira/state' },
   'sara.clareira.vagus': { method: 'POST', path: '/v1/clareira/vagus' },
+  'sara.clareira.vagus.pending': { method: 'GET', path: '/v1/clareira/vagus/pending' },
+  'sara.clareira.vagus.ack': { method: 'POST', path: '/v1/clareira/vagus/ack' },
 });
 
 function normalize(value) {
@@ -114,6 +116,28 @@ function buildBody(capability, payload, correlationId) {
       source: payload.source || 'SOUL_N01',
       snapshot,
     };
+  }
+
+  if (capability === 'sara.clareira.vagus.pending') {
+    if (!isRecord(payload)) return undefined;
+    const limit = Number(payload.limit ?? 32);
+    if (!Number.isFinite(limit) || limit < 1 || limit > 32) {
+      throw new Error('SARA_CLAREIRA_VAGAL_LIMIT_INVALID');
+    }
+    return undefined;
+  }
+
+  if (capability === 'sara.clareira.vagus.ack') {
+    if (!isRecord(payload) || typeof payload.event_id !== 'string' || !payload.event_id.trim()) {
+      throw new Error('SARA_CLAREIRA_VAGAL_EVENT_REQUIRED');
+    }
+    if (typeof payload.executed !== 'boolean') {
+      throw new Error('SARA_CLAREIRA_VAGAL_EXECUTED_REQUIRED');
+    }
+    if (typeof payload.execution_status !== 'string' || !payload.execution_status.trim()) {
+      throw new Error('SARA_CLAREIRA_VAGAL_STATUS_REQUIRED');
+    }
+    return { ...payload };
   }
 
   if (capability === 'sara.clareira.vagus') {
