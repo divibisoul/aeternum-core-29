@@ -25,5 +25,17 @@ assert.match(files.hook, /removeEventListener\('soul:device-state'/);
 assert.match(files.bridge, /\/vagus\/pending/);
 assert.match(files.bridge, /\/vagus\/ack/);
 assert.doesNotMatch(files.bridge, /const commandEnvelope = payload/);
+for (const capability of [
+  'clareira.android.snapshot',
+  'clareira.android.brightness',
+  'clareira.android.kill_background',
+  'clareira.android.wifi_panel',
+  'clareira.android.bluetooth_request',
+  'clareira.android.airplane_settings',
+]) {
+  assert.match(catalog, new RegExp(capability.replace(/\./g, '\\.'), 'g'));
+}
+assert.match(bootstrap, /androidContext: Context\? = null/);
+assert.match(bootstrap, /nativeClareira = androidContext/);
 
 console.log('CLAREIRA_ANDROID_CONTRACT: ok=true native_snapshot=true webview_ingress=true vagal_ack=true');
