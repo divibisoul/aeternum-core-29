@@ -17,7 +17,8 @@ class SoulMeshRuntime(private val nuclei: List<String> = SoulMeshChannels.nuclei
         require(source in nuclei && target in nuclei)
         val endpoint = endpoints[target] ?: error("Nucleus $target is not registered")
         if (source == target) {
-            require(SoulCapabilityCatalog.owner(capability).owner == target) {
+            val owner = runCatching { SoulCapabilityCatalog.owner(capability).owner }.getOrNull()
+            require(owner == target) {
                 "Self-target dispatch requires a capability owned by target nucleus"
             }
         }
