@@ -17,6 +17,7 @@ import {
   LEVEL_MAP,
   MAX_QUEUE_SIZE,
   REPORT_INTERVAL,
+  ENERGY_CAPACITY_BY_LEVEL,
 } from './types';
 
 /**
@@ -58,6 +59,8 @@ export class ProcessingNode {
   constructor(id: string, level: NodeLevel) {
     this.id = id;
     this.level = level;
+    this.energyCapacity = ENERGY_CAPACITY_BY_LEVEL[level];
+    this.currentEnergy = this.energyCapacity * 0.6;
 
     EventBus.emit('module:registered', {
       id: this.id,
