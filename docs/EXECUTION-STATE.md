@@ -1,6 +1,6 @@
 # SOUL — LIVE EXECUTION STATE
 
-Last updated: 2026-09-03
+Last updated: 2026-09-22
 
 This is the N01 continuous execution control board. Every state transition requires repository evidence and validation evidence. A new prompt continues this state; it does not create a new project or parallel implementation.
 
@@ -15,7 +15,7 @@ This is the N01 continuous execution control board. Every state transition requi
 | N01-05 | Soul Sentinel | IMPLEMENTED / VALIDATION OPEN | Watchdog, integrity snapshot, metrics, bounded restart and boot/package-replacement startup are implemented. Android runtime proof remains pending. |
 | N01-06 | Seven-nucleus topology | CORRECTED / VALIDATION OPEN | 7 nuclei × 6 peers = 42 directed links and 21 bidirectional pairs. |
 | N01-07 | Environment/security | PRESENT | Secrets remain template-only; no real secret values added. |
-| N01-08 | Source review | CORRECTED / VALIDATION OPEN | 43 current PR paths reviewed; concrete envelope, router, Android JVM, capability-name, protocol-duplication and diagnostic robustness defects corrected on the same branch. |
+| N01-08 | Source review | CORRECTED / VALIDATION OPEN | 44 current PR paths reviewed; concrete envelope, router, Android JVM, capability-name, protocol-duplication and diagnostic robustness defects corrected on the same branch. |
 | N01-09 | Regression validation | BLOCKED BY EXECUTION ENVIRONMENT | Full local commands cannot be run in this agent environment; GitHub Actions also previously failed before steps with runner-unassigned evidence. |
 | N01-10 | N01↔N02 runtime transaction | OPEN | Requires actual deployed peer endpoints and a real correlated request/response. |
 | N01-11 | Final N01 certification | BLOCKED | No PASS/HEALTHY/ONLINE/merged claim is permitted without executable evidence. |
@@ -38,7 +38,7 @@ This is the N01 continuous execution control board. Every state transition requi
 
 ## Canonical PR
 
-PR #25 remains the only N01 consolidation PR. Its current verified head is `6a34a56c6fd47594cdb429b0e83750f061222734`, base remains `main` at `6c828648fb2d953f609218d612501102566684fc`, state `open`, not merged.
+PR #25 remains the only N01 consolidation PR. Its current verified head is updated by the latest commit after this source correction, base remains `main` at `6c828648fb2d953f609218d612501102566684fc`, state `open`, not merged.
 
 ## Anti-loop rule
 
@@ -46,4 +46,12 @@ Before every subsequent N01 action, re-read this file, compare `consolidacao-n01
 
 ## Single next executable action
 
-Run the real N01 validation gates against the current HEAD. Because this agent cannot execute the private checkout locally and the hosted Actions path previously failed before runner assignment, no local PASS is claimed here. Once an executor is available, any source-level failure returns to this same PR #25 for correction before merge and before N02.
+Run the real N01 validation gates against the current HEAD, then re-audit the generated execution evidence. Because this agent cannot execute the private checkout locally and the hosted Actions path previously failed before runner assignment, no local PASS is claimed here. Once an executor is available, any source-level failure returns to this same PR #25 for correction before merge and before N02.
+
+
+## Continuous audit additions — 2026-09-22
+
+- SARA federation adapter was added to the N01 canonical branch without replacing Mesh ownership.
+- SARA capability routing now uses the same correlation ID and explicit server-side service configuration.
+- Envelope facade clock-skew validation was reconciled to the canonical 30-second contract.
+- Global SOUL+SARA forensic audit continues in parallel; no N01 gate is bypassed by that work.
