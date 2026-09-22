@@ -32,7 +32,7 @@ export interface IntegrityReport {
   repairedModules: string[];
   anticorpoActions: AnticorpoAction[];
   criticalAlerts: string[];
-  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number };
+  meshHeartbeatCheck: { allFreshWithin10s: boolean; maxAgeMs: number; evidence: 'HEARTBEAT_AGE' };
 }
 
 export interface AnticorpoAction {
@@ -70,6 +70,7 @@ export class SAIIC {
   private _anticorpoInterval: ReturnType<typeof setInterval> | null = null;
   
   private healthProviders: Map<string, HealthProvider> = new Map();
+  private recoveryHandlers: Map<string, () => boolean | Promise<boolean>> = new Map();
   private moduleDiagnostics: Map<string, ModuleDiagnostic> = new Map();
   private anticorpoHistory: AnticorpoAction[] = [];
   private isolatedModules: Set<string> = new Set();
@@ -105,6 +106,10 @@ export class SAIIC {
     if (!this.patternBuffer.has(moduleId)) {
       this.patternBuffer.set(moduleId, []);
     }
+  }
+
+  registerRecoveryHandler(moduleId: string, handler: () => boolean | Promise<boolean>): void {
+    this.recoveryHandlers.set(moduleId, handler);
   }
 
   /**
@@ -185,7 +190,6 @@ export class SAIIC {
         // If module was isolated, check if it recovered
         if (this.isolatedModules.has(moduleId) && diag.healthy) {
           this.isolatedModules.delete(moduleId);
-          this.repairedModules.add(moduleId);
         }
 
       } catch (error) {
@@ -204,9 +208,9 @@ export class SAIIC {
     const healthyCount = diagnostics.filter(d => d.healthy).length;
     const overallIntegrity = diagnostics.length > 0 ? healthyCount / diagnostics.length : 1;
 
-    // Check mesh latency
-    const latencies = diagnostics.map(d => Date.now() - d.lastHeartbeat);
-    const maxLatency = Math.max(...latencies, 0);
+    // Idade do heartbeat não é latência de rede.
+    const heartbeatAges = diagnostics.map(d => Date.now() - d.lastHeartbeat);
+    const maxHeartbeatAge = Math.max(...heartbeatAges, 0);
 
     // Store report
     const report: IntegrityReport = {
@@ -217,7 +221,11 @@ export class SAIIC {
       repairedModules: Array.from(this.repairedModules),
       anticorpoActions: this.anticorpoHistory.slice(-10),
       criticalAlerts,
-      meshLatencyCheck: { allUnder10ms: maxLatency < 10, maxLatency },
+      meshHeartbeatCheck: {
+        allFreshWithin10s: maxHeartbeatAge < 10_000,
+        maxAgeMs: maxHeartbeatAge,
+        evidence: 'HEARTBEAT_AGE',
+      },
     };
     
     this.lastReports.push(report);
@@ -241,52 +249,64 @@ export class SAIIC {
    */
   private executeAnticorpoSweep(): void {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
-      // Detect and repair weight corruption (simulated via high error rate)
+      // Uma anomalia só pode ser corrigida por um executor real.
       if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
-        const action: AnticorpoAction = {
+        const handler = this.recoveryHandlers.get(moduleId);
+        let recovered = false;
+        if (handler) {
+          try { recovered = await Promise.resolve(handler()); } catch { recovered = false; }
+        }
+        this.anticorpoHistory.push({
           timestamp: Date.now(),
           targetModule: moduleId,
-          anomalyType: 'weight_corruption',
-          action: 'corrected',
+          anomalyType: 'state_drift',
+          action: recovered ? 'corrected' : 'bypassed',
           severity: diag.errorRate,
-          details: `Corrigido errorRate de ${(diag.errorRate * 100).toFixed(1)}% para níveis saudáveis`,
-        };
-        this.anticorpoHistory.push(action);
-        
-        // Apply correction
-        diag.errorRate *= 0.5; // Reduce error rate
-        this._inconsistenciesResolved++;
+          details: recovered
+            ? 'Recovery handler executado e reportado como aplicado.'
+            : 'Nenhum executor observado; diagnóstico preservado sem mutação sintética.',
+        });
+        if (recovered) this._inconsistenciesResolved++;
       }
 
-      // Detect memory leaks
       if (diag.memoryUsage > 0.85) {
-        const action: AnticorpoAction = {
+        const handler = this.recoveryHandlers.get(moduleId);
+        let recovered = false;
+        if (handler) {
+          try { recovered = await Promise.resolve(handler()); } catch { recovered = false; }
+        }
+        this.anticorpoHistory.push({
           timestamp: Date.now(),
           targetModule: moduleId,
           anomalyType: 'memory_leak',
-          action: 'corrected',
+          action: recovered ? 'corrected' : 'bypassed',
           severity: diag.memoryUsage,
-          details: `Memória de ${moduleId} otimizada de ${(diag.memoryUsage * 100).toFixed(0)}%`,
-        };
-        this.anticorpoHistory.push(action);
-        diag.memoryUsage *= 0.8;
-        this._inconsistenciesResolved++;
+          details: recovered
+            ? 'Recovery handler executado e reportado como aplicado.'
+            : 'Sem executor de recuperação de memória; nenhum valor foi falsamente reduzido.',
+        });
+        if (recovered) this._inconsistenciesResolved++;
       }
 
-      // Handle detected loops
       if (diag.loopDetected) {
-        const action: AnticorpoAction = {
+        const handler = this.recoveryHandlers.get(moduleId);
+        let recovered = false;
+        if (handler) {
+          try { recovered = await Promise.resolve(handler()); } catch { recovered = false; }
+        }
+        this.anticorpoHistory.push({
           timestamp: Date.now(),
           targetModule: moduleId,
           anomalyType: 'loop_detected',
-          action: 'restarted',
+          action: recovered ? 'restarted' : 'bypassed',
           severity: 0.8,
-          details: `Loop de inferência detectado em ${moduleId}, forçando perturbação de estado`,
-        };
-        this.anticorpoHistory.push(action);
-        // Reset pattern buffer for this module
+          details: recovered
+            ? 'Recovery handler executado para o loop detectado.'
+            : 'Somente o detector foi resetado; restart do runtime não foi executado.',
+        });
         this.patternBuffer.set(moduleId, []);
         diag.loopDetected = false;
+        if (recovered) this._inconsistenciesResolved++;
       }
 
       // Isolate critically unhealthy modules
@@ -298,7 +318,7 @@ export class SAIIC {
           anomalyType: 'state_drift',
           action: 'isolated',
           severity: 1.0,
-          details: `${moduleId} isolado por falha crítica. Bypass ativado.`,
+          details: moduleId + ' marcado criticamente insalubre; isolamento efetivo depende de executor autorizado.',
         };
         this.anticorpoHistory.push(action);
       }
