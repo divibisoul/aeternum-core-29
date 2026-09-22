@@ -159,14 +159,13 @@ export class AeternumAGI {
     this.quantumNeural.initialize();
     this.connectivity.initialize();
 
-    // Establish FULL-MESH quantum entanglement
+    // Registrar participantes da conectividade não implica conexão física.
     const allSubsystemIds = [
       'consciousness', 'godel', 'darwin', 'lattice',
       'safeCore', 'selfHealing', 'ethics', 'hyperSafety',
       'nip', 'saiic', 'resourceManager'
     ];
     allSubsystemIds.forEach(id => {
-      this.quantumNeural.establishEntanglement(id);
       this.connectivity.registerNode(id, 'agi-engine');
     });
 
@@ -494,12 +493,12 @@ export class AeternumAGI {
           this.ethicalOptimizer.isRunning,
           this.safetySystem.isRunning,
           this.nip.isRunning,
-          this.quantumNeural.getInterfaceStatus().initialized,
+          this.quantumNeural.getInterfaceStatus().neural.isActive,
           this.connectivity.isRunning,
           this.saiic.isRunning,
           this.resourceManager.isRunning,
-          true, // GodelAgent
-          true, // SafeCore
+          this._godelContinuousInterval !== null,
+          this.safeCore.isActive(),
           this.gemHealth.isRunning,
           this.gemResearch.isRunning,
           this.gemMusic.isRunning,
