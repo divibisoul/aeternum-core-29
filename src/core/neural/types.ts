@@ -97,6 +97,16 @@ export interface InformationPacket {
 /**
  * Estado de um nó de processamento
  */
+export interface ClareiraDeviceState {
+  batteryPercent: number;
+  charging: boolean;
+  batteryTemperatureC: number | null;
+  screenOn: boolean;
+  network: string;
+  shizukuStatus: string;
+  timestamp: number;
+}
+
 export interface NodeState {
   nodeId: string;
   level: NodeLevel;
@@ -158,6 +168,7 @@ export interface ClareiraSnapshot {
   channels: ReturnType<import('./InformationChannel').InformationChannel['getMetrics']>[];
   homeostasis: ReturnType<import('./HomeostasisManager').HomeostasisManager['getMetrics']>;
   vagus: ReturnType<import('./VagusNerve').VagusNerve['snapshot']>;
+  deviceState?: ClareiraDeviceState;
 }
 
 /**
