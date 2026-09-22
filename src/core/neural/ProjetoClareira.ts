@@ -15,12 +15,11 @@ import { homeostasisManager, HomeostasisManager } from './HomeostasisManager';
 import { InformationChannel } from './InformationChannel';
 import {
   type SystemMetrics,
-  type InformationPacket,
   type ClareiraSnapshot,
-  createInformationPacket,
 } from './types';
 import { VagusNerve } from './VagusNerve';
 import { ClareiraSaraBridge } from './ClareiraSaraBridge';
+import { InputTransducer } from './InputTransducer';
 import {
   NucleoApps,
   NucleoArmazenamento,
@@ -55,6 +54,7 @@ class ProjetoClareiraSystem {
   private homeostasis: HomeostasisManager;
   private vagus: VagusNerve;
   private saraBridge: ClareiraSaraBridge;
+  private readonly inputTransducer = new InputTransducer();
   
   private _initialized = false;
   private _running = false;
@@ -242,16 +242,6 @@ class ProjetoClareiraSystem {
       return false;
     }
 
-    const packet = createInformationPacket(
-      data,
-      10.0,
-      criticality,
-      'Data',
-      'EXTERNAL',
-      targetNodeId,
-      { injectedAt: Date.now() }
-    );
-
     const target = targetNodeId
       ? this.allNodes.find(node => node.id === targetNodeId)
       : this.secondaryNodes.find(node => node.active)
@@ -259,6 +249,17 @@ class ProjetoClareiraSystem {
         ?? (this.nucleoRaiz.active ? this.nucleoRaiz : undefined);
 
     if (!target || !target.active) return false;
+
+    const nodeMetrics = target.getMetrics();
+    const packet = this.inputTransducer.transduce(
+      data,
+      'EXTERNAL',
+      nodeMetrics.temperature,
+      nodeMetrics.energy / Math.max(1, nodeMetrics.energyCapacity),
+      'Data',
+      target.id,
+      { injectedAt: Date.now(), source: 'SOUL_RUNTIME' },
+    );
 
     const success = target.receivePacket(packet);
     if (success) this.packetsInjected++;
@@ -314,7 +315,15 @@ class ProjetoClareiraSystem {
       packetsProcessed: totalPackets,
       tunelamentosRealizados: this.packetsInjected,
       vagalTone: this.vagus.snapshot().vagalTone,
-      activeVagusBranches: this.vagus.snapshot().branches.filter(branch => branch.active).length,
+      activeVagusBranches: this.vagus.snapshot().activeNodeBranches,
+      redundantVagusBranches: this.vagus.snapshot().redundantBranches,
+      vagalSignalLatencyMs: this.vagus.snapshot().observedLatencyMs ?? undefined,
+      droppedPackets: this.channels.reduce((sum, channel) => sum + channel.getMetrics().errorCount, 0),
+      dropRate: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) > 0
+        ? this.channels.reduce((sum, channel) => sum + channel.getMetrics().errorCount, 0) /
+          (this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) +
+           this.channels.reduce((sum, channel) => sum + channel.getMetrics().errorCount, 0))
+        : 0,
       timestamp: Date.now(),
     };
   }
