@@ -14,8 +14,13 @@ class SoulMeshRuntime(private val nuclei: List<String> = SoulMeshChannels.nuclei
     }
 
     fun send(source: String, target: String, capability: String, payload: JSONObject): SoulMeshMessage {
-        require(source in nuclei && target in nuclei && source != target)
+        require(source in nuclei && target in nuclei)
         val endpoint = endpoints[target] ?: error("Nucleus $target is not registered")
+        if (source == target) {
+            require(SoulCapabilityCatalog.owner(capability).owner == target) {
+                "Self-target dispatch requires a capability owned by target nucleus"
+            }
+        }
         val request = SoulMeshMessage(
             id = UUID.randomUUID().toString(),
             correlationId = UUID.randomUUID().toString(),
