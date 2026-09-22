@@ -352,7 +352,10 @@ export class ProcessingNode {
       }
     }
 
-    if (this.inputQueue.length === 0) return;
+    if (this.inputQueue.length === 0) {
+      this.currentEnergy = Math.min(this.energyCapacity, this.currentEnergy + 0.25);
+      return;
+    }
 
     const startTime = Date.now();
 
@@ -368,10 +371,12 @@ export class ProcessingNode {
       // Processamento específico do nó
       const result = this.nodeSpecificProcessing(packet);
       
-      // Consumir energia
-    this.consumeEnergy(packet.criticality * 5);
-    
-    // Atualizar temperatura
+      // Custo metabólico depende do tamanho e criticidade do pacote.
+      this.consumeEnergy(
+        packet.data.length * 0.008 * (1 + packet.criticality * 0.5)
+      );
+      
+      // Atualizar temperatura
     this.updateTemperature(packet.criticality);
 
       // Se houver resultado, criar e enviar resposta
