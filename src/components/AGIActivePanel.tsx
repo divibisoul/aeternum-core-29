@@ -79,7 +79,7 @@ export function AGIActivePanel() {
         {/* Live Status Header */}
         <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
           <Badge className="bg-emerald-500/20 text-emerald-400 text-[9px]">
-            {metrics?.overall?.activeSubsystems ?? 0}/{metrics?.overall?.subsystems ?? 17} ONLINE
+            {metrics?.overall?.activeSubsystems ?? 0}/{metrics?.overall?.subsystems ?? 17} ATIVOS
           </Badge>
           <span className="text-emerald-400">Ψ:{metrics?.consciousness?.isRunning ? 'ON' : 'OFF'}</span>
           <span className="text-sky-400">G:{((metrics?.godelMeta?.selfAwareness ?? 0) * 100).toFixed(0)}%</span>
@@ -104,7 +104,7 @@ export function AGIActivePanel() {
                 {[
                   { name: 'SAIIC', status: metrics?.saiic?.isRunning, metric: metrics?.saiic?.overallIntegrity, priority: true },
                   { name: 'ResourceMgr', status: metrics?.resources?.isRunning, label: `${metrics?.resources?.modulesManaged ?? 0} mods` },
-                  { name: 'GodelAgent', status: true, metric: metrics?.godelMeta?.selfAwareness },
+                  { name: 'GodelAgent', status: metrics?.overall?.godelLoopActive === true, metric: metrics?.godelMeta?.selfAwareness },
                   { name: 'DarwinMachine', status: metrics?.darwin?.isRunning, metric: metrics?.darwin?.avgFitness },
                   { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                   { name: 'Consciousness', status: metrics?.consciousness?.isRunning },
