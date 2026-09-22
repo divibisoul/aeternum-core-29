@@ -38,6 +38,7 @@ export class HomeostasisManager {
   private vagus: VagusNerve | null = null;
   private deviceState: ClareiraDeviceState | null = null;
   private lastTurboActivation = 0;
+  private lastTurboEnd = 0;
   
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private _running = false;
@@ -121,6 +122,10 @@ export class HomeostasisManager {
    */
   stop(): void {
     this._running = false;
+    this.turboActive = false;
+    for (const node of this.allNodes) {
+      node.setHomeostasisMultiplier(1.0);
+    }
     
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
@@ -227,7 +232,7 @@ export class HomeostasisManager {
     const turboConditions = (
       this.globalStress < TURBO_MAX_STRESS &&
       this.energyScore >= TURBO_MIN_ENERGY_SCORE &&
-      (currentTime - this.lastTurboActivation) / 1000 > TURBO_COOLDOWN_SECONDS
+      (currentTime - this.lastTurboEnd) / 1000 > TURBO_COOLDOWN_SECONDS
     );
 
     if (turboConditions && !this.turboActive) {
@@ -251,9 +256,10 @@ export class HomeostasisManager {
       // DESATIVAR MODO TURBO
       console.log('[HomeostasisManager] ⚡ DESATIVANDO MODO TURBO');
       this.turboActive = false;
+      this.lastTurboEnd = currentTime;
 
       for (const node of this.allNodes) {
-        node.setHomeostasisMultiplier(1 / TURBO_PROCESSING_MULTIPLIER);
+        node.setHomeostasisMultiplier(1.0);
       }
     }
 
