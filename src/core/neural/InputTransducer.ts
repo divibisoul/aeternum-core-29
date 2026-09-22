@@ -64,7 +64,7 @@ export class InputTransducer {
     for (const ch of new TextEncoder().encode(data)) {
       counts.set(ch, (counts.get(ch) ?? 0) + 1);
     }
-    const total = data.length;
+    const total = new TextEncoder().encode(data).length;
     let entropy = 0;
     for (const count of counts.values()) {
       const p = count / total;
