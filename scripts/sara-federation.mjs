@@ -36,6 +36,10 @@ export function saraConfigured() {
   return Boolean(baseUrl && token);
 }
 
+export function saraHealthConfigured() {
+  return Boolean(config().baseUrl);
+}
+
 export function saraDescribe() {
   const { baseUrl, token } = config();
   return {
@@ -109,7 +113,9 @@ function buildBody(capability, payload, correlationId) {
 
 export async function requestSara(capability, payload = {}, correlationId) {
   const { baseUrl, token } = config();
-  if (!baseUrl || !token) throw new Error('SARA_SERVICE_NOT_CONFIGURED');
+  if (!baseUrl || (capability !== 'sara.health' && !token)) {
+    throw new Error('SARA_SERVICE_NOT_CONFIGURED');
+  }
 
   const route = routeFor(capability, payload);
   const correlation = correlationFrom(payload, normalize(correlationId) || crypto.randomUUID());
