@@ -28,9 +28,10 @@ class SoulHybridActivity : ComponentActivity() {
         eventCollector = SystemEventCollector(this, eventBus)
         eventCollector.start()
 
-        mesh = SoulMeshBootstrap.create(webDelegate = { message ->
-            SoulMeshBootstrap.delegateToWeb(message)
-        })
+        mesh = SoulMeshBootstrap.create(
+            webDelegate = { message -> SoulMeshBootstrap.delegateToWeb(message) },
+            androidContext = this,
+        )
         webView = WebView(this)
         SoulSecureWebView.configure(webView)
         SoulHybridBridge.attach(webView, SoulHybridBridge("N01", { message ->
