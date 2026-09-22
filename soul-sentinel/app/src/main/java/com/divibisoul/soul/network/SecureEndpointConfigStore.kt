@@ -67,7 +67,7 @@ class SecureEndpointConfigStore(private val context: Context) {
             requestTimeoutMs = p[TIMEOUT]?.toLongOrNull() ?: 10_000L,
             saraTokenConfigured = p[SARA_TOKEN] != null,
             n07TokenConfigured = p[N07_TOKEN] != null,
-            logRetentionDays = p[LOG_RETENTION_DAYS]?.toIntOrNull()?.coerceIn(1, 3650) ?: 30
+            logRetentionDays = p[LOG_RETENTION_DAYS]?.coerceIn(1, 3650) ?: 30
         )
     }
 
