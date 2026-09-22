@@ -1,5 +1,6 @@
 package com.divibisoul.soul.network
 
+import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -100,5 +101,5 @@ class SaraClient(private val configStore: SecureEndpointConfigStore) {
         request("POST", "/v1/regenerate", JSONObject().put("input", input), correlationId = correlationId)
 
     suspend fun trace(cycleId: String, correlationId: String = UUID.randomUUID().toString()) =
-        request("GET", "/v1/trace/" + cycleId, correlationId = correlationId)
+        request("GET", "/v1/trace/" + Uri.encode(cycleId), correlationId = correlationId)
 }
