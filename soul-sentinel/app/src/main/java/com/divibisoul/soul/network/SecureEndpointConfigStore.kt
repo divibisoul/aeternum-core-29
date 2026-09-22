@@ -71,8 +71,8 @@ class SecureEndpointConfigStore(private val context: Context) {
         )
     }
 
-    suspend fun saraToken(): String? = context.endpointDataStore.data.first()[SARA_TOKEN]?.let(::decrypt)
-    suspend fun n07Token(): String? = context.endpointDataStore.data.first()[N07_TOKEN]?.let(::decrypt)
+    suspend fun saraToken(): String? = context.endpointDataStore.data.first()[SARA_TOKEN]?.let { runCatching { decrypt(it) }.getOrNull() }
+    suspend fun n07Token(): String? = context.endpointDataStore.data.first()[N07_TOKEN]?.let { runCatching { decrypt(it) }.getOrNull() }
     suspend fun feedbackSyncUrl(): String? = context.endpointDataStore.data.first()[FEEDBACK_SYNC_URL]
 
     suspend fun setTimeout(ms: Long) {
