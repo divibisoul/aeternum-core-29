@@ -26,7 +26,7 @@ export interface ClareiraSaraResponse {
 }
 
 export class ClareiraSaraBridge {
-  readonly version = '1.0.0';
+  readonly version = '1.1.0';
 
   constructor(private readonly gatewayBaseUrl = '/api/clareira') {}
 
@@ -59,6 +59,93 @@ export class ClareiraSaraBridge {
       },
       correlation ?? correlationId('clareira-vagal'),
     );
+  }
+
+  async pullAndApplyVagalCommands(
+    apply: (
+      nodeId: string,
+      command: 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
+      payload: Record<string, unknown>
+    ) => boolean,
+    limit = 32,
+  ): Promise<{ received: number; executed: number; failed: number }> {
+    const correlation = correlationId('clareira-vagal-poll');
+    const response = await fetch(
+      this.gatewayBaseUrl.replace(/\/$/, '') + `/vagus/pending?limit=${Math.max(1, Math.min(32, limit))}`,
+      {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          'x-correlation-id': correlation,
+        },
+        cache: 'no-store',
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`CLAREIRA_SARA_VAGAL_PULL_${response.status}`);
+    }
+    const body = await response.json() as { commands?: Array<Record<string, unknown>> };
+    const commands = Array.isArray(body.commands) ? body.commands : [];
+    let executed = 0;
+    let failed = 0;
+    for (const item of commands) {
+      const nodeId = typeof item.node_id === 'string' ? item.node_id : '';
+      const eventId = typeof item.event_id === 'string' ? item.event_id : '';
+      const commandEnvelope = payload;
+      const rawCommand = typeof (item as { command?: unknown }).command === 'string'
+        ? (item as { command: string }).command
+        : '';
+      const validCommands = new Set(['calm', 'turbo', 'reduce_thermal', 'shutdown', 'resume']);
+      if (!nodeId || !eventId || !validCommands.has(rawCommand)) {
+        failed += 1;
+        continue;
+      }
+      let ok = false;
+      try {
+        ok = apply(
+          nodeId,
+          rawCommand as 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
+          commandEnvelope as Record<string, unknown>,
+        );
+      } catch {
+        ok = false;
+      }
+      if (ok) executed += 1;
+      else failed += 1;
+
+      await this.ackVagalCommand(
+        eventId,
+        ok,
+        ok ? 'APPLIED_IN_SOUL_RUNTIME' : 'APPLICATION_FAILED',
+        `${correlation}-${eventId}`,
+      );
+    }
+    return { received: commands.length, executed, failed };
+  }
+
+  private async ackVagalCommand(
+    eventId: string,
+    executed: boolean,
+    executionStatus: string,
+    correlation: string,
+  ): Promise<void> {
+    const response = await fetch(
+      this.gatewayBaseUrl.replace(/\/$/, '') + '/vagus/ack',
+      {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'x-correlation-id': correlation,
+        },
+        body: JSON.stringify({
+          event_id: eventId,
+          executed,
+          execution_status: executionStatus,
+        }),
+      },
+    );
+    if (!response.ok) throw new Error(`CLAREIRA_SARA_VAGAL_ACK_${response.status}`);
   }
 
   private async request(
