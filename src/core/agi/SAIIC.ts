@@ -188,10 +188,10 @@ export class SAIIC {
         }
 
         // Check for critical issues
-        if (health.errorRate > 0.2) {
+        if (health.errorRate != null && health.errorRate > 0.2) {
           criticalAlerts.push(`[SAIIC] ${moduleId} - Taxa de erro alta: ${(health.errorRate * 100).toFixed(1)}%`);
         }
-        if (health.memoryUsage > 0.9) {
+        if (health.memoryUsage != null && health.memoryUsage > 0.9) {
           criticalAlerts.push(`[SAIIC] ${moduleId} - Memória crítica: ${(health.memoryUsage * 100).toFixed(0)}%`);
         }
 
@@ -357,7 +357,7 @@ export class SAIIC {
         
         // If one is very healthy and the other very unhealthy, flag inconsistency
         if (d1.errorRate != null && d2.errorRate != null && Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
-          const lower = d1.errorRate > d2.errorRate ? d1 : d2;
+          const lower = d1.errorRate != null && d2.errorRate != null && d1.errorRate > d2.errorRate ? d1 : d2;
           if (!lower.inconsistencies.includes(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`)) {
             lower.inconsistencies.push(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`);
           }
