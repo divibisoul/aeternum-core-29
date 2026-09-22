@@ -1,255 +1,235 @@
 /**
- * HOMEOSTASIS MANAGER - Sistema de Regulação Global
- * 
- * Implementação CRÍTICA do HomeostasisManager
- * Gerencia stress global, modo turbo e recuperação de nós
+ * HOMEOSTASIS MANAGER - Regulação global da Clareira.
+ *
+ * Mantém stress, energia operacional, turbo, throttling e recuperação.
+ * O Nervo Vago é o canal autonômico; esta classe continua sendo a autoridade
+ * de regulação da Clareira no runtime SOUL.
  */
-
 import { EventBus } from '../EventBus';
 import type { ProcessingNode } from './ProcessingNode';
+import type { VagusNerve } from './VagusNerve';
 import {
   type NodeState,
   type HomeostasisReport,
+  type VagalSignal,
   THERMAL_STRESS_WARN,
   TURBO_MAX_STRESS,
   TURBO_COOLDOWN_SECONDS,
   TURBO_DURATION_SECONDS,
   TURBO_PROCESSING_MULTIPLIER,
   RECOVERY_STRESS_THRESHOLD,
-  RECOVERY_CHANCE_PER_CHECK,
   HOMEOSTASIS_CHECK_INTERVAL,
 } from './types';
 
-/**
- * HomeostasisManager - Sistema de regulação global
- */
 export class HomeostasisManager {
   private nodeStates: Map<string, NodeState> = new Map();
   private allNodes: ProcessingNode[] = [];
-  
   private globalStress = 0;
+  private energyScore = 100;
   private turboActive = false;
   private lastTurboActivation = 0;
-  
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private _running = false;
-
-  // Histórico para análise
   private stressHistory: number[] = [];
   private turboActivations = 0;
   private nodesRecovered = 0;
+  private vagus: VagusNerve | null = null;
 
   constructor() {
     EventBus.emit('module:registered', {
       id: 'homeostasis-manager',
       name: 'HomeostasisManager',
     });
-
-    console.log('[HomeostasisManager] Inicializado');
   }
 
-  /**
-   * Registra nós para monitoramento
-   */
   registerNodes(nodes: ProcessingNode[]): void {
-    this.allNodes = nodes;
-    
-    // Configurar callback em cada nó
-    for (const node of nodes) {
+    this.allNodes = [...nodes];
+    for (const node of this.allNodes) {
       node.setHomeostasisCallback((state: NodeState) => {
         this.nodeStates.set(state.nodeId, state);
       });
     }
-
-    console.log(`[HomeostasisManager] ${nodes.length} nós registrados`);
   }
 
-  /**
-   * Inicia o monitoramento
-   */
-  start(): void {
-    if (this._running) return;
+  attachVagus(vagus: VagusNerve): void {
+    this.vagus = vagus;
+  }
 
+  receiveVagalAfferent(signal: VagalSignal): void {
+    const node = this.allNodes.find(item => item.id === signal.sourceNodeId);
+    if (!node) return;
+
+    if (signal.signalType === 'thermal_critical') {
+      this.vagus?.sendEfferent(node.id, 'reduce_thermal', signal.payload, 0.95);
+    } else if (signal.signalType === 'overload' || signal.signalType === 'energy_low') {
+      this.vagus?.sendEfferent(node.id, 'calm', signal.payload, 0.85);
+    } else if (signal.signalType === 'fault') {
+      this.globalStress = Math.min(100, this.globalStress + signal.priority);
+    }
+  }
+
+  start(): void {
+    if (this.checkInterval) return;
     this._running = true;
+    if (this.lastTurboActivation === 0) this.lastTurboActivation = Date.now();
+
     this.checkInterval = setInterval(() => {
       this.collectReports();
       this.calculateGlobalStress();
       this.applyRegulation();
     }, HOMEOSTASIS_CHECK_INTERVAL);
-
-    console.log('[HomeostasisManager] Monitoramento iniciado');
   }
 
-  /**
-   * Para o monitoramento
-   */
   stop(): void {
     this._running = false;
-    
-    if (this.checkInterval) {
-      clearInterval(this.checkInterval);
-      this.checkInterval = null;
+    if (this.checkInterval) clearInterval(this.checkInterval);
+    this.checkInterval = null;
+    this.turboActive = false;
+    for (const node of this.allNodes) {
+      node.setHomeostasisMultiplier(1);
+      node.setVagalMultiplier(1);
     }
-
-    console.log('[HomeostasisManager] Monitoramento parado');
   }
 
-  /**
-   * Coleta relatórios de estado
-   */
   private collectReports(): void {
-    // Os estados são coletados automaticamente via callback
-    // Este método pode ser usado para limpeza de estados antigos
     const now = Date.now();
-    const staleThreshold = 10000; // 10 segundos
-
     for (const [nodeId, state] of this.nodeStates.entries()) {
-      if (now - state.timestamp > staleThreshold) {
-        console.warn(`[HomeostasisManager] Estado obsoleto de ${nodeId}`);
+      if (now - state.timestamp > 10000) {
+        EventBus.emit('telemetry:update', {
+          nodeId,
+          stale: true,
+          timestamp: now,
+        });
       }
     }
   }
 
-  /**
-   * Calcula stress global do sistema
-   */
   private calculateGlobalStress(): void {
-    let totalStress = 0;
-
-    // Se não há estados reportados, stress é baixo (sistema estável)
     if (this.nodeStates.size === 0) {
-      this.globalStress = 0.5; // Valor inicial estável
+      this.globalStress = 0.5;
+      this.energyScore = 100;
       return;
     }
 
+    let totalStress = 0;
+    let totalEnergy = 0;
+    let activeCount = 0;
+
     for (const state of this.nodeStates.values()) {
-      // Fatores de estresse individual
-      const loadStress = Math.max(0, state.loadRatio - 0.8) * 10; // >80% carga
-      const thermalStress = Math.max(0, state.temperature - THERMAL_STRESS_WARN) * 2;
-      totalStress += loadStress + thermalStress;
+      if (!state.active) continue;
+      const loadStress = Math.max(0, state.loadRatio - 0.8) * 10;
+      const thermalStress = Math.max(0, state.temperature - THERMAL_STRESS_WARN) * 4;
+      const queueStress = 0;
+      totalStress += loadStress + thermalStress + queueStress;
+      totalEnergy += state.loadRatio;
+      activeCount += 1;
     }
 
-    // Adicionar stress por nós inativos (mas não no início)
-    const inactiveNodes = this.allNodes.filter(node => !node.active).length;
-    if (this.nodeStates.size > 0) {
-      totalStress += inactiveNodes * 2.0; // Reduzido de 5.0 para 2.0
-    }
+    const inactive = this.allNodes.length - activeCount;
+    totalStress += Math.max(0, inactive) * 2;
 
-    this.globalStress = totalStress;
-    this.stressHistory.push(totalStress);
+    this.globalStress = Math.min(100, totalStress);
+    this.energyScore = activeCount > 0
+      ? Math.max(0, Math.min(100, (totalEnergy / activeCount) * 100))
+      : 0;
 
-    // Manter histórico limitado
-    if (this.stressHistory.length > 100) {
-      this.stressHistory.shift();
-    }
+    this.stressHistory.push(this.globalStress);
+    if (this.stressHistory.length > 100) this.stressHistory.shift();
 
-    // Emitir evento de telemetria
     EventBus.emit('telemetry:update', {
       latencyMs: 0,
       tokensPerSecond: 0,
-      activeModules: this.allNodes.filter(n => n.active).length,
+      activeModules: activeCount,
       memoryUsage: this.globalStress,
+      energyScore: this.energyScore,
       uptime: Date.now(),
     });
   }
 
-  /**
-   * Aplica regulação homeostática
-   */
   private applyRegulation(): void {
-    const currentTime = Date.now();
+    const now = Date.now();
 
-    // ======= MODO TURBO =======
-    const turboConditions = (
-      this.globalStress < TURBO_MAX_STRESS &&
-      (currentTime - this.lastTurboActivation) / 1000 > TURBO_COOLDOWN_SECONDS
-    );
-
-    if (turboConditions && !this.turboActive) {
-      // ATIVAR MODO TURBO
-      console.log('[HomeostasisManager] ⚡ ATIVANDO MODO TURBO');
-      this.turboActive = true;
-      this.lastTurboActivation = currentTime;
-      this.turboActivations++;
-
+    if (this.globalStress >= TURBO_MAX_STRESS * 2) {
+      this.turboActive = false;
       for (const node of this.allNodes) {
-        if (node.active) {
-          node.processingRateMultiplier *= TURBO_PROCESSING_MULTIPLIER;
+        if (node.level === 'Secondary') {
+          node.setHomeostasisMultiplier(0.35);
+        } else {
+          node.setHomeostasisMultiplier(0.55);
+        }
+        this.vagus?.sendEfferent(node.id, node.level === 'Central' ? 'calm' : 'reduce_thermal', {}, 1);
+      }
+    } else if (this.globalStress >= TURBO_MAX_STRESS) {
+      this.turboActive = false;
+      for (const node of this.allNodes) {
+        node.setHomeostasisMultiplier(0.6);
+        this.vagus?.sendEfferent(node.id, 'calm', {}, 0.85);
+      }
+    } else {
+      const turboReady =
+        !this.turboActive &&
+        now - this.lastTurboActivation >= TURBO_COOLDOWN_SECONDS * 1000 &&
+        this.energyScore >= 70 &&
+        this.globalStress < TURBO_MAX_STRESS;
+
+      if (turboReady) {
+        this.turboActive = true;
+        this.lastTurboActivation = now;
+        this.turboActivations += 1;
+        for (const node of this.allNodes) {
+          node.setHomeostasisMultiplier(TURBO_PROCESSING_MULTIPLIER);
+          node.setVagalMultiplier(1);
         }
       }
 
-      EventBus.emit('system:ready', { modules: ['turbo-mode-active'] });
-    } else if (
-      this.turboActive && 
-      (currentTime - this.lastTurboActivation) / 1000 > TURBO_DURATION_SECONDS
-    ) {
-      // DESATIVAR MODO TURBO
-      console.log('[HomeostasisManager] ⚡ DESATIVANDO MODO TURBO');
-      this.turboActive = false;
+      if (this.turboActive && now - this.lastTurboActivation >= TURBO_DURATION_SECONDS * 1000) {
+        this.turboActive = false;
+        this.lastTurboActivation = now;
+        for (const node of this.allNodes) node.setHomeostasisMultiplier(1);
+      }
 
-      for (const node of this.allNodes) {
-        node.processingRateMultiplier /= TURBO_PROCESSING_MULTIPLIER;
+      if (!this.turboActive) {
+        for (const node of this.allNodes) node.setHomeostasisMultiplier(1);
       }
     }
 
-    // ======= RECUPERAÇÃO DE NÓS =======
     if (this.globalStress < RECOVERY_STRESS_THRESHOLD) {
       for (const node of this.allNodes) {
-        if (!node.active && Math.random() < RECOVERY_CHANCE_PER_CHECK) {
-          console.log(`[HomeostasisManager] Reativando nó ${node.id}`);
-          node.setActive(true);
-          this.nodesRecovered++;
+        const inactiveSince = node.getInactiveSince();
+        if (!node.active && inactiveSince > 0 && now - inactiveSince >= 10_000) {
+          node.applyVagalCommand('resume', {});
+          this.nodesRecovered += 1;
+          this.lastTurboActivation = now;
         }
-      }
-    }
-
-    // ======= THROTTLING DE EMERGÊNCIA =======
-    if (this.globalStress > TURBO_MAX_STRESS * 2) {
-      console.warn('[HomeostasisManager] ⚠️ STRESS CRÍTICO - Throttling ativo');
-      
-      for (const node of this.allNodes) {
-        node.processingRateMultiplier *= 0.9;
       }
     }
   }
 
-  /**
-   * Retorna relatório completo
-   */
   getReport(): HomeostasisReport {
     return {
       globalStress: this.globalStress,
       turboActive: this.turboActive,
       nodeStates: new Map(this.nodeStates),
-      inactiveNodes: this.allNodes.filter(n => !n.active).length,
+      inactiveNodes: this.allNodes.filter(node => !node.active).length,
       timestamp: Date.now(),
     };
   }
 
-  /**
-   * Retorna métricas do sistema
-   */
-  getMetrics(): {
-    globalStress: number;
-    turboActive: boolean;
-    turboActivations: number;
-    nodesRecovered: number;
-    activeNodes: number;
-    totalNodes: number;
-    avgStress: number;
-  } {
-    const avgStress = this.stressHistory.length > 0
+  getMetrics() {
+    const avgStress = this.stressHistory.length
       ? this.stressHistory.reduce((a, b) => a + b, 0) / this.stressHistory.length
       : 0;
 
     return {
       globalStress: this.globalStress,
+      energyScore: this.energyScore,
       turboActive: this.turboActive,
       turboActivations: this.turboActivations,
       nodesRecovered: this.nodesRecovered,
-      activeNodes: this.allNodes.filter(n => n.active).length,
+      activeNodes: this.allNodes.filter(node => node.active).length,
       totalNodes: this.allNodes.length,
       avgStress,
+      running: this._running,
     };
   }
 
@@ -258,5 +238,4 @@ export class HomeostasisManager {
   }
 }
 
-// Singleton instance
 export const homeostasisManager = new HomeostasisManager();
