@@ -120,13 +120,13 @@ export function AGIDashboard() {
                         { name: 'DarwinMachine', status: metrics?.darwin?.isRunning, metric: metrics?.darwin?.avgFitness },
                         { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                         { name: 'Consciousness', status: metrics?.consciousness?.isRunning, metric: null },
-                        { name: 'SafeCore', status: true, metric: null },
-                        { name: 'SelfHealing', status: metrics?.healing !== null, metric: metrics?.healing?.overallScore },
+                        { name: 'SafeCore', status: metrics?.overall?.safeCoreActive === true, metric: null },
+                        { name: 'SelfHealing', status: metrics?.healingRunning === true, metric: metrics?.healing?.overallScore },
                         { name: 'EthicalOpt', status: metrics?.ethics?.isRunning, metric: metrics?.ethics?.auditMetrics?.avgScore },
-                        { name: 'HyperSafety', status: metrics?.safety !== null, metric: metrics?.safety?.overallHealth },
-                        { name: 'NIP', status: metrics?.nip !== undefined, metric: null, label: metrics?.nip?.saudeEpistemologica },
-                        { name: 'QuantumNeural', status: metrics?.quantumNeural?.initialized, metric: metrics?.quantumNeural?.quantum?.coherence },
-                        { name: 'Connectivity', status: metrics?.connectivity !== undefined, metric: metrics?.connectivity?.reliability },
+                        { name: 'HyperSafety', status: metrics?.safetyRunning === true, metric: metrics?.safety?.overallHealth },
+                        { name: 'NIP', status: metrics?.nipRunning === true, metric: null, label: metrics?.nip?.saudeEpistemologica },
+                        { name: 'QuantumNeural', status: metrics?.quantumNeural?.initialized === true, metric: metrics?.quantumNeural?.quantum?.measurementAvailable === true ? metrics?.quantumNeural?.quantum?.coherence : null, label: metrics?.quantumNeural?.quantum?.measurementAvailable === true ? undefined : 'UNMEASURED' },
+                        { name: 'Connectivity', status: metrics?.connectivityRunning === true, metric: metrics?.connectivity?.reliability ?? null },
                       ].map((engine, i) => (
                         <div key={i} className="flex items-center justify-between text-[10px]">
                           <span className="flex items-center gap-1.5">
