@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
 import android.os.Build
+import android.os.PowerManager
 
 class SystemEventCollector(
     private val context: Context,
@@ -26,7 +27,11 @@ class SystemEventCollector(
                         val pct = (level * 100 / scale).coerceIn(0, 100)
                         val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                         val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+                        val batteryTemp = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+                            .takeIf { it != Int.MIN_VALUE }
+                            ?.div(10.0)
                         bus.publish(SoulEvent.BatteryChanged(pct, charging))
+                        publishDeviceSnapshot(pct, charging, batteryTemp)
                     }
                     Intent.ACTION_SCREEN_ON -> bus.publish(SoulEvent.ScreenChanged(true))
                     Intent.ACTION_SCREEN_OFF -> bus.publish(SoulEvent.ScreenChanged(false))
@@ -46,13 +51,36 @@ class SystemEventCollector(
         } else {
             @Suppress("DEPRECATION") context.registerReceiver(receiver, filter)
         }
+        val bm = context.getSystemService(BatteryManager::class.java)
+        val pct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).coerceIn(0, 100)
+        val charging = bm.isCharging
+        val batteryTemp = null
         bus.publish(SoulEvent.NetworkChanged(readNetwork()))
         bus.publish(SoulEvent.ShizukuChanged(shizukuStatus()))
+        publishDeviceSnapshot(pct, charging, batteryTemp)
     }
 
     fun stop() {
         receiver?.let { context.unregisterReceiver(it) }
         receiver = null
+    }
+
+    private fun publishDeviceSnapshot(
+        batteryPercent: Int,
+        charging: Boolean,
+        batteryTemperatureC: Double?
+    ) {
+        val screenOn = context.getSystemService(PowerManager::class.java).isInteractive
+        bus.publish(
+            SoulEvent.DeviceSnapshot(
+                batteryPercent = batteryPercent.coerceIn(0, 100),
+                charging = charging,
+                batteryTemperatureC = batteryTemperatureC,
+                screenOn = screenOn,
+                network = readNetwork(),
+                shizukuStatus = shizukuStatus()
+            )
+        )
     }
 
     private fun readNetwork(): String {
