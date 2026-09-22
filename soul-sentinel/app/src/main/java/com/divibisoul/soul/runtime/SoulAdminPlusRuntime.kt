@@ -75,6 +75,7 @@ class SoulAdminPlusRuntime(
             refreshBackends()
             scheduleLogSync()
             while (isActive) {
+                dashboard.load()
                 val reduced = watchdog.isLoadReduced()
                 if (!reduced) {
                     refreshBackends()
