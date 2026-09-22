@@ -21,3 +21,5 @@ export { ClareiraSaraBridge } from './ClareiraSaraBridge';
 export * from './SpecializedNuclei';
 
 export * from './types';
+
+export { InputTransducer } from './InputTransducer';
