@@ -15,6 +15,12 @@ sealed interface SoulEvent {
         val screenOn: Boolean,
         val network: String,
         val shizukuStatus: String,
+        val cpuFreqMhz: Double?,
+        val ramUsedMb: Long?,
+        val ramTotalMb: Long?,
+        val foregroundPackage: String?,
+        val wifiEnabled: Boolean,
+        val bluetoothEnabled: Boolean,
         override val timestamp: Long = System.currentTimeMillis()
     ) : SoulEvent
     data class Tick(override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
