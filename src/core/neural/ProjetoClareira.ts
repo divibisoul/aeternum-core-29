@@ -318,11 +318,12 @@ class ProjetoClareiraSystem {
       activeVagusBranches: this.vagus.snapshot().activeNodeBranches,
       redundantVagusBranches: this.vagus.snapshot().redundantBranches,
       vagalSignalLatencyMs: this.vagus.snapshot().observedLatencyMs ?? undefined,
-      droppedPackets: this.channels.reduce((sum, channel) => sum + channel.getMetrics().errorCount, 0),
-      dropRate: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) > 0
-        ? this.channels.reduce((sum, channel) => sum + channel.getMetrics().errorCount, 0) /
+      droppedPackets: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0),
+      dropRate: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) +
+          this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0) > 0
+        ? this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0) /
           (this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) +
-           this.channels.reduce((sum, channel) => sum + channel.getMetrics().errorCount, 0))
+           this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0))
         : 0,
       timestamp: Date.now(),
     };
