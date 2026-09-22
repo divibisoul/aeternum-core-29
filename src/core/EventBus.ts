@@ -40,7 +40,7 @@ export interface AeternumEvents {
   'nav:settings:open': void;
   'soul:mesh:message': unknown;
 }
-export interface TelemetryData { latencyMs: number; tokensPerSecond: number; activeModules: number; memoryUsage: number; uptime: number; stateCriticality?: number; nodeId?: string; stale?: boolean; energyScore?: number; }
+export interface TelemetryData { latencyMs: number; tokensPerSecond: number; activeModules: number; memoryUsage: number; uptime: number; stateCriticality?: number; nodeId?: string; stale?: boolean; energyScore?: number; deviceBatteryPercent?: number; deviceCharging?: boolean; }
 type EventCallback<T> = (data: T) => void | Promise<void>;
 type UnsubscribeFn = () => void;
 interface Subscription { id: number; callback: EventCallback<unknown>; once: boolean; }
