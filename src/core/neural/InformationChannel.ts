@@ -20,7 +20,11 @@ export class InformationChannel {
   private bandwidth = 1.0;
   private latency = 0;
   private packetsTransmitted = 0;
+  private packetsReceived = 0;
+  private packetsDropped = 0;
   private errorCount = 0;
+  private observedLatencyTotalMs = 0;
+  private observedLatencySamples = 0;
   private packetQueue: InformationPacket[] = [];
   private maxQueueSize = 50;
 
@@ -72,9 +76,10 @@ export class InformationChannel {
       
       if (packet.criticality > leastCritical.criticality) {
         this.packetQueue = this.packetQueue.filter(p => p.id !== leastCritical.id);
+        this.packetsDropped += 1;
         this.packetQueue.push(packet);
       } else {
-        this.errorCount++;
+        this.packetsDropped += 1;
         return false;
       }
     } else {
@@ -91,9 +96,18 @@ export class InformationChannel {
   receive(): InformationPacket | null {
     if (!this._active || this.packetQueue.length === 0) return null;
 
-    // Ordenar por criticidade e pegar o mais crítico
-    this.packetQueue.sort((a, b) => b.criticality - a.criticality);
-    return this.packetQueue.shift() || null;
+    // Prioridade por criticidade; empates preservam a ordem de chegada.
+    this.packetQueue.sort((a, b) => {
+      if (b.criticality !== a.criticality) return b.criticality - a.criticality;
+      return a.timestamp - b.timestamp;
+    });
+    const packet = this.packetQueue.shift() || null;
+    if (packet) {
+      this.packetsReceived += 1;
+      this.observedLatencyTotalMs += Math.max(0, Date.now() - packet.timestamp);
+      this.observedLatencySamples += 1;
+    }
+    return packet;
   }
 
   /**
@@ -127,7 +141,10 @@ export class InformationChannel {
     bandwidth: number;
     latency: number;
     packetsTransmitted: number;
+    packetsReceived: number;
+    packetsDropped: number;
     errorCount: number;
+    observedLatencyMs: number | null;
     queueSize: number;
   } {
     return {
@@ -136,7 +153,12 @@ export class InformationChannel {
       bandwidth: this.bandwidth,
       latency: this.latency,
       packetsTransmitted: this.packetsTransmitted,
+      packetsReceived: this.packetsReceived,
+      packetsDropped: this.packetsDropped,
       errorCount: this.errorCount,
+      observedLatencyMs: this.observedLatencySamples > 0
+        ? Number((this.observedLatencyTotalMs / this.observedLatencySamples).toFixed(3))
+        : null,
       queueSize: this.packetQueue.length,
     };
   }
