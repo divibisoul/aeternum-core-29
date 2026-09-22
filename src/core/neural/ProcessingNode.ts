@@ -32,6 +32,8 @@ export class ProcessingNode {
   protected energyCapacity = 100;
   protected thermalSensorReading = 0.3;
   protected _processingRateMultiplier = 1.0;
+  private homeostasisMultiplier = 1.0;
+  private vagalMultiplier = 1.0;
   
   // Filas
   protected inputQueue: InformationPacket[] = [];
@@ -70,11 +72,17 @@ export class ProcessingNode {
   }
 
   get processingRateMultiplier(): number {
-    return this._processingRateMultiplier;
+    return Math.max(
+      0.05,
+      Math.min(
+        8.0,
+        this._processingRateMultiplier * this.homeostasisMultiplier * this.vagalMultiplier
+      )
+    );
   }
 
   set processingRateMultiplier(value: number) {
-    this._processingRateMultiplier = value;
+    this._processingRateMultiplier = Math.max(0.05, Math.min(8.0, value));
   }
 
   /**
@@ -153,17 +161,11 @@ export class ProcessingNode {
   }
 
   setHomeostasisMultiplier(multiplier: number): void {
-    this._processingRateMultiplier = Math.max(
-      0.05,
-      Math.min(8.0, this._processingRateMultiplier * Math.max(0.1, Math.min(4.0, multiplier)))
-    );
+    this.homeostasisMultiplier = Math.max(0.1, Math.min(4.0, multiplier));
   }
 
   setVagalMultiplier(multiplier: number): void {
-    this._processingRateMultiplier = Math.max(
-      0.05,
-      Math.min(8.0, this._processingRateMultiplier * Math.max(0.1, Math.min(4.0, multiplier)))
-    );
+    this.vagalMultiplier = Math.max(0.1, Math.min(3.0, multiplier));
   }
 
   applyVagalCommand(
@@ -358,37 +360,41 @@ export class ProcessingNode {
     this.inputQueue.sort((a, b) => b.criticality - a.criticality);
     
     // Processar pacote mais crítico
-    const packet = this.inputQueue.shift();
-    if (!packet) return;
+    const batchSize = Math.max(1, Math.min(8, Math.ceil(this.processingRateMultiplier)));
+    for (let processed = 0; processed < batchSize && this.inputQueue.length > 0; processed++) {
+      const packet = this.inputQueue.shift();
+      if (!packet) break;
 
-    // Processamento específico do nó
-    const result = this.nodeSpecificProcessing(packet);
-    
-    // Consumir energia
+      // Processamento específico do nó
+      const result = this.nodeSpecificProcessing(packet);
+      
+      // Consumir energia
     this.consumeEnergy(packet.criticality * 5);
     
     // Atualizar temperatura
     this.updateTemperature(packet.criticality);
 
-    // Se houver resultado, criar e enviar resposta
-    if (result) {
-      const responsePacket = createInformationPacket(
-        result.data,
-        packet.informationalValue * 0.9,
-        result.criticality,
-        result.packetType,
-        this.id,
-        result.destinationHint,
-        result.metadata
-      );
+      // Se houver resultado, criar e enviar resposta
+      if (result) {
+        const responsePacket = createInformationPacket(
+          result.data,
+          packet.informationalValue * 0.9,
+          result.criticality,
+          result.packetType,
+          this.id,
+          result.destinationHint,
+          result.metadata
+        );
 
-      const channel = this.selectOutputChannel(responsePacket);
-      if (channel) {
-        channel.transmit(responsePacket);
+        const channel = this.selectOutputChannel(responsePacket);
+        if (channel) {
+          channel.transmit(responsePacket);
+        }
       }
+
+      this.packetsProcessed++;
     }
 
-    this.packetsProcessed++;
     this.lastProcessingTime = Date.now() - startTime;
   }
 
