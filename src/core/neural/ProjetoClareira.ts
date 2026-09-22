@@ -281,7 +281,7 @@ class ProjetoClareiraSystem {
   }
 
   /**
-   * Executa simulação por duração especificada
+   * Executa o runtime por uma duração especificada
    */
   async runForDuration(durationMs: number = 5000): Promise<SystemMetrics> {
     if (durationMs < 0) throw new Error('CLAREIRA_DURATION_INVALID');
@@ -304,7 +304,12 @@ class ProjetoClareiraSystem {
     const homeostasisMetrics = this.homeostasis.getMetrics();
     const nodeMetrics = this.allNodes.map(n => n.getMetrics());
     
-    const avgLoad = nodeMetrics.reduce((sum, m) => sum + (m.energy / 100), 0) / nodeMetrics.length;
+    const avgLoad = nodeMetrics.length > 0
+      ? nodeMetrics.reduce(
+          (sum, m) => sum + (m.energy / Math.max(1, m.energyCapacity)),
+          0,
+        ) / nodeMetrics.length
+      : 0;
     const avgTemp = nodeMetrics.reduce((sum, m) => sum + m.temperature, 0) / nodeMetrics.length;
     const totalPackets = nodeMetrics.reduce((sum, m) => sum + m.packetsProcessed, 0);
 
