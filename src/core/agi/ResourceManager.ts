@@ -27,6 +27,8 @@ export interface ResourceSnapshot {
   moduleProfiles: Map<string, ModuleResourceProfile>;
   rebalanceCount: number;
   quantumSliceMs: number;
+  cpuMeasurementSource: 'JS_EXECUTION_WINDOW' | 'UNMEASURED';
+  memoryMeasurementSource: 'PERFORMANCE_MEMORY' | 'UNMEASURED';
 }
 
 export interface ResourceMetrics {
@@ -49,6 +51,8 @@ export class ResourceManager {
   
   private totalCpuUsage = 0;
   private totalMemoryUsage = 0;
+  private _executionWindowMs = 0;
+  private _monitorWindowStartedAt = Date.now();
 
   get isRunning(): boolean { return this._running; }
 
@@ -104,6 +108,7 @@ export class ResourceManager {
     if (profile) {
       profile.lastExecutionMs = executionMs;
       profile.executionCount++;
+      this._executionWindowMs += Math.max(0, executionMs);
     }
   }
 
@@ -133,24 +138,19 @@ export class ResourceManager {
    * Monitor resource usage across all modules
    */
   private monitorResources(): void {
-    let totalCpu = 0;
-    let totalMem = 0;
+    const now = Date.now();
+    const windowMs = Math.max(1, now - this._monitorWindowStartedAt);
+    this.totalCpuUsage = Math.max(0, Math.min(1, this._executionWindowMs / windowMs));
+    this._executionWindowMs = 0;
+    this._monitorWindowStartedAt = now;
 
-    for (const profile of this.moduleProfiles.values()) {
-      if (!profile.isActive) continue;
-
-      // Simulate CPU usage based on execution frequency and time
-      const cpuUsage = Math.min(1, (profile.lastExecutionMs / this._quantumSliceMs) * profile.cpuAllocation);
-      totalCpu += cpuUsage;
-
-      // Simulate memory usage with gradual fluctuation
-      const memDelta = (Math.random() - 0.5) * 0.02;
-      profile.memoryAllocation = Math.max(0.01, Math.min(0.3, profile.memoryAllocation + memDelta));
-      totalMem += profile.memoryAllocation;
-    }
-
-    this.totalCpuUsage = Math.min(1, totalCpu / Math.max(1, this.moduleProfiles.size));
-    this.totalMemoryUsage = Math.min(1, totalMem);
+    const performanceWithMemory = globalThis.performance as Performance & {
+      memory?: { usedJSHeapSize: number; totalJSHeapSize: number };
+    };
+    const memory = performanceWithMemory.memory;
+    this.totalMemoryUsage = memory && Number.isFinite(memory.usedJSHeapSize) && Number.isFinite(memory.totalJSHeapSize) && memory.totalJSHeapSize > 0
+      ? Math.max(0, Math.min(1, memory.usedJSHeapSize / memory.totalJSHeapSize))
+      : 0;
   }
 
   /**
@@ -203,6 +203,8 @@ export class ResourceManager {
       rebalanceCount: this._rebalanceCount,
       avgQuantumSliceMs: this._quantumSliceMs,
       hotModules,
+      cpuMeasurementSource: this._executionWindowMs > 0 ? 'JS_EXECUTION_WINDOW' : 'UNMEASURED',
+      memoryMeasurementSource: ((globalThis.performance as Performance & { memory?: unknown }).memory) ? 'PERFORMANCE_MEMORY' : 'UNMEASURED',
     };
   }
 
