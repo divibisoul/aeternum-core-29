@@ -205,9 +205,16 @@ export class AeternumAGI {
     });
     this.selfHealing.integrity_scanner.registerModule('safety_system', () => {
       const report = this.safetySystem.getLatestReport();
-      const score = Number(report?.overallHealth ?? 0);
-      const bounded = Number.isFinite(score) ? Math.max(0, Math.min(1, score)) : null;
-      return healingProvider(bounded, null, bounded == null ? null : 1 - bounded, this.safetySystem.isRunning && report != null);
+      const score = Number(report?.overallHealth);
+      const bounded = report?.observedHealth === true && Number.isFinite(score)
+        ? Math.max(0, Math.min(1, score))
+        : null;
+      return healingProvider(
+        bounded,
+        null,
+        bounded == null ? null : 1 - bounded,
+        this.safetySystem.isRunning && report?.observedHealth === true,
+      );
     });
     this.selfHealing.integrity_scanner.registerModule('nip', () => {
       const report = this.nip.getRelatorio();
