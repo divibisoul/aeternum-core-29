@@ -272,11 +272,11 @@ export class AeternumAGI {
     // SAIIC recebe somente sinais observáveis dos módulos.
     // CPU/memória de cada módulo permanecem 0 quando não há telemetria nativa disponível;
     // isso significa UNMEASURED, não consumo zero do dispositivo.
-    const observed = (healthy: boolean, errorRate = 0) => ({
+    const observed = (healthy: boolean, errorRate: number | null = null) => ({
       healthy,
-      cpuLoad: 0,
-      memoryUsage: 0,
-      errorRate: Math.max(0, Math.min(1, Number.isFinite(errorRate) ? errorRate : 0)),
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: Number.isFinite(errorRate ?? Number.NaN) ? Math.max(0, Math.min(1, errorRate as number)) : null,
     });
 
     this.saiic.registerModule('consciousness', () => observed(
@@ -300,7 +300,7 @@ export class AeternumAGI {
     this.saiic.registerModule('ethicalOptimizer', () => {
       const metrics = this.ethicalOptimizer.getMetrics();
       const score = Number(metrics.auditMetrics?.avgScore);
-      return observed(this.ethicalOptimizer.isRunning, Number.isFinite(score) ? 1 - Math.max(0, Math.min(1, score)) : 0);
+      return observed(this.ethicalOptimizer.isRunning, Number.isFinite(score) ? 1 - Math.max(0, Math.min(1, score)) : null);
     });
     this.saiic.registerModule('safetySystem', () => observed(
       this.safetySystem.isRunning,
@@ -308,7 +308,7 @@ export class AeternumAGI {
     this.saiic.registerModule('nip', () => {
       const report = this.nip.getRelatorio();
       const healthy = report.saudeEpistemologica === 'saudavel';
-      return observed(healthy, healthy ? 0 : 1);
+      return observed(healthy, null);
     });
     this.saiic.registerModule('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
