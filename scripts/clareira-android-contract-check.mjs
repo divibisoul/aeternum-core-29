@@ -10,6 +10,8 @@ const files = {
   project: await readFile(resolve(root, 'src/core/neural/ProjetoClareira.ts'), 'utf8'),
   hook: await readFile(resolve(root, 'src/hooks/useProjetoClareira.ts'), 'utf8'),
   bridge: await readFile(resolve(root, 'src/core/neural/ClareiraSaraBridge.ts'), 'utf8'),
+  catalog: await readFile(resolve(root, 'soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulCapabilityCatalog.kt'), 'utf8'),
+  bootstrap: await readFile(resolve(root, 'soul-sentinel/app/src/main/java/com/divibisoul/soul/SoulMeshBootstrap.kt'), 'utf8'),
 };
 
 assert.match(files.events, /data class DeviceSnapshot/);
@@ -33,9 +35,9 @@ for (const capability of [
   'clareira.android.bluetooth_request',
   'clareira.android.airplane_settings',
 ]) {
-  assert.match(catalog, new RegExp(capability.replace(/\./g, '\\.'), 'g'));
+  assert.match(files.catalog, new RegExp(capability.replace(/\./g, '\\.'), 'g'));
 }
-assert.match(bootstrap, /androidContext: Context\? = null/);
-assert.match(bootstrap, /nativeClareira = androidContext/);
+assert.match(files.bootstrap, /androidContext: Context\? = null/);
+assert.match(files.bootstrap, /nativeClareira = androidContext/);
 
 console.log('CLAREIRA_ANDROID_CONTRACT: ok=true native_snapshot=true webview_ingress=true vagal_ack=true');
