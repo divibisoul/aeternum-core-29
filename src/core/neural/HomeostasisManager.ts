@@ -8,7 +8,7 @@
 import { EventBus } from '../EventBus';
 import type { ProcessingNode } from './ProcessingNode';
 import type { VagusNerve } from './VagusNerve';
-import type { VagalSignal } from './types';
+import type { VagalSignal, ClareiraDeviceState } from './types';
 import {
   type NodeState,
   type HomeostasisReport,
@@ -36,6 +36,7 @@ export class HomeostasisManager {
   private energyScore = 100;
   private turboActive = false;
   private vagus: VagusNerve | null = null;
+  private deviceState: ClareiraDeviceState | null = null;
   private lastTurboActivation = 0;
   
   private checkInterval: ReturnType<typeof setInterval> | null = null;
@@ -73,6 +74,17 @@ export class HomeostasisManager {
 
   attachVagus(vagus: VagusNerve): void {
     this.vagus = vagus;
+  }
+
+  updateDeviceState(state: ClareiraDeviceState): void {
+    this.deviceState = {
+      ...state,
+      batteryPercent: Math.max(0, Math.min(100, state.batteryPercent)),
+    };
+  }
+
+  getDeviceState(): ClareiraDeviceState | null {
+    return this.deviceState ? { ...this.deviceState } : null;
   }
 
   receiveVagalAfferent(signal: VagalSignal): void {
@@ -166,9 +178,25 @@ export class HomeostasisManager {
     }
 
     this.globalStress = totalStress;
-    this.energyScore = energySamples > 0
+    const internalEnergyScore = energySamples > 0
       ? Math.max(0, Math.min(100, (totalEnergy / energySamples) * 100))
       : 0;
+
+    const devicePenalty = this.deviceState
+      ? Math.max(0, 25 - this.deviceState.batteryPercent) * 0.2
+      : 0;
+    const thermalPenalty = this.deviceState?.batteryTemperatureC != null
+      ? Math.max(0, this.deviceState.batteryTemperatureC - 40) * 0.5
+      : 0;
+
+    this.globalStress = Math.min(
+      100,
+      this.globalStress + devicePenalty + thermalPenalty,
+    );
+
+    this.energyScore = this.deviceState
+      ? Math.min(internalEnergyScore, this.deviceState.batteryPercent)
+      : internalEnergyScore;
     this.stressHistory.push(totalStress);
 
     // Manter histórico limitado
@@ -184,6 +212,8 @@ export class HomeostasisManager {
       memoryUsage: this.globalStress,
       uptime: Date.now(),
       energyScore: this.energyScore,
+      deviceBatteryPercent: this.deviceState?.batteryPercent,
+      deviceCharging: this.deviceState?.charging,
     });
   }
 
