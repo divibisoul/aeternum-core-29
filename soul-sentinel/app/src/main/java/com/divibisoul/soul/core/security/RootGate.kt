@@ -11,7 +11,6 @@ data class RootStatus(
 )
 
 class RootGate {
-    private val allowed = setOf("id", "getenforce", "dumpsys", "pm", "am", "settings", "top", "logcat")
 
     fun status(): RootStatus {
         val cachedRoot = Shell.getCachedShell()?.isRoot == true
@@ -23,13 +22,12 @@ class RootGate {
     }
 
     fun execute(command: String): String {
-        val binary = command.trim().split(Regex("\s+")).firstOrNull().orEmpty()
-        if (binary !in allowed) throw SecurityException("ROOT_COMMAND_NOT_ALLOWED:" + binary)
+        val safeCommand = PrivilegedCommandValidator.validate(command)
         val shell = runCatching { Shell.getShell() }.getOrElse {
             throw RootUnavailableException(it.message ?: "ROOT_UNAVAILABLE")
         }
         if (!shell.isRoot) throw RootUnavailableException()
-        val result = Shell.cmd(command).exec()
+        val result = Shell.cmd(safeCommand).exec()
         if (!result.isSuccess) throw IllegalStateException(
             result.getErr().joinToString("\n").ifBlank { "ROOT_COMMAND_FAILED" }
         )
