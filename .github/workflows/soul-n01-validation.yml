@@ -217,6 +217,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Mesh contract check
         run: npm run mesh:contract:check
+      - name: Clareira topology and federation contract check
+        run: npm run clareira:contract:check
       - name: Local Mesh runtime contract proof
         run: node scripts/soul-mesh-local-contract-check.mjs
       - name: Emergency diagnostics
