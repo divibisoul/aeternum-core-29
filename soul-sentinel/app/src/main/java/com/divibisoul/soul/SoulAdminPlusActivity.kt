@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
 import com.divibisoul.soul.core.security.AuthAndSignature
 import com.divibisoul.soul.core.security.LocalRole
 import com.divibisoul.soul.core.security.PrivilegedAuthGate
@@ -24,7 +23,6 @@ import com.divibisoul.soul.core.security.ShizukuOrchestrator
 import com.divibisoul.soul.runtime.SoulAdminPlusRuntime
 import com.divibisoul.soul.runtime.SoulAdminPlusRuntimeRegistry
 import com.divibisoul.soul.core.federation.FederationStatusMatrix
-import com.divibisoul.soul.core.state.DashboardState
 import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.network.N07Client
 import com.divibisoul.soul.network.N07Exception
