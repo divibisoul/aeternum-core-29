@@ -12,6 +12,7 @@ export interface CrossLayerHealthReport {
     evolution: number;
     lattice: number;
   };
+  unmeasuredLayers: string[];
   criticalAlerts: string[];
   warnings: string[];
 }
@@ -42,12 +43,14 @@ export class HyperSafetySystem {
   get isRunning() { return this._isRunning; }
 
   generateReport(): CrossLayerHealthReport {
+    const names = ['consciousness', 'ethics', 'selfHealing', 'evolution', 'lattice'] as const;
+    const unmeasuredLayers = names.filter(name => !this.healthProviders.has(name));
     const layerHealth = {
-      consciousness: this.healthProviders.get('consciousness')?.() ?? 0.8,
-      ethics: this.healthProviders.get('ethics')?.() ?? 0.9,
-      selfHealing: this.healthProviders.get('selfHealing')?.() ?? 0.85,
-      evolution: this.healthProviders.get('evolution')?.() ?? 0.75,
-      lattice: this.healthProviders.get('lattice')?.() ?? 0.7
+      consciousness: this.healthProviders.get('consciousness')?.() ?? 0,
+      ethics: this.healthProviders.get('ethics')?.() ?? 0,
+      selfHealing: this.healthProviders.get('selfHealing')?.() ?? 0,
+      evolution: this.healthProviders.get('evolution')?.() ?? 0,
+      lattice: this.healthProviders.get('lattice')?.() ?? 0,
     };
 
     const values = Object.values(layerHealth);
@@ -61,7 +64,14 @@ export class HyperSafetySystem {
       else if (health < 0.6) warnings.push(`${layer} degradado (${(health * 100).toFixed(1)}%)`);
     });
 
-    const report: CrossLayerHealthReport = { timestamp: Date.now(), overallHealth, layerHealth, criticalAlerts, warnings };
+    const report: CrossLayerHealthReport = {
+      timestamp: Date.now(),
+      overallHealth,
+      layerHealth,
+      unmeasuredLayers,
+      criticalAlerts,
+      warnings,
+    };
     this.reports.push(report);
     if (this.reports.length > 100) this.reports = this.reports.slice(-50);
     return report;
