@@ -16,14 +16,42 @@ class ShizukuOrchestrator {
         const val PERMISSION_REQUEST_CODE = 7401
     }
 
-    private val allowed = setOf("id", "dumpsys", "pm", "am", "settings", "top", "logcat")
+    private val allowed = setOf("id", "getenforce", "dumpsys", "pm", "am", "settings", "top", "logcat")
+
+    private val binderReceivedListener = Shizuku.OnBinderReceivedListener {
+        lastBinderState = true
+    }
+    private val binderDeadListener = Shizuku.OnBinderDeadListener {
+        lastBinderState = false
+    }
+    @Volatile private var started = false
+    @Volatile private var lastBinderState = false
+
+    @Synchronized
+    fun start() {
+        if (started) return
+        Shizuku.addBinderReceivedListener(binderReceivedListener)
+        Shizuku.addBinderDeadListener(binderDeadListener)
+        started = true
+        lastBinderState = Shizuku.pingBinder()
+    }
+
+    @Synchronized
+    fun stop() {
+        if (!started) return
+        Shizuku.removeBinderReceivedListener(binderReceivedListener)
+        Shizuku.removeBinderDeadListener(binderDeadListener)
+        started = false
+    }
 
     fun state(): ShizukuState = runCatching {
         val running = Shizuku.pingBinder()
         val permission = running &&
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
         ShizukuState(running, permission, Shizuku.getVersion())
-    }.getOrElse { ShizukuState(false, false, -1) }
+    }.getOrElse {
+        ShizukuState(false, false, -1)
+    }
 
     fun requestPermissionIfNeeded() {
         val s = state()
