@@ -21,6 +21,7 @@ import com.divibisoul.soul.core.security.LocalRole
 import com.divibisoul.soul.core.security.PrivilegedAuthGate
 import com.divibisoul.soul.core.security.RootGate
 import com.divibisoul.soul.core.security.ShizukuOrchestrator
+import com.divibisoul.soul.core.federation.FederationStatusMatrix
 import com.divibisoul.soul.core.state.DashboardState
 import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.network.N07Client
@@ -88,6 +89,15 @@ class SoulAdminPlusActivity : FragmentActivity() {
         ) {
             Text("SOUL ADMIN PLUS", style = MaterialTheme.typography.headlineMedium)
             Text("Federation: N01..N07 + SARA")
+            Card {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("FEDERATION BOUNDARIES", style = MaterialTheme.typography.titleLarge)
+                    FederationStatusMatrix.initial().forEach { member ->
+                        Text(member.node.id + " — " + member.status.name + " — " + member.authority)
+                    }
+                    Text("Status matrix is a boundary/ownership view, not proof of remote liveness.")
+                }
+            }
 
             StatusCard("Hardware", state.hardware)
             StatusCard("Battery / Thermal", state.batteryThermal)
