@@ -229,9 +229,9 @@ export class ConscienciaAlgoritmica {
     
     const coerencias: number[] = [];
     
-    // 10 iterações de teste
+    // Fixture determinística: teste de integração, não evidência de runtime externo.
+    const experiencia = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     for (let i = 0; i < 10; i++) {
-      const experiencia = Array(10).fill(null).map(() => Math.random());
       const resultado = this.processar(experiencia, 'teste-automatico');
       coerencias.push(resultado.metricas.coerenciaMedia);
     }
