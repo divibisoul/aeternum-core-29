@@ -3,10 +3,13 @@ package com.divibisoul.soul
 import android.os.Bundle
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
-import androidx.lifecycle.lifecycleScope
 import com.divibisoul.soul.core.SoulEvent
 import com.divibisoul.soul.core.SoulEventBus
 import com.divibisoul.soul.core.SystemEventCollector
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import org.json.JSONObject
@@ -17,6 +20,7 @@ class SoulHybridActivity : ComponentActivity() {
     private lateinit var webView: WebView
     private lateinit var eventBus: SoulEventBus
     private lateinit var eventCollector: SystemEventCollector
+    private val eventScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,7 +41,7 @@ class SoulHybridActivity : ComponentActivity() {
                 webView.evaluateJavascript("window.SoulHybridRuntime&&window.SoulHybridRuntime.receive(JSON.parse($json));", null)
             }
         }))
-        lifecycleScope.launch {
+        eventScope.launch {
             eventBus.events.collect { event ->
                 if (event is SoulEvent.DeviceSnapshot) {
                     webView.post { sendDeviceSnapshotToClareira(event) }
@@ -67,6 +71,7 @@ class SoulHybridActivity : ComponentActivity() {
 
     override fun onDestroy() {
         eventCollector.stop()
+        eventScope.cancel()
         super.onDestroy()
     }
 }
