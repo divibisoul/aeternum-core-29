@@ -1,7 +1,7 @@
 import http from 'node:http';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { requestSara, saraConfigured, saraDescribe } from './sara-federation.mjs';
+import { requestSara, saraConfigured, saraHealthConfigured, saraDescribe } from './sara-federation.mjs';
 
 const original = {
   serviceUrl: process.env.SARA_SERVICE_URL,
@@ -57,14 +57,21 @@ try {
   delete process.env.SARA_SERVICE_URL;
   delete process.env.SARA_SERVICE_TOKEN;
   assert.equal(saraConfigured(), false);
+  assert.equal(saraHealthConfigured(), false);
   assert.equal(saraDescribe().configured, false);
 
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
   const { port } = server.address();
   process.env.SARA_SERVICE_URL = `http://127.0.0.1:${port}`;
-  process.env.SARA_SERVICE_TOKEN = 'test-token';
+  delete process.env.SARA_SERVICE_TOKEN;
 
+  assert.equal(saraConfigured(), false);
+  assert.equal(saraHealthConfigured(), true);
+  const health = await requestSara('sara.health', {}, 'n01-sara-health-001');
+  assert.equal(health.payload.service, 'SARA');
+
+  process.env.SARA_SERVICE_TOKEN = 'test-token';
   assert.equal(saraConfigured(), true);
   const correlationId = 'n01-sara-test-001';
   const discovery = await requestSara('sara.capabilities', {}, correlationId);
