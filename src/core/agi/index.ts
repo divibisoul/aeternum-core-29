@@ -346,7 +346,7 @@ export class AeternumAGI {
     });
     this.safetySystem.registerHealthProvider('selfHealing', () => {
       const health = this.selfHealing.getLatestHealth();
-      return health?.overallScore ?? 0.8;
+      return health ? health.overallScore : 0;
     });
     this.safetySystem.registerHealthProvider('evolution', () => {
       return this.darwinMachine.getMetrics().avgFitness;
