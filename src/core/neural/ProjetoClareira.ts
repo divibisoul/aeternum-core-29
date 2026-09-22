@@ -66,9 +66,14 @@ class ProjetoClareiraSystem {
       NucleoSemantica, NucleoSensores, NucleoMemoria, NucleoLinguagem,
       NucleoEmocional, NucleoRaciocinio, NucleoControleMotor,
     ];
-    for (let i = 0; i < secondaryClasses.length; i += 1) {
-      const node = new secondaryClasses[i](`MS-${String(i + 1).padStart(3, '0')}`);
-      this.secondaryNodes.push(node);
+    let secondaryIndex = 0;
+    for (let primaryIndex = 0; primaryIndex < this.primaryNodes.length; primaryIndex += 1) {
+      for (let localIndex = 0; localIndex < 4; localIndex += 1) {
+        const Nucleus = secondaryClasses[secondaryIndex % secondaryClasses.length];
+        const node = new Nucleus(`MS-${String(secondaryIndex + 1).padStart(3, '0')}`);
+        this.secondaryNodes.push(node);
+        secondaryIndex += 1;
+      }
     }
 
     this.allNodes.push(this.nucleoRaiz, ...this.primaryNodes, ...this.secondaryNodes);
@@ -113,9 +118,10 @@ class ProjetoClareiraSystem {
       this.channels.push(down, up);
     }
 
+    const secondariesPerPrimary = Math.floor(this.secondaryNodes.length / this.primaryNodes.length);
     for (let i = 0; i < this.secondaryNodes.length; i += 1) {
       const secondary = this.secondaryNodes[i];
-      const primary = this.primaryNodes[i % this.primaryNodes.length];
+      const primary = this.primaryNodes[Math.floor(i / secondariesPerPrimary)];
       const up = new InformationChannel(secondary.id, primary.id, 'Primary', 1, 60);
       const down = new InformationChannel(primary.id, secondary.id, 'Secondary', 1, 60);
       secondary.addOutputChannel(up);
