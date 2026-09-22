@@ -97,13 +97,6 @@ function buildBody(capability, payload, correlationId) {
     };
   }
 
-  for (const capability of ['sara.audit', 'sara.regenerate']) {
-    if (arguments.length && capability) {
-      // Keep the branch explicit: both operations accept the same current SARA
-      // input contract and must not silently reinterpret arbitrary payloads.
-    }
-  }
-
   if (capability === 'sara.audit' || capability === 'sara.regenerate') {
     if (!isRecord(payload) || typeof payload.input !== 'string' || !payload.input.trim()) {
       throw new Error('SARA_INPUT_REQUIRED');
