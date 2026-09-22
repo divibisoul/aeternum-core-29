@@ -72,6 +72,9 @@ class SoulAdminPlusActivity : FragmentActivity() {
         var saraToken by remember { mutableStateOf("") }
         var n07Url by remember { mutableStateOf("") }
         var n07Token by remember { mutableStateOf("") }
+        var timeoutMs by remember { mutableStateOf("10000") }
+        var rootEnabled by remember { mutableStateOf(false) }
+        var n07Enabled by remember { mutableStateOf(false) }
         var input by remember { mutableStateOf("Executar ciclo de validação do Soul Admin") }
         var output by remember { mutableStateOf("") }
 
@@ -80,6 +83,9 @@ class SoulAdminPlusActivity : FragmentActivity() {
             val cfg = config.read()
             saraUrl = cfg.saraBaseUrl.orEmpty()
             n07Url = cfg.n07BaseUrl.orEmpty()
+            timeoutMs = cfg.requestTimeoutMs.toString()
+            rootEnabled = cfg.rootEnabled
+            n07Enabled = cfg.n07Enabled
             loaded = true
         }
 
@@ -123,11 +129,25 @@ class SoulAdminPlusActivity : FragmentActivity() {
                         label = { Text("N07_TOKEN") },
                         visualTransformation = PasswordVisualTransformation()
                     )
+                    OutlinedTextField(
+                        timeoutMs, { timeoutMs = it.filter(Char::isDigit) },
+                        label = { Text("REQUEST_TIMEOUT_MS") }
+                    )
+                    Row {
+                        Checkbox(checked = rootEnabled, onCheckedChange = { rootEnabled = it })
+                        Text("FEATURE_ROOT_ENABLED")
+                    }
+                    Row {
+                        Checkbox(checked = n07Enabled, onCheckedChange = { n07Enabled = it })
+                        Text("FEATURE_N07_ENABLED")
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = {
                             scope.launch {
                                 config.setSara(saraUrl, saraToken.takeIf(String::isNotBlank))
                                 config.setN07(n07Url.takeIf(String::isNotBlank), n07Token.takeIf(String::isNotBlank))
+                                config.setTimeout(timeoutMs.toLongOrNull() ?: 10_000L)
+                                config.setFeatureFlags(rootEnabled, n07Enabled)
                                 output = "CONFIG_SAVED"
                             }
                         }) { Text("SALVAR") }
