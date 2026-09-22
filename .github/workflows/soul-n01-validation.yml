@@ -219,6 +219,8 @@ jobs:
         run: npm run mesh:contract:check
       - name: Clareira topology and federation contract check
         run: npm run clareira:contract:check
+      - name: Clareira Android/WebView contract check
+        run: npm run clareira:android:contract:check
       - name: Local Mesh runtime contract proof
         run: node scripts/soul-mesh-local-contract-check.mjs
       - name: Emergency diagnostics
