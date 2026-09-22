@@ -422,13 +422,7 @@ export class ProcessingNode {
    * Consome energia baseado no processamento
    */
   protected consumeEnergy(amount: number): void {
-    this.currentEnergy = Math.max(0, this.currentEnergy - amount * 0.1);
-    
-    // Regenerar lentamente
-    this.currentEnergy = Math.min(
-      this.energyCapacity, 
-      this.currentEnergy + 0.5
-    );
+    this.currentEnergy = Math.max(0, this.currentEnergy - Math.max(0, amount));
 
     if (this.currentEnergy / Math.max(1, this.energyCapacity) < 0.1) {
       this.vagusAfferentReporter?.('energy_low', {
@@ -454,7 +448,7 @@ export class ProcessingNode {
     // Verificar stress térmico
     if (this.thermalSensorReading >= THERMAL_STRESS_CRITICAL) {
       console.warn(`[ProcessingNode] ${this.id} em stress térmico crítico!`);
-      this._processingRateMultiplier *= 0.8; // Throttle
+      this.setHomeostasisMultiplier(0.5); // Throttle via regulatory layer
       this.vagusAfferentReporter?.('thermal_critical', {
         temperature: this.thermalSensorReading,
       }, 0.95);
