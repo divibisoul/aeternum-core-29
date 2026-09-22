@@ -27,9 +27,9 @@ export function useProjetoClareira() {
       setRunning(ProjetoClareira.running);
       try {
         await ProjetoClareira.syncStateToSara();
-        await ProjetoClareira.dispatchVagalCommandToSara('NC-001', 'resume', {}, 0.1);
+        await ProjetoClareira.pullVagalCommandsFromSara();
       } catch {
-        // SARA is an external dependency; local Clareira continues operating.
+        // SARA remains external; local Clareira continues operating on transport failure.
       }
     }, 2000);
 
