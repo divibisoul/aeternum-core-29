@@ -41,6 +41,15 @@ export class ClareiraSaraBridge {
     );
   }
 
+  async auditLatestState(correlation?: string): Promise<ClareiraSaraResponse> {
+    return this.request(
+      '/audit',
+      {},
+      correlation ?? correlationId('clareira-audit'),
+      'GET',
+    );
+  }
+
   async dispatchVagalCommand(
     nodeId: string,
     command: 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
@@ -155,14 +164,15 @@ export class ClareiraSaraBridge {
     path: string,
     payload: Record<string, unknown> | ClareiraSnapshot,
     correlation: string,
+    method: 'POST' | 'GET' = 'POST',
   ): Promise<ClareiraSaraResponse> {
     const response = await fetch(this.gatewayBaseUrl.replace(/\/$/, '') + path, {
-      method: 'POST',
+      method,
       headers: {
-        'content-type': 'application/json',
+        ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
         'x-correlation-id': correlation,
       },
-      body: JSON.stringify(payload),
+      ...(method === 'POST' ? { body: JSON.stringify(payload) } : {}),
       cache: 'no-store',
     });
     const body = await response.json().catch(() => null) as Record<string, unknown> | null;
