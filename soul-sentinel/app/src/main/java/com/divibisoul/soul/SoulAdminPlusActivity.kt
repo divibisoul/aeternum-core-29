@@ -22,7 +22,6 @@ import com.divibisoul.soul.core.security.PrivilegedAuthGate
 import com.divibisoul.soul.core.security.RootGate
 import com.divibisoul.soul.core.security.ShizukuOrchestrator
 import com.divibisoul.soul.runtime.MissionControl
-import com.divibisoul.soul.core.security.ShizukuOrchestrator
 import com.divibisoul.soul.core.federation.FederationStatusMatrix
 import com.divibisoul.soul.core.state.DashboardState
 import com.divibisoul.soul.core.state.DashboardStateStore
@@ -153,7 +152,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
                             }
                         }) { Text("SALVAR") }
                         OutlinedButton(onClick = {
-                            scope.launch { plusRuntime.requestShizukuPermission() }
+                            scope.launch { ShizukuOrchestrator().requestPermissionIfNeeded() }
                         }) { Text("SOLICITAR SHIZUKU") }
                     }
                 }
@@ -239,13 +238,16 @@ class SoulAdminPlusActivity : FragmentActivity() {
                             }
 
                             val shizuku = ShizukuOrchestrator().state()
+                            val cfg = config.read()
                             output = if (shizuku.running && shizuku.permissionGranted) {
                                 runCatching { ShizukuOrchestrator().execute("id") }.getOrElse {
                                     "SHIZUKU_ERROR: " + (it.message ?: "unknown")
                                 }
-                            } else {
+                            } else if (cfg.rootEnabled) {
                                 val rootStatus = RootGate().status()
                                 if (rootStatus.available) "ROOT_AVAILABLE" else "NO_PRIVILEGED_CHANNEL"
+                            } else {
+                                "NO_PRIVILEGED_CHANNEL"
                             }
                         }
                     }) { Text("DIAGNOSTICAR CANAL") }
