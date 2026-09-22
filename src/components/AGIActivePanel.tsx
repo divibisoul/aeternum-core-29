@@ -34,8 +34,8 @@ export function AGIActivePanel() {
   const [diagnostics, setDiagnostics] = useState<any[]>([]);
   const [duvidas, setDuvidas] = useState<any[]>([]);
   const [rupturas, setRupturas] = useState<any[]>([]);
-  const [deviceIp, setDeviceIp] = useState('192.168.18.35');
-  const [devicePort, setDevicePort] = useState('40513');
+  const [deviceIp, setDeviceIp] = useState('');
+  const [devicePort, setDevicePort] = useState('');
 
   useEffect(() => {
     const agi = AeternumAGI.getInstance();
@@ -167,7 +167,7 @@ export function AGIActivePanel() {
                 <div className="text-[10px] font-medium flex items-center gap-1">
                   <Heart className="w-3 h-3 text-red-400" /> GEM-Health
                   <Badge className={cn("text-[8px] ml-auto", metrics?.gemHealth?.wearableConnected ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400")}>
-                    {metrics?.gemHealth?.wearableConnected ? 'WEARABLE' : 'SIMULADO'}
+                    {metrics?.gemHealth?.wearableConnected ? 'WEARABLE' : 'NÃO DISPONÍVEL'}
                   </Badge>
                 </div>
                 {metrics?.gemHealth && (
@@ -240,13 +240,13 @@ export function AGIActivePanel() {
                   <div className="space-y-0.5 text-[9px]">
                     <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className={cn("font-mono", metrics.deviceStatus.connected ? 'text-emerald-400' : 'text-muted-foreground')}>{metrics.deviceStatus.connected ? 'CONECTADO' : 'OFFLINE'}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Shizuku</span><span className={cn("font-mono", metrics.deviceStatus.shizukuActive ? 'text-emerald-400' : 'text-muted-foreground')}>{metrics.deviceStatus.shizukuActive ? 'OK' : 'N/A'}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">CPU</span><span className="font-mono">{metrics.deviceStatus.cpu.toFixed(0)}%</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">CPU</span><span className="font-mono">{metrics.deviceStatus.metricsAvailable ? metrics.deviceStatus.cpu.toFixed(0) + '%' : 'NÃO DISPONÍVEL'}</span></div>
                     <Progress value={metrics.deviceStatus.cpu} className="h-1" />
-                    <div className="flex justify-between"><span className="text-muted-foreground">RAM</span><span className="font-mono">{metrics.deviceStatus.ramUsedMb.toFixed(0)}/{metrics.deviceStatus.ramTotalMb}MB</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">RAM</span><span className="font-mono">{metrics.deviceStatus.metricsAvailable ? metrics.deviceStatus.ramUsedMb.toFixed(0) + '/' + metrics.deviceStatus.ramTotalMb + 'MB' : 'NÃO DISPONÍVEL'}</span></div>
                     <Progress value={(metrics.deviceStatus.ramUsedMb / Math.max(1, metrics.deviceStatus.ramTotalMb)) * 100} className="h-1" />
-                    <div className="flex justify-between"><span className="text-muted-foreground">Bateria</span><span className="font-mono">{metrics.deviceStatus.batteryPct.toFixed(0)}%</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Temp</span><span className={cn("font-mono", metrics.deviceStatus.temperature > 40 ? 'text-red-400' : 'text-emerald-400')}>{metrics.deviceStatus.temperature.toFixed(1)}°C</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Processos</span><span className="font-mono">{metrics.deviceStatus.runningProcesses}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Bateria</span><span className="font-mono">{metrics.deviceStatus.metricsAvailable ? metrics.deviceStatus.batteryPct.toFixed(0) + '%' : 'NÃO DISPONÍVEL'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Temp</span><span className={cn("font-mono", metrics.deviceStatus.temperature > 40 ? 'text-red-400' : 'text-emerald-400')}>{metrics.deviceStatus.metricsAvailable ? metrics.deviceStatus.temperature.toFixed(1) + '°C' : 'NÃO DISPONÍVEL'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Processos</span><span className="font-mono">{metrics.deviceStatus.metricsAvailable ? metrics.deviceStatus.runningProcesses : 'NÃO DISPONÍVEL'}</span></div>
                   </div>
                 )}
                 {!metrics?.deviceStatus?.connected && (
