@@ -27,9 +27,7 @@ class ShizukuOrchestrator {
 
     fun requestPermissionIfNeeded() {
         val s = state()
-        if (s.running && !s.permissionGranted && Shizuku.shouldShowRequestPermissionRationale()) {
-            Shizuku.requestPermission(PERMISSION_REQUEST_CODE)
-        } else if (s.running && !s.permissionGranted) {
+        if (s.running && !s.permissionGranted) {
             Shizuku.requestPermission(PERMISSION_REQUEST_CODE)
         }
     }
