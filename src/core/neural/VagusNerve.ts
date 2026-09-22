@@ -5,7 +5,7 @@
  * Não simula Android/firmware: transporta estados reais produzidos pelo
  * runtime Clareira e deixa integrações externas em adaptadores explícitos.
  */
-import type { InformationPacket, VagalCommand, VagalSignal } from './types';
+import type { VagalCommand, VagalSignal } from './types';
 import type { HomeostasisManager } from './HomeostasisManager';
 import type { ProcessingNode } from './ProcessingNode';
 
@@ -92,6 +92,7 @@ export class VagusNerve {
   }
 
   registerNode(node: ProcessingNode): void {
+    if (this.plexus.getActive(node.id)) return;
     const branch = new VagusBranch(node);
     this.plexus.register(branch);
     node.setVagusAfferentReporter((signalType, payload, priority = 0.5) => {
@@ -168,7 +169,9 @@ export class VagusNerve {
     for (const item of efferentBatch) {
       const branch = this.plexus.getActive(item.nodeId);
       if (!branch) continue;
-      const command = branch.efferentQueue.shift();
+      const index = branch.efferentQueue.findIndex(command => command.id === item.command.id);
+      if (index < 0) continue;
+      const [command] = branch.efferentQueue.splice(index, 1);
       if (!command) continue;
       branch.signalsOut += 1;
       this.signalsOut += 1;
