@@ -19,7 +19,8 @@
     "byok:check": "node scripts/test-n01-byok.mjs",
     "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs",
     "sara:federation:check": "node scripts/sara-federation.test.mjs",
-    "clareira:contract:check": "node scripts/clareira-contract-check.mjs"
+    "clareira:contract:check": "node scripts/clareira-contract-check.mjs",
+    "clareira:android:contract:check": "node scripts/clareira-android-contract-check.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
