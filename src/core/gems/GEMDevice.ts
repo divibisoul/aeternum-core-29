@@ -20,9 +20,9 @@ export interface DeviceStatus {
   cpu: number;
   ramUsedMb: number;
   ramTotalMb: number;
-  batteryPct: number;
-  temperature: number;
-  runningProcesses: number;
+  batteryPct: number | null;
+  temperature: number | null;
+  runningProcesses: number | null;
   metricsAvailable: boolean;
 }
 
@@ -71,9 +71,9 @@ export class GEMDevice {
     cpu: 0,
     ramUsedMb: 0,
     ramTotalMb: 0,
-    batteryPct: 100,
-    temperature: 25,
-    runningProcesses: 0,
+    batteryPct: null,
+    temperature: null,
+    runningProcesses: null,
     metricsAvailable: false,
   };
   private _actions: DeviceAction[] = [];
