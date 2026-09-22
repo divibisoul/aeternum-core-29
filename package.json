@@ -18,7 +18,8 @@
     "supergpu:check": "node scripts/soul-supergpu-check.mjs",
     "byok:check": "node scripts/test-n01-byok.mjs",
     "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs",
-    "sara:federation:check": "node scripts/sara-federation.test.mjs"
+    "sara:federation:check": "node scripts/sara-federation.test.mjs",
+    "clareira:contract:check": "node scripts/clareira-contract-check.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
