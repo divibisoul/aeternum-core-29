@@ -33,6 +33,8 @@ class SoulHybridBridge(
         fun attach(webView: WebView, bridge: SoulHybridBridge) {
             webView.settings.javaScriptEnabled = true
             webView.addJavascriptInterface(bridge, "SoulMesh")
+            // Backward-compatible alias required by the TypeScript bridge runtime.
+            webView.addJavascriptInterface(bridge, "SoulHybridBridge")
         }
     }
 }
