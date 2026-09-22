@@ -27,6 +27,7 @@ sealed interface SoulEvent {
         val batteryLevel: Int,
         val thermalStatus: Int,
         val lowMemory: Boolean,
+        val anrRisk: Boolean,
         override val timestamp: Long = System.currentTimeMillis()
     ) : SoulEvent
 }
