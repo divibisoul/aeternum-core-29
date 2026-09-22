@@ -8,7 +8,7 @@ Princípio: o estado verificável do código prevalece sobre declarações anter
 
 A auditoria encontrou frentes incompletas e erros introduzidos na própria implementação anterior. Eles foram corrigidos de forma aditiva quando o contrato já estava verificável.
 
-A branch do Plus permanece sobre o `main` atual sem divergência para trás: `main` = `480ad4d8ed8814e4aa2c3d69043390d90658e52c`; branch Plus auditada = 86 commits à frente, 0 atrás no momento desta auditoria. Nenhum arquivo foi removido pela frente Plus.
+A branch do Plus permanece sobre o `main` atual sem divergência para trás: `main` = `480ad4d8ed8814e4aa2c3d69043390d90658e52c`; branch Plus auditada = 112 commits à frente, 0 atrás no momento desta auditoria. Nenhum arquivo foi removido pela frente Plus.
 
 ## Erros corrigidos nesta auditoria
 
@@ -78,3 +78,17 @@ O pacote legado `compute/transcendental` do N07 continua ISOLADO e DESABILITADO 
 Restaurar uma execução de CI observável; em seguida executar build + testes; depois comissionar APK e executar SARA/N07 online/offline, watchdog, canal privilegiado e uma transação correlacionada real.
 
 Nenhuma certificação de produção deve ser atribuída antes dessas evidências.
+
+
+## Recovery pass II — pós-auditoria
+
+A segunda passagem encontrou mais três problemas de integração e os corrigiu:
+
+- O runtime compartilhado ainda podia iniciar em corrida concorrente entre Activity e Service; o lifecycle foi serializado.
+- O watchdog podia pausar WorkManager, mas uma nova missão ainda podia ser enfileirada; a pausa agora é aplicada também no boundary de enqueue.
+- Resultado de ciclo SARA era persistido apenas no log; agora `lastCycleId` e `lastTraceHash` também alimentam o DashboardStateStore, com ressincronização persistente no runtime.
+- O loop legado do Soul Admin reduz sua própria frequência sob proteção do watchdog.
+- N07 foi corrigido no próprio repositório para propagar `X-Correlation-ID` ao SARA proxy; foi adicionada cobertura de teste específica para esse header.
+
+Estado N07 após a correção: main = `b33cf720379aa17dfbe45a01fbc423d24806a69c`.
+Estado SARA: sem alteração nesta passagem; contrato inspecionado continua o limite autoritativo para o client.
