@@ -48,6 +48,7 @@ export class ProcessingNode {
   private reportInterval: ReturnType<typeof setInterval> | null = null;
   private packetsProcessed = 0;
   private lastProcessingTime = 0;
+  private inactiveSince = 0;
 
   constructor(id: string, level: NodeLevel) {
     this.id = id;
@@ -116,10 +117,20 @@ export class ProcessingNode {
 
   setActive(active: boolean): void {
     if (active && !this._active) {
+      this.inactiveSince = 0;
       this.start();
     } else if (!active && this._active) {
+      this.inactiveSince = Date.now();
       this.stop();
+      this.vagusAfferentReporter?.('fault', {
+        nodeId: this.id,
+        inactiveSince: this.inactiveSince,
+      }, 0.9);
     }
+  }
+
+  getInactiveSince(): number {
+    return this.inactiveSince;
   }
 
   addInputChannel(channel: InformationChannel): void {
