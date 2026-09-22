@@ -96,10 +96,51 @@ class SystemEventCollector(
                 batteryTemperatureC = batteryTemperatureC,
                 screenOn = screenOn,
                 network = readNetwork(),
-                shizukuStatus = shizukuStatus()
+                shizukuStatus = shizukuStatus(),
+                cpuFreqMhz = readCpuFreqMhz(),
+                ramUsedMb = readRamUsedMb(),
+                ramTotalMb = readRamTotalMb(),
+                foregroundPackage = readForegroundPackage(),
+                wifiEnabled = readWifiEnabled(),
+                bluetoothEnabled = readBluetoothEnabled()
             )
         )
     }
+
+    private fun readCpuFreqMhz(): Double? = try {
+        java.io.File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq")
+            .takeIf { it.canRead() }
+            ?.readText()
+            ?.trim()
+            ?.toLongOrNull()
+            ?.div(1000.0)
+    } catch (_: Throwable) { null }
+
+    private fun readRamTotalMb(): Long? = try {
+        android.app.ActivityManager.MemoryInfo().also {
+            context.getSystemService(android.app.ActivityManager::class.java)?.getMemoryInfo(it)
+        }.totalMem.takeIf { it > 0 }?.div(1024L * 1024L)
+    } catch (_: Throwable) { null }
+
+    private fun readRamUsedMb(): Long? = try {
+        val info = android.app.ActivityManager.MemoryInfo().also {
+            context.getSystemService(android.app.ActivityManager::class.java)?.getMemoryInfo(it)
+        }
+        if (info.totalMem <= 0 || info.availMem < 0) null
+        else ((info.totalMem - info.availMem).coerceAtLeast(0) / (1024L * 1024L))
+    } catch (_: Throwable) { null }
+
+    private fun readForegroundPackage(): String? = try {
+        SoulCortex(context, SoulConfig(context)).foregroundPackage()
+    } catch (_: Throwable) { null }
+
+    private fun readWifiEnabled(): Boolean = try {
+        context.getSystemService(android.net.wifi.WifiManager::class.java)?.isWifiEnabled == true
+    } catch (_: Throwable) { false }
+
+    private fun readBluetoothEnabled(): Boolean = try {
+        context.getSystemService(android.bluetooth.BluetoothManager::class.java)?.adapter?.isEnabled == true
+    } catch (_: Throwable) { false }
 
     private fun readNetwork(): String {
         val cm = context.getSystemService(ConnectivityManager::class.java)
