@@ -120,10 +120,6 @@ function buildBody(capability, payload, correlationId) {
 
   if (capability === 'sara.clareira.vagus.pending') {
     if (!isRecord(payload)) return undefined;
-    const limit = Number(payload.limit ?? 32);
-    if (!Number.isFinite(limit) || limit < 1 || limit > 32) {
-      throw new Error('SARA_CLAREIRA_VAGAL_LIMIT_INVALID');
-    }
     return undefined;
   }
 
