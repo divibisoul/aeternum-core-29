@@ -8,5 +8,14 @@ sealed interface SoulEvent {
     data class ScreenChanged(val on: Boolean, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
     data class AppForeground(val packageName: String, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
     data class ShizukuChanged(val status: String, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
+    data class DeviceSnapshot(
+        val batteryPercent: Int,
+        val charging: Boolean,
+        val batteryTemperatureC: Double?,
+        val screenOn: Boolean,
+        val network: String,
+        val shizukuStatus: String,
+        override val timestamp: Long = System.currentTimeMillis()
+    ) : SoulEvent
     data class Tick(override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
 }
