@@ -204,7 +204,7 @@ export class HomeostasisManager {
 
       for (const node of this.allNodes) {
         if (node.active) {
-          node.processingRateMultiplier *= TURBO_PROCESSING_MULTIPLIER;
+          node.setHomeostasisMultiplier(TURBO_PROCESSING_MULTIPLIER);
         }
       }
 
@@ -218,7 +218,7 @@ export class HomeostasisManager {
       this.turboActive = false;
 
       for (const node of this.allNodes) {
-        node.processingRateMultiplier /= TURBO_PROCESSING_MULTIPLIER;
+        node.setHomeostasisMultiplier(1 / TURBO_PROCESSING_MULTIPLIER);
       }
     }
 
@@ -241,7 +241,7 @@ export class HomeostasisManager {
       console.warn('[HomeostasisManager] ⚠️ STRESS CRÍTICO - Throttling ativo');
       
       for (const node of this.allNodes) {
-        node.processingRateMultiplier *= 0.9;
+        node.setHomeostasisMultiplier(0.9);
       }
     }
   }
@@ -270,6 +270,7 @@ export class HomeostasisManager {
     activeNodes: number;
     totalNodes: number;
     avgStress: number;
+    energyScore: number;
   } {
     const avgStress = this.stressHistory.length > 0
       ? this.stressHistory.reduce((a, b) => a + b, 0) / this.stressHistory.length
