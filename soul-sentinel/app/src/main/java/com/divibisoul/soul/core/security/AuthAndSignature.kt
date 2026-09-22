@@ -85,7 +85,7 @@ class AuthAndSignature(private val context: Context) {
     companion object {
         fun canRole(role: LocalRole, action: String): Boolean = when (role) {
             LocalRole.ADMIN -> true
-            LocalRole.OPERATOR -> action !in setOf("root", "destructive", "credential")
+            LocalRole.OPERATOR -> action in setOf("diagnostic", "observe", "health", "read")
             LocalRole.OBSERVER -> action in setOf("observe", "health", "read")
         }
     }
