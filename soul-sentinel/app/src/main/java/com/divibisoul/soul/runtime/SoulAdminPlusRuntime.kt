@@ -74,10 +74,13 @@ class SoulAdminPlusRuntime(
             refreshBackends()
             scheduleLogSync()
             while (isActive) {
-                refreshBackends()
+                val reduced = watchdog.isLoadReduced()
+                if (!reduced) {
+                    refreshBackends()
+                    scheduleLogSync()
+                }
                 refreshHardware()
-                scheduleLogSync()
-                delay(15_000L)
+                delay(if (reduced) 60_000L else 15_000L)
             }
         }
     }
@@ -181,7 +184,10 @@ class SoulAdminPlusRuntime(
     }
 
     fun pauseMissions(reason: String) = missions.pause(reason)
-    fun resumeMissions() = missions.resume()
+    fun resumeMissions() {
+        watchdog.clearProtection()
+        missions.resume()
+    }
     fun requestShizukuPermission() = shizuku.requestPermissionIfNeeded()
     fun shizukuState() = shizuku.state()
     fun watchdog(): AndroidWatchdog = watchdog
