@@ -63,3 +63,38 @@ Os arquivos originais do Clareira foram reconciliados novamente com main. Altera
 ## Próximo gate
 
 Executar CI, corrigir primeiro erro real, repetir até obter execução verde e então promover a frente para teste/validação. Só depois reabrir as frentes congeladas.
+## Atualização da rodada de engenharia — 2026-09-22
+
+### Implementação confirmada no branch de fusão
+- Clareira incorporado ao runtime TypeScript existente do SOUL N01.
+- 20 classes do blueprint preservadas; 61 instâncias operacionais: 1 Central + 12 Primary + 48 Secondary.
+- 120 canais direcionais bidirecionais na topologia Clareira.
+- Homeostase em intervalo de 100 ms, Turbo com 30 s de duração e cooldown de 60 s após o encerramento.
+- Nervo Vago com filas limitadas, ramo primário + backup e ciclo configurado em 5 ms; a latência é observada, não presumida.
+- Custos metabólicos dependem do tamanho e criticidade do pacote; energia por nível usa capacidades distintas.
+- InputTransducer usa diversidade/entropia e estado de carga/temperatura para produzir pacotes.
+- Snapshot Android passa por eventos nativos e bootstrap inicial; campos opcionais permanecem nulos quando a API não fornece o dado.
+- Ponte SOUL↔SARA usa correlação, congelamento pelo ERU canônico, proveniência e ciclo vagal PENDING→ACK.
+- Capacidades Android Clareira usam o catálogo e executor nativos já existentes do N01; não foi criado um segundo serviço Android paralelo.
+
+### Correções forenses adicionadas
+- Self-dispatch N01→N01 só é aceito para a lista explícita de capacidades Android Clareira.
+- ACK vagal duplicado é rejeitado.
+- Alvos vagais fora de SOUL_N01 são rejeitados.
+- Leituras não finitas são rejeitadas no SARA antes do congelamento pelo ERU.
+- IDs e contagens da topologia são validados no SARA.
+- Métricas `vagalTone` e `dropRate` têm domínio validado.
+- Histórico de proveniência foi tornado thread-safe.
+
+### Evidência de execução
+- Foram executados vários workflows reais do GitHub Actions para o branch de fusão.
+- Os últimos workflows observados do N01 retornaram `failure` nos jobs, mas o conector disponível não expõe `steps` nem blobs de log; a leitura dos logs retorna `BlobNotFound`.
+- Por isso não é possível atribuir o erro a um comando específico do projeto nem declarar build/teste verde.
+- O ambiente local desta sessão também não conseguiu acessar `codeload.github.com`, portanto não existe uma segunda execução local independente.
+
+### Classificação atual
+- Código/artefatos: E2 — implementado e verificável no branch.
+- Integração SOUL↔SARA: implementada por contratos, endpoints e adaptadores.
+- Execução E3: bloqueada por evidência insuficiente do runner/log.
+- Validação E4/E5: pendente até haver execução reproduzível com logs/steps.
+- PRs permanecem abertos e não mesclados.
