@@ -80,6 +80,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
         var n07Url by remember { mutableStateOf("") }
         var n07Token by remember { mutableStateOf("") }
         var timeoutMs by remember { mutableStateOf("10000") }
+        var retentionDays by remember { mutableStateOf("30") }
         var rootEnabled by remember { mutableStateOf(false) }
         var n07Enabled by remember { mutableStateOf(false) }
         var input by remember { mutableStateOf("Executar ciclo de validação do Soul Admin") }
@@ -91,6 +92,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
             saraUrl = cfg.saraBaseUrl.orEmpty()
             n07Url = cfg.n07BaseUrl.orEmpty()
             timeoutMs = cfg.requestTimeoutMs.toString()
+            retentionDays = cfg.logRetentionDays.toString()
             rootEnabled = cfg.rootEnabled
             n07Enabled = cfg.n07Enabled
             loaded = true
@@ -140,6 +142,10 @@ class SoulAdminPlusActivity : FragmentActivity() {
                         timeoutMs, { timeoutMs = it.filter(Char::isDigit) },
                         label = { Text("REQUEST_TIMEOUT_MS") }
                     )
+                    OutlinedTextField(
+                        retentionDays, { retentionDays = it.filter(Char::isDigit) },
+                        label = { Text("LOG_RETENTION_DAYS") }
+                    )
                     Row {
                         Checkbox(checked = rootEnabled, onCheckedChange = { rootEnabled = it })
                         Text("FEATURE_ROOT_ENABLED")
@@ -154,6 +160,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
                                 config.setSara(saraUrl, saraToken.takeIf(String::isNotBlank))
                                 config.setN07(n07Url.takeIf(String::isNotBlank), n07Token.takeIf(String::isNotBlank))
                                 config.setTimeout(timeoutMs.toLongOrNull() ?: 10_000L)
+                                config.setLogRetentionDays(retentionDays.toIntOrNull() ?: 30)
                                 config.setFeatureFlags(rootEnabled, n07Enabled)
                                 output = "CONFIG_SAVED"
                             }
