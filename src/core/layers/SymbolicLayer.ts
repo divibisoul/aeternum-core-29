@@ -208,7 +208,7 @@ export class BarramentoQuantico {
 /**
  * TunelamentoCognitivo - Permite "saltos" instantâneos entre estados cognitivos
  * 
- * Simula o tunelamento quântico para transições cognitivas não-lineares
+ * Modela uma transição cognitiva determinística; não representa tunelamento quântico físico
  */
 export class TunelamentoCognitivo {
   private estados: Map<string, unknown> = new Map();
@@ -263,7 +263,7 @@ export class TunelamentoCognitivo {
   }
 
   private calcularProbabilidade(de: string, para: string): number {
-    // Simula decaimento exponencial da barreira
+    // Score determinístico derivado da distância entre estados
     const barreiraCognitiva = Math.abs(de.length - para.length) * 0.1 + 0.5;
     return Math.exp(-barreiraCognitiva);
   }
@@ -279,7 +279,7 @@ export class TunelamentoCognitivo {
 /**
  * EntrelacamentoSistemico - Conecta componentes distantes do sistema
  * 
- * Simula entrelamento quântico para sincronização instantânea
+ * Modela correlação simbólica; não representa entrelaçamento quântico físico
  */
 export class EntrelacamentoSistemico {
   private pares: Map<string, { parceiro: string; estado: 'up' | 'down' }> = new Map();
