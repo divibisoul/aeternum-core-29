@@ -26,7 +26,6 @@ class SoulHybridActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         eventBus = SoulEventBus()
         eventCollector = SystemEventCollector(this, eventBus)
-        eventCollector.start()
 
         mesh = SoulMeshBootstrap.create(
             webDelegate = { message -> SoulMeshBootstrap.delegateToWeb(message) },
@@ -52,6 +51,7 @@ class SoulHybridActivity : ComponentActivity() {
 
         webView.loadUrl(SoulSecureWebView.localUrl())
         setContentView(webView)
+        eventCollector.start()
     }
 
     private fun sendDeviceSnapshotToClareira(snapshot: SoulEvent.DeviceSnapshot) {
