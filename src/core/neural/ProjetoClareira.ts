@@ -436,7 +436,8 @@ class ProjetoClareiraSystem {
     return this.saraBridge.pullAndApplyVagalCommands(
       (nodeId, command, payload) => {
         const node = this.allNodes.find(item => item.id === nodeId);
-        if (!node || !node.active) return false;
+        if (!node) return false;
+        if (!node.active && command !== 'resume') return false;
         node.applyVagalCommand(command, payload);
         return true;
       },
