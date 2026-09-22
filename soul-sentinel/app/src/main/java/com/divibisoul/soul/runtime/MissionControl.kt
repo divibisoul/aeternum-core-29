@@ -2,6 +2,7 @@ package com.divibisoul.soul.runtime
 
 import android.content.Context
 import androidx.work.Constraints
+import androidx.work.BackoffPolicy
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
@@ -28,6 +29,7 @@ class MissionControl(context: Context) {
 
     fun enqueueCycleMission(input: String, cycleId: String? = null): UUID {
         val request = OneTimeWorkRequestBuilder<CycleMissionWorker>()
+            .addTag("soul-mission")
             .setInputData(
                 Data.Builder()
                     .putString("input", input)
