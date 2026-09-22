@@ -3,8 +3,8 @@ package com.divibisoul.soul.runtime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -17,11 +17,20 @@ data class QueuedIntent(
     val run: suspend () -> Unit
 )
 
-class IntentQueueManager(private val scope: CoroutineScope) {
-    private val channel = Channel<QueuedIntent>(Channel.UNLIMITED)
+private data class PendingIntent(
+    val intent: QueuedIntent,
+    val sequence: Long
+)
+
+class IntentQueueManager(
+    private val scope: CoroutineScope,
+    private val onFailure: (QueuedIntent, Throwable) -> Unit = { _, _ -> }
+) {
+    private val signal = Channel<Unit>(Channel.CONFLATED)
     private val mutex = Mutex()
-    private val pending = PriorityQueue<QueuedIntent>(
-        compareByDescending<QueuedIntent> { it.priority }
+    private val pending = PriorityQueue<PendingIntent>(
+        compareByDescending<PendingIntent> { it.intent.priority }
+            .thenBy { it.sequence }
     )
     private val sequence = AtomicLong()
     private var worker: Job? = null
@@ -29,25 +38,28 @@ class IntentQueueManager(private val scope: CoroutineScope) {
     fun start() {
         if (worker != null) return
         worker = scope.launch(Dispatchers.Default) {
-            for (incoming in channel) {
-                mutex.withLock {
-                    pending.add(incoming.copy(id = incoming.id + "-" + sequence.incrementAndGet()))
+            while (true) {
+                signal.receive()
+                while (true) {
+                    val next = mutex.withLock { pending.poll()?.intent } ?: break
+                    try {
+                        next.run()
+                    } catch (error: Throwable) {
+                        onFailure(next, error)
+                    }
                 }
-                drain()
             }
         }
     }
 
-    suspend fun enqueue(intent: QueuedIntent) = channel.send(intent)
+    suspend fun enqueue(intent: QueuedIntent) {
+        mutex.withLock {
+            pending.add(PendingIntent(intent, sequence.incrementAndGet()))
+        }
+        signal.trySend(Unit)
+    }
 
     suspend fun depth(): Int = mutex.withLock { pending.size }
-
-    private suspend fun drain() {
-        while (true) {
-            val next = mutex.withLock { pending.poll() } ?: break
-            runCatching { next.run() }
-        }
-    }
 
     fun stop() {
         worker?.cancel()
