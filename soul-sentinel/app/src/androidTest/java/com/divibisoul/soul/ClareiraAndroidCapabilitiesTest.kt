@@ -23,6 +23,12 @@ class ClareiraAndroidCapabilitiesTest {
         assertTrue(result.has("screenOn"))
         assertTrue(result.has("network"))
         assertTrue(result.has("shizukuStatus"))
+        assertTrue(result.has("cpuFreqMhz"))
+        assertTrue(result.has("ramUsedMb"))
+        assertTrue(result.has("ramTotalMb"))
+        assertTrue(result.has("foregroundPackage"))
+        assertTrue(result.has("wifiEnabled"))
+        assertTrue(result.has("bluetoothEnabled"))
         assertTrue(result.has("timestamp"))
         assertTrue(result.getLong("timestamp") > 0)
     }
