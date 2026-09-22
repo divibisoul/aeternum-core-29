@@ -15,7 +15,6 @@ interface EthicsViolation {
 export function EthicsGuardian() {
   const [overall, setOverall] = useState<number | null>(null);
   const [violationsCount, setViolationsCount] = useState(0);
-  const [decisionsProcessed, setDecisionsProcessed] = useState<number | null>(null);
 
   useEffect(() => {
     const update = () => {
@@ -23,7 +22,6 @@ export function EthicsGuardian() {
       const audit = metrics.auditMetrics;
       setOverall(Number.isFinite(audit.avgScore) ? Math.max(0, Math.min(1, audit.avgScore)) : null);
       setViolationsCount(Number.isFinite(audit.violations) ? audit.violations : 0);
-      setDecisionsProcessed(Number.isFinite(audit.successRate) ? undefined : undefined);
     };
     update();
     const interval = setInterval(update, 3000);
