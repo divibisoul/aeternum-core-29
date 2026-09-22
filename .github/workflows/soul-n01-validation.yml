@@ -181,6 +181,7 @@ jobs:
             scripts/soul-mesh-contract-check.mjs \
             scripts/test-n01-byok.mjs \
             scripts/test-supabase-vector-memory.mjs \
+            scripts/sara-federation.test.mjs \
             scripts/diagnostics.mjs; do
             test -f "$file"
             node --check "$file"
