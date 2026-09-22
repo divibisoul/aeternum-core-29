@@ -87,8 +87,8 @@ export function AGIDashboard() {
               <span className="text-amber-400">L:{((metrics.lattice?.globalFitness ?? 0) * 100).toFixed(0)}%</span>
               <span className="text-primary">Ε:{((metrics.ethics?.auditMetrics?.avgScore ?? 0) * 100).toFixed(0)}%</span>
               <span className="text-orange-400">NIP:{metrics.nip?.saudeEpistemologica ?? '?'}</span>
-              <span className="text-cyan-400">Q:{((metrics.quantumNeural?.quantum?.coherence ?? 0) * 100).toFixed(0)}%</span>
-              <span className="text-red-400">SAIIC:{((metrics.saiic?.overallIntegrity ?? 0) * 100).toFixed(0)}%</span>
+              <span className="text-cyan-400">Q:{metrics.quantumNeural?.quantum?.measurementAvailable ? ((metrics.quantumNeural.quantum.coherence * 100).toFixed(0) + "%") : "—"}</span>
+              <span className="text-red-400">SAIIC:{metrics.saiic?.evidenceBasis === "NOT_MEASURED" ? "—" : ((metrics.saiic?.overallIntegrity ?? 0) * 100).toFixed(0) + "%"}</span>
             </div>
           )}
         </CardHeader>
