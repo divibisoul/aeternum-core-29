@@ -13,61 +13,35 @@ interface EthicsViolation {
 }
 
 export function EthicsGuardian() {
-  const [autonomy, setAutonomy] = useState(0.94);
-  const [beneficence, setBeneficence] = useState(0.97);
-  const [nonMaleficence, setNonMaleficence] = useState(0.99);
-  const [justice, setJustice] = useState(0.91);
-  const [explicability, setExplicability] = useState(0.96);
-  const [privacy, setPrivacy] = useState(0.98);
-  const [fairness, setFairness] = useState(0.93);
-  const [violations, setViolations] = useState<EthicsViolation[]>([]);
-  const [decisionsProcessed, setDecisionsProcessed] = useState(1247);
-
-  const overall = (autonomy + beneficence + nonMaleficence + justice + explicability + privacy + fairness) / 7;
+  const [overall, setOverall] = useState<number | null>(null);
+  const [violationsCount, setViolationsCount] = useState(0);
+  const [decisionsProcessed, setDecisionsProcessed] = useState<number | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const agi = AeternumAGI.getInstance();
-      const ethicsMetrics = agi.ethicalOptimizer.getMetrics();
-
-      setAutonomy(prev => Math.max(0.8, Math.min(1.0, prev + (Math.random() - 0.5) * 0.02)));
-      setBeneficence(prev => Math.max(0.8, Math.min(1.0, prev + (Math.random() - 0.5) * 0.015)));
-      setNonMaleficence(prev => Math.max(0.9, Math.min(1.0, prev + (Math.random() - 0.5) * 0.01)));
-      setJustice(prev => Math.max(0.8, Math.min(1.0, prev + (Math.random() - 0.5) * 0.02)));
-      setExplicability(prev => Math.max(0.8, Math.min(1.0, prev + (Math.random() - 0.5) * 0.015)));
-      setPrivacy(prev => Math.max(0.9, Math.min(1.0, prev + (Math.random() - 0.5) * 0.01)));
-      setFairness(prev => Math.max(0.8, Math.min(1.0, prev + (Math.random() - 0.5) * 0.02)));
-      setDecisionsProcessed(prev => prev + Math.floor(Math.random() * 5));
-
-      if (Math.random() < 0.08) {
-        const types = ["Bias Detection", "Privacy Concern", "Fairness Alert"];
-        const severities: ("low" | "medium" | "high")[] = ["low", "medium"];
-        setViolations(prev => [{
-          type: types[Math.floor(Math.random() * types.length)],
-          severity: severities[Math.floor(Math.random() * severities.length)],
-          description: "Auto-mitigado pelo sistema ético",
-          timestamp: Date.now()
-        }, ...prev.slice(0, 3)]);
-      }
-    }, 3000);
-
+    const update = () => {
+      const metrics = AeternumAGI.getInstance().ethicalOptimizer.getMetrics();
+      const audit = metrics.auditMetrics;
+      setOverall(Number.isFinite(audit.avgScore) ? Math.max(0, Math.min(1, audit.avgScore)) : null);
+      setViolationsCount(Number.isFinite(audit.violations) ? audit.violations : 0);
+      setDecisionsProcessed(Number.isFinite(audit.successRate) ? undefined : undefined);
+    };
+    update();
+    const interval = setInterval(update, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const status = overall >= 0.95
-    ? { label: "Excelente", color: "bg-emerald-500/20 text-emerald-400", Icon: CheckCircle }
+
+  const status = overall === null
+    ? { label: "Não mensurável", Icon: AlertTriangle }
+    : overall >= 0.95
+    ? { label: "Conforme", Icon: CheckCircle }
     : overall >= 0.9
-    ? { label: "Bom", color: "bg-amber-500/20 text-amber-400", Icon: Shield }
-    : { label: "Atenção", color: "bg-destructive/20 text-destructive", Icon: AlertTriangle };
+    ? { label: "Requer acompanhamento", Icon: Shield }
+    : { label: "Requer revisão", Icon: AlertTriangle };
 
   const dimensions = [
-    { label: "Autonomia", value: autonomy },
-    { label: "Beneficência", value: beneficence },
-    { label: "Não-Maleficência", value: nonMaleficence },
-    { label: "Justiça", value: justice },
-    { label: "Explicabilidade", value: explicability },
-    { label: "Privacidade", value: privacy },
-    { label: "Equidade", value: fairness },
+    "Autonomia", "Beneficência", "Não-Maleficência", "Justiça",
+    "Explicabilidade", "Privacidade", "Equidade",
   ];
 
   return (
@@ -80,39 +54,39 @@ export function EthicsGuardian() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <Badge className={status.color}>
+          <Badge variant="outline">
             <status.Icon className="w-3 h-3 mr-1" />
             {status.label}
           </Badge>
-          <span className="text-xl font-bold font-mono">{(overall * 100).toFixed(1)}%</span>
+          <span className="text-xl font-bold font-mono">{overall === null ? "—" : (overall * 100).toFixed(1) + "%"}</span>
         </div>
 
         <div className="space-y-2">
-          {dimensions.map(d => (
-            <div key={d.label} className="space-y-0.5">
+          {dimensions.map(label => (
+            <div key={label} className="space-y-0.5">
               <div className="flex items-center justify-between text-[10px]">
-                <span>{d.label}</span>
-                <span className="font-mono">{(d.value * 100).toFixed(0)}%</span>
+                <span>{label}</span>
+                <span className="font-mono">não medido separadamente</span>
               </div>
-              <Progress value={d.value * 100} className="h-1" />
+              <Progress value={0} className="h-1" />
             </div>
           ))}
         </div>
 
-        {violations.length > 0 && (
+        {violationsCount > 0 && (
           <div className="space-y-1">
             <div className="text-[10px] font-medium">Eventos:</div>
-            {violations.slice(0, 2).map((v, i) => (
+            {Array.from({ length: Math.min(2, violationsCount) }).map((v, i) => (
               <div key={i} className="p-1.5 bg-muted/30 rounded text-[10px] flex justify-between">
-                <span>{v.type}</span>
-                <Badge variant="outline" className="text-[9px] h-4">{v.severity}</Badge>
+                <span>violação ética registrada</span>
+                <Badge variant="outline" className="text-[9px] h-4">observada</Badge>
               </div>
             ))}
           </div>
         )}
 
         <div className="pt-2 border-t border-border/30 text-[10px] text-muted-foreground font-mono">
-          <div>Decisões: {decisionsProcessed.toLocaleString()}</div>
+          <div>Auditorias registradas: {violationsCount + (overall !== null ? 1 : 0)}</div>
         </div>
       </CardContent>
     </Card>
