@@ -18,9 +18,10 @@ const files = {
   godel: await readFile(root + '/src/core/agi/GodelAgent.ts', 'utf8'),
   symbolic: await readFile(root + '/src/core/layers/SymbolicLayer.ts', 'utf8'),
   conscience: await readFile(root + '/src/core/layers/ConscienciaAlgoritmica.ts', 'utf8'),
+  research: await readFile(root + '/src/core/gems/GEMResearch.ts', 'utf8'),
 };
 
-const telemetryFiles = ['connectivity','resources','health','device','quantum','saiic','healing','app','chat','qUi','healthUi','nip','godel','symbolic','conscience'];
+const telemetryFiles = ['connectivity','resources','health','device','quantum','saiic','healing','app','chat','qUi','healthUi','nip','godel','symbolic','conscience','research'];
 for (const key of telemetryFiles) assert.ok(files[key], 'missing file ' + key);
 
 assert.match(files.connectivity, /measurementSource/);
@@ -49,6 +50,9 @@ assert.doesNotMatch(files.qUi, /127 Qubits/);
 assert.doesNotMatch(files.qUi, /Math\.random\(\)/);
 assert.doesNotMatch(files.symbolic, /Math\.random\(\)/);
 assert.doesNotMatch(files.conscience, /Array\(10\).*Math\.random/);
+assert.doesNotMatch(files.research, /0\.7 \+ Math\.random/);
+assert.match(files.research, /RESEARCH_PROVIDER_NOT_CONFIGURED/);
+assert.match(files.research, /confidenceMeasured/);
 assert.doesNotMatch(files.nip, /Math\.random\(\)/);
 assert.doesNotMatch(files.godel, /Math\.random\(\)/);
 
