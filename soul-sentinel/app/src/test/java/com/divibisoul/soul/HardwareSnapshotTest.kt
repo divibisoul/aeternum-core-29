@@ -3,7 +3,6 @@ package com.divibisoul.soul
 import com.divibisoul.soul.core.hardware.HardwareSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class HardwareSnapshotTest {
@@ -14,7 +13,8 @@ class HardwareSnapshotTest {
             soc = null,
             cpuCores = 8,
             apiLevel = 36,
-            hasNpu = false,
+            hasNpu = null,
+            nnapiAvailable = false,
             thermalZones = emptyList(),
             batteryTempC = null,
             batteryLevel = null
@@ -22,6 +22,7 @@ class HardwareSnapshotTest {
         assertEquals(8, snapshot.cpuCores)
         assertNull(snapshot.soc)
         assertNull(snapshot.batteryLevel)
-        assertFalse(snapshot.hasNpu)
+        assertNull(snapshot.hasNpu)
+        assertEquals(false, snapshot.nnapiAvailable)
     }
 }
