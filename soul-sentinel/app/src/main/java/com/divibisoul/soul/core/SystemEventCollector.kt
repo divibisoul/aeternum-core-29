@@ -61,9 +61,18 @@ class SystemEventCollector(
             @Suppress("DEPRECATION") context.registerReceiver(receiver, filter)
         }
         val bm = context.getSystemService(BatteryManager::class.java)
+        val batteryIntent = context.registerReceiver(
+            null,
+            IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+        )
         val pct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).coerceIn(0, 100)
-        val charging = bm.isCharging
-        val batteryTemp = null
+        val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+            status == BatteryManager.BATTERY_STATUS_FULL
+        val batteryTemp = batteryIntent
+            ?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)
+            ?.takeIf { it != Int.MIN_VALUE }
+            ?.div(10.0)
         bus.publish(SoulEvent.NetworkChanged(readNetwork()))
         bus.publish(SoulEvent.ShizukuChanged(shizukuStatus()))
         publishDeviceSnapshot(pct, charging, batteryTemp)
