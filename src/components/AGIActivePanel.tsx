@@ -84,7 +84,7 @@ export function AGIActivePanel() {
           <span className="text-emerald-400">Ψ:{metrics?.consciousness?.isRunning ? 'ON' : 'OFF'}</span>
           <span className="text-sky-400">G:{((metrics?.godelMeta?.selfAwareness ?? 0) * 100).toFixed(0)}%</span>
           <span className="text-orange-400">NIP:{metrics?.nip?.saudeEpistemologica ?? '?'}</span>
-          <span className="text-red-400">SAIIC:{((metrics?.saiic?.overallIntegrity ?? 0) * 100).toFixed(0)}%</span>
+          <span className="text-red-400">SAIIC:{metrics?.saiic?.evidenceBasis === "NOT_MEASURED" ? "—" : ((metrics?.saiic?.overallIntegrity ?? 0) * 100).toFixed(0) + "%"}</span>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
