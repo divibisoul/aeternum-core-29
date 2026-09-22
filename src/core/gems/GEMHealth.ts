@@ -20,6 +20,8 @@ export interface HealthMetrics {
   lastAnalysis: number;
   wearableConnected: boolean;
   cyclesCompleted: number;
+  observed: boolean;
+  dataSource: 'NONE' | 'WEARABLE';
 }
 
 interface HealthAlert {
@@ -36,15 +38,17 @@ export class GEMHealth {
   private _running = false;
   private _interval: ReturnType<typeof setInterval> | null = null;
   private _metrics: HealthMetrics = {
-    heartRate: 72,
-    hrv: 55,
-    stressLevel: 0.3,
-    fatigueIndex: 0.2,
-    sleepQuality: 0.75,
+    heartRate: 0,
+    hrv: 0,
+    stressLevel: 0,
+    fatigueIndex: 0,
+    sleepQuality: 0,
     alertsGenerated: 0,
     lastAnalysis: Date.now(),
     wearableConnected: false,
     cyclesCompleted: 0,
+    observed: false,
+    dataSource: 'NONE',
   };
   private _alerts: HealthAlert[] = [];
   private _history: HealthMetrics[] = [];
@@ -72,19 +76,23 @@ export class GEMHealth {
    * Receive real data from companion Android app
    */
   ingestWearableData(data: Partial<HealthMetrics>): void {
-    this._metrics = { ...this._metrics, ...data, wearableConnected: true };
+    const safeData: Partial<HealthMetrics> = {};
+    for (const key of ['heartRate','hrv','stressLevel','fatigueIndex','sleepQuality'] as const) {
+      const value = data[key];
+      if (value != null && Number.isFinite(value)) safeData[key] = value;
+    }
+    this._metrics = {
+      ...this._metrics,
+      ...safeData,
+      wearableConnected: true,
+      observed: Object.keys(safeData).length > 0,
+      dataSource: Object.keys(safeData).length > 0 ? 'WEARABLE' : this._metrics.dataSource,
+    };
     this.analyzeAndAlert();
   }
 
   private cycle(): void {
-    // Simulate physiological drift when no wearable connected
-    if (!this._metrics.wearableConnected) {
-      this._metrics.heartRate = 65 + Math.random() * 20;
-      this._metrics.hrv = 40 + Math.random() * 30;
-      this._metrics.stressLevel = Math.max(0, Math.min(1, this._metrics.stressLevel + (Math.random() - 0.52) * 0.05));
-      this._metrics.fatigueIndex = Math.max(0, Math.min(1, this._metrics.fatigueIndex + (Math.random() - 0.48) * 0.03));
-    }
-
+    // Sem wearable: somente registra ciclo/tempo. Nenhuma fisiologia é fabricada.
     this._metrics.lastAnalysis = Date.now();
     this._metrics.cyclesCompleted++;
     this.analyzeAndAlert();
@@ -95,6 +103,7 @@ export class GEMHealth {
   }
 
   private analyzeAndAlert(): void {
+    if (!this._metrics.observed) return;
     const { heartRate, hrv, stressLevel, fatigueIndex } = this._metrics;
 
     // HRV anomaly detection
