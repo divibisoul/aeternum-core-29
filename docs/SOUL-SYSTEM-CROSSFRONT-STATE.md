@@ -42,3 +42,20 @@ N07 owns `scripts/generate-crossfront-state.mjs` and `.github/workflows/crossfro
 ## Current acceptance boundary
 
 Repository-level capabilities are now instrumented, but the system must not be declared ONLINE until the existing N07 commissioning gates prove authenticated real traffic across the deployed runtime set and all required CI/E2E gates are green.
+
+## SARA federation state
+
+SARA é um serviço externo/complementar ao conjunto de núcleos SOUL; não foi reclassificado como N01–N07. O contrato federado atual é `SOUL↔SARA 1.0.0` e preserva a propriedade das capacidades: SARA é autoridade das operações `sara.health`, `sara.capabilities`, `sara.state`, `sara.cycle`, `sara.audit`, `sara.regenerate` e `sara.trace`.
+
+Afinidades funcionais sem transferência de ownership:
+
+| Núcleo | Uso complementar do SARA |
+|---|---|
+| N01 | gateway/host, estado, capacidades, saúde, rastreabilidade e ciclo |
+| N02 | auditoria, ciclo, regeneração e traço como enriquecimento conversacional |
+| N03 | auditoria/regeneração de conteúdo multimodal/textual produzido; traço |
+| N04 | governança de documentos, ferramentas e artefatos via auditoria/regeneração/traço |
+| N05 | apoio ao despacho/orquestração via ciclo, auditoria, regeneração e traço |
+| N06 | cognição/auditoria/governança via auditoria, estado, traço, regeneração e ciclo |
+
+A conexão é comprovada somente por descoberta/contrato, configuração, requisição real, resposta válida e correlação. Afinidade documental não é prova de conectividade.
