@@ -66,13 +66,13 @@ class SoulAdminPlusRuntime(
     @Synchronized
     fun start() {
         if (job != null) return
-        missions.resume()
         intentQueue.start()
         shizuku.start()
         job = scope.launch(Dispatchers.Default) {
             dashboard.load()
-            refreshHardware()
             refreshBackends()
+            refreshHardware()
+            if (!watchdog.isLoadReduced()) missions.resume()
             scheduleLogSync()
             while (isActive) {
                 dashboard.load()
