@@ -337,23 +337,17 @@ export class AeternumAGI {
     });
 
     // Register health providers for HyperSafetySystem (cross-layer)
-    this.safetySystem.registerHealthProvider('consciousness', () => {
-      const metrics = this.consciousness.getMetrics();
-      return metrics.isRunning ? 0.9 : 0.5;
-    });
+    this.safetySystem.registerHealthProvider('consciousness', () => null);
     this.safetySystem.registerHealthProvider('ethics', () => {
-      return this.ethicalOptimizer.getMetrics().auditMetrics.avgScore;
+      const audit = this.ethicalOptimizer.getMetrics().auditMetrics;
+      return audit.observed === true && Number.isFinite(audit.avgScore) ? audit.avgScore : null;
     });
     this.safetySystem.registerHealthProvider('selfHealing', () => {
       const health = this.selfHealing.getLatestHealth();
-      return health ? health.overallScore : 0;
+      return health ? health.overallScore : null;
     });
-    this.safetySystem.registerHealthProvider('evolution', () => {
-      return this.darwinMachine.getMetrics().avgFitness;
-    });
-    this.safetySystem.registerHealthProvider('lattice', () => {
-      return this.neuralLattice.getMetrics().globalFitness;
-    });
+    this.safetySystem.registerHealthProvider('evolution', () => null);
+    this.safetySystem.registerHealthProvider('lattice', () => null);
     this.safetySystem.registerHealthProvider('nip', () => {
       const report = this.nip.getRelatorio();
       return report.saudeEpistemologica === 'saudavel' ? 0.95
@@ -361,13 +355,14 @@ export class AeternumAGI {
     });
     this.safetySystem.registerHealthProvider('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
-      return status.quantum.coherence;
+      return status.quantum.measurementAvailable ? status.quantum.coherence : null;
     });
     this.safetySystem.registerHealthProvider('connectivity', () => {
       return this.connectivity.getMetrics().reliability;
     });
     this.safetySystem.registerHealthProvider('saiic', () => {
-      return this.saiic.getMetrics().overallIntegrity;
+      const metrics = this.saiic.getMetrics();
+      return metrics.lastScanTimestamp > 0 ? metrics.overallIntegrity : null;
     });
 
     this._initialized = true;
