@@ -1,5 +1,5 @@
 /**
- * CAMADA SIMBÓLICA - Experimental (Quantum, Morfogenético)
+ * CAMADA SIMBÓLICA - Experimental, sem backend quântico físico
  * 
  * Adaptação de camada_simbolica.py para TypeScript
  * Implementa campo morfogenético, barramento quântico e tunelamento cognitivo
@@ -132,7 +132,7 @@ export class BarramentoQuantico {
   }
 
   /**
-   * Emite evento com superposição quântica
+   * Emite evento com fila simbólica; o campo probabilidade é mantido apenas por compatibilidade histórica.
    */
   emitir(evento: string, dados: unknown, origem: string): void {
     this.emissionCount++;
@@ -165,7 +165,7 @@ export class BarramentoQuantico {
       this.eventosSupepostos.shift();
     }
     
-    console.log(`[BarramentoQuantico] Emitido simbólico: ${evento} (prob: ${eventoSuperposto.probabilidade.toFixed(3)})`);
+    console.log(`[BarramentoQuantico] Emitido simbólico: ${evento} (deliveryScore: ${eventoSuperposto.probabilidade.toFixed(0)})`);
   }
 
   /**
@@ -265,7 +265,7 @@ export class TunelamentoCognitivo {
   private calcularProbabilidade(de: string, para: string): number {
     // Simula decaimento exponencial da barreira
     const barreiraCognitiva = Math.abs(de.length - para.length) * 0.1 + 0.5;
-    return Math.exp(-barreiraCognitiva) * (0.5 + Math.random() * 0.5);
+    return Math.exp(-barreiraCognitiva);
   }
 
   getMetrics(): { tunelamentos: number; estadosRegistrados: number } {
@@ -293,10 +293,11 @@ export class EntrelacamentoSistemico {
   }
 
   /**
-   * Cria entrelamento entre dois componentes
+   * Cria correlação simbólica entre dois componentes
    */
   entrelacar(componente1: string, componente2: string): void {
-    const estadoInicial = Math.random() > 0.5 ? 'up' : 'down';
+    const seed = Array.from(componente1 + ':' + componente2).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    const estadoInicial = seed % 2 === 0 ? 'up' : 'down';
     const estadoOposto = estadoInicial === 'up' ? 'down' : 'up';
     
     this.pares.set(componente1, { parceiro: componente2, estado: estadoInicial });
@@ -306,8 +307,7 @@ export class EntrelacamentoSistemico {
   }
 
   /**
-   * Mede o estado de um componente entrelacado
-   * Colapsa o estado do parceiro instantaneamente
+   * Mede a correlação simbólica registrada entre dois componentes
    */
   medir(componente: string): { estado: 'up' | 'down'; parceiroColapsado: string } | null {
     const info = this.pares.get(componente);
