@@ -34,6 +34,7 @@ import {
   NucleoVigilancia,
 } from './SpecializedNuclei';
 import { type SystemMetrics, type ClareiraSnapshot, createInformationPacket } from './types';
+import { ClareiraSaraBridge } from './ClareiraSaraBridge';
 
 class ProjetoClareiraSystem {
   private readonly nucleoRaiz: NucleoRaizAlma;
@@ -43,6 +44,7 @@ class ProjetoClareiraSystem {
   private readonly channels: InformationChannel[] = [];
   private readonly homeostasis: HomeostasisManager;
   private readonly vagus: VagusNerve;
+  private readonly saraBridge: ClareiraSaraBridge;
 
   private _initialized = false;
   private _running = false;
@@ -82,6 +84,7 @@ class ProjetoClareiraSystem {
     this.homeostasis.registerNodes(this.allNodes);
 
     this.vagus = new VagusNerve(this.homeostasis);
+    this.saraBridge = new ClareiraSaraBridge();
     this.homeostasis.attachVagus(this.vagus);
     for (const node of this.allNodes) this.vagus.registerNode(node);
 
@@ -279,6 +282,27 @@ class ProjetoClareiraSystem {
     } catch {
       throw new Error('CLAREIRA_SNAPSHOT_INVALID');
     }
+  }
+
+  async syncStateToSara(correlationId?: string) {
+    if (!this._initialized) this.initialize();
+    return this.saraBridge.syncState(this.getSnapshot(), correlationId);
+  }
+
+  async dispatchVagalCommandToSara(
+    nodeId: string,
+    command: 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
+    payload: Record<string, unknown> = {},
+    priority = 0.5,
+    correlationId?: string,
+  ) {
+    return this.saraBridge.dispatchVagalCommand(
+      nodeId,
+      command,
+      payload,
+      priority,
+      correlationId,
+    );
   }
 
   exportMetricsCSV(): string {
