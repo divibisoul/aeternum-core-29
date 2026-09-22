@@ -68,7 +68,7 @@ export function AGIDashboard() {
               Aeternum AGI
               {metrics && (
                 <Badge className="bg-emerald-500/20 text-emerald-400 text-[10px]">
-                  {metrics.overall.activeSubsystems}/{metrics.overall.subsystems} ONLINE
+                  {metrics.overall.activeSubsystems}/{metrics.overall.subsystems} ATIVOS
                 </Badge>
               )}
             </CardTitle>
@@ -116,7 +116,7 @@ export function AGIDashboard() {
                       {[
                         { name: 'SAIIC', status: metrics?.saiic?.isRunning, metric: metrics?.saiic?.overallIntegrity, priority: true },
                         { name: 'ResourceMgr', status: metrics?.resources?.isRunning, metric: null, label: `${metrics?.resources?.modulesManaged ?? 0} mods` },
-                        { name: 'GodelAgent', status: true, metric: metrics?.godelMeta?.selfAwareness },
+                        { name: 'GodelAgent', status: metrics?.overall?.godelLoopActive === true, metric: metrics?.godelMeta?.selfAwareness },
                         { name: 'DarwinMachine', status: metrics?.darwin?.isRunning, metric: metrics?.darwin?.avgFitness },
                         { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                         { name: 'Consciousness', status: metrics?.consciousness?.isRunning, metric: null },
