@@ -55,6 +55,8 @@ export class ResourceManager {
   private totalMemoryUsage = 0;
   private _executionWindowMs = 0;
   private _monitorWindowStartedAt = Date.now();
+  private _cpuMeasurementSource: 'JS_EXECUTION_WINDOW' | 'UNMEASURED' = 'UNMEASURED';
+  private _memoryMeasurementSource: 'PERFORMANCE_MEMORY' | 'UNMEASURED' = 'UNMEASURED';
 
   get isRunning(): boolean { return this._running; }
 
@@ -148,6 +150,7 @@ export class ResourceManager {
     const now = Date.now();
     const windowMs = Math.max(1, now - this._monitorWindowStartedAt);
     this.totalCpuUsage = Math.max(0, Math.min(1, this._executionWindowMs / windowMs));
+    this._cpuMeasurementSource = 'JS_EXECUTION_WINDOW';
     this._executionWindowMs = 0;
     this._monitorWindowStartedAt = now;
 
@@ -155,9 +158,13 @@ export class ResourceManager {
       memory?: { usedJSHeapSize: number; totalJSHeapSize: number };
     };
     const memory = performanceWithMemory.memory;
-    this.totalMemoryUsage = memory && Number.isFinite(memory.usedJSHeapSize) && Number.isFinite(memory.totalJSHeapSize) && memory.totalJSHeapSize > 0
-      ? Math.max(0, Math.min(1, memory.usedJSHeapSize / memory.totalJSHeapSize))
-      : 0;
+    if (memory && Number.isFinite(memory.usedJSHeapSize) && Number.isFinite(memory.totalJSHeapSize) && memory.totalJSHeapSize > 0) {
+      this.totalMemoryUsage = Math.max(0, Math.min(1, memory.usedJSHeapSize / memory.totalJSHeapSize));
+      this._memoryMeasurementSource = 'PERFORMANCE_MEMORY';
+    } else {
+      this.totalMemoryUsage = 0;
+      this._memoryMeasurementSource = 'UNMEASURED';
+    }
   }
 
   /**
@@ -210,8 +217,8 @@ export class ResourceManager {
       rebalanceCount: this._rebalanceCount,
       avgQuantumSliceMs: this._quantumSliceMs,
       hotModules,
-      cpuMeasurementSource: this._executionWindowMs > 0 ? 'JS_EXECUTION_WINDOW' : 'UNMEASURED',
-      memoryMeasurementSource: ((globalThis.performance as Performance & { memory?: unknown }).memory) ? 'PERFORMANCE_MEMORY' : 'UNMEASURED',
+      cpuMeasurementSource: this._cpuMeasurementSource,
+      memoryMeasurementSource: this._memoryMeasurementSource,
     };
   }
 
@@ -233,8 +240,8 @@ export class ResourceManager {
       moduleProfiles: new Map(this.moduleProfiles),
       rebalanceCount: this._rebalanceCount,
       quantumSliceMs: this._quantumSliceMs,
-      cpuMeasurementSource: this._executionWindowMs > 0 ? 'JS_EXECUTION_WINDOW' : 'UNMEASURED',
-      memoryMeasurementSource: ((globalThis.performance as Performance & { memory?: unknown }).memory) ? 'PERFORMANCE_MEMORY' : 'UNMEASURED',
+      cpuMeasurementSource: this._cpuMeasurementSource,
+      memoryMeasurementSource: this._memoryMeasurementSource,
     };
   }
 }
