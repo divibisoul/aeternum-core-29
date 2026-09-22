@@ -74,7 +74,7 @@ export class InformationChannel {
   }
 
   receive(): InformationPacket | null {
-    if (this.packetQueue.length === 0) return null;
+    if (!this._active || this.packetQueue.length === 0) return null;
     this.packetQueue.sort((a, b) => {
       if (b.criticality !== a.criticality) return b.criticality - a.criticality;
       return a.timestamp - b.timestamp;
