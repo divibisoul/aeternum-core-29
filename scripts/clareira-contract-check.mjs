@@ -55,9 +55,13 @@ assert.match(types, /TURBO_DURATION_SECONDS = 30/);
 assert.match(types, /TURBO_COOLDOWN_SECONDS = 60/);
 assert.match(bridge, /\/state/);
 assert.match(bridge, /\/vagus/);
+assert.match(bridge, /auditLatestState/);
+assert.match(bridge, /\/audit/);
 assert.match(server, /\/api\/clareira\/state/);
 assert.match(server, /\/api\/clareira\/vagus/);
+assert.match(server, /\/api\/clareira\/audit/);
 assert.match(federation, /sara\.clareira\.state/);
 assert.match(federation, /sara\.clareira\.vagus/);
+assert.match(federation, /sara\.clareira\.audit/);
 
 console.log('CLAREIRA_CONTRACT: ok=true classes=20 topology=61_nodes channels=120 vagus=true sara_bridge=true');
