@@ -16,6 +16,7 @@ data class EndpointConfig(
     val saraBaseUrl: String? = null,
     val n07BaseUrl: String? = null,
     val n07Enabled: Boolean = false,
+    val feedbackSyncUrl: String? = null,
     val requestTimeoutMs: Long = 10_000L,
     val saraTokenConfigured: Boolean = false,
     val n07TokenConfigured: Boolean = false
@@ -39,12 +40,20 @@ class SecureEndpointConfigStore(private val context: Context) {
         }
     }
 
+    suspend fun setFeedbackSyncUrl(url: String?) {
+        context.endpointDataStore.edit {
+            if (url.isNullOrBlank()) it.remove(FEEDBACK_SYNC_URL)
+            else it[FEEDBACK_SYNC_URL] = url.trimEnd('/')
+        }
+    }
+
     suspend fun read(): EndpointConfig {
         val p = context.endpointDataStore.data.first()
         return EndpointConfig(
             saraBaseUrl = p[SARA_URL],
             n07BaseUrl = p[N07_URL],
             n07Enabled = p[N07_ENABLED] == true,
+            feedbackSyncUrl = p[FEEDBACK_SYNC_URL],
             requestTimeoutMs = p[TIMEOUT]?.toLongOrNull() ?: 10_000L,
             saraTokenConfigured = p[SARA_TOKEN] != null,
             n07TokenConfigured = p[N07_TOKEN] != null
@@ -53,6 +62,7 @@ class SecureEndpointConfigStore(private val context: Context) {
 
     suspend fun saraToken(): String? = context.endpointDataStore.data.first()[SARA_TOKEN]?.let(::decrypt)
     suspend fun n07Token(): String? = context.endpointDataStore.data.first()[N07_TOKEN]?.let(::decrypt)
+    suspend fun feedbackSyncUrl(): String? = context.endpointDataStore.data.first()[FEEDBACK_SYNC_URL]
 
     suspend fun setTimeout(ms: Long) {
         context.endpointDataStore.edit { it[TIMEOUT] = ms.coerceIn(1000L, 120_000L).toString() }
@@ -101,6 +111,7 @@ class SecureEndpointConfigStore(private val context: Context) {
         private val N07_URL = stringPreferencesKey("n07_url")
         private val N07_TOKEN = stringPreferencesKey("n07_token_enc")
         private val N07_ENABLED = booleanPreferencesKey("n07_enabled")
+        private val FEEDBACK_SYNC_URL = stringPreferencesKey("feedback_sync_url")
         private val TIMEOUT = stringPreferencesKey("timeout_ms")
     }
 }
