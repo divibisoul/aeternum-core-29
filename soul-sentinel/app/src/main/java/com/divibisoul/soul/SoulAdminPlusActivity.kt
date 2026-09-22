@@ -21,6 +21,8 @@ import com.divibisoul.soul.core.security.LocalRole
 import com.divibisoul.soul.core.security.PrivilegedAuthGate
 import com.divibisoul.soul.core.security.RootGate
 import com.divibisoul.soul.core.security.ShizukuOrchestrator
+import com.divibisoul.soul.runtime.MissionControl
+import com.divibisoul.soul.core.security.ShizukuOrchestrator
 import com.divibisoul.soul.core.federation.FederationStatusMatrix
 import com.divibisoul.soul.core.state.DashboardState
 import com.divibisoul.soul.core.state.DashboardStateStore
@@ -36,7 +38,6 @@ class SoulAdminPlusActivity : FragmentActivity() {
     private lateinit var dashboard: DashboardStateStore
     private lateinit var sara: SaraClient
     private lateinit var n07: N07Client
-    private lateinit var plusRuntime: com.divibisoul.soul.runtime.SoulAdminPlusRuntime
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,9 +46,10 @@ class SoulAdminPlusActivity : FragmentActivity() {
         sara = SaraClient(config)
         n07 = N07Client(config)
 
-        val bus = SoulRuntimeBusHolder.bus ?: SoulRuntimeBusHolder.create()
-        plusRuntime = com.divibisoul.soul.runtime.SoulAdminPlusRuntime(this, bus, lifecycleScope)
-        plusRuntime.start()
+        androidx.core.content.ContextCompat.startForegroundService(
+            this,
+            android.content.Intent(this, SoulAdminService::class.java)
+        )
 
         setContent {
             MaterialTheme {
@@ -59,7 +61,6 @@ class SoulAdminPlusActivity : FragmentActivity() {
     }
 
     override fun onDestroy() {
-        if (::plusRuntime.isInitialized) plusRuntime.stop()
         super.onDestroy()
     }
 
@@ -166,7 +167,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
                         Button(onClick = {
                             scope.launch {
                                 try {
-                                    plusRuntime.runCycle(input)
+                                    MissionControl(this@SoulAdminPlusActivity).enqueueCycleMission(input)
                                     output = "MISSION_ENQUEUED"
                                 } catch (e: Exception) {
                                     output = e.message ?: "MISSION_ERROR"
