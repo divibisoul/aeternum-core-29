@@ -20,6 +20,7 @@ import {
 } from './types';
 import { VagusNerve } from './VagusNerve';
 import { ClareiraSaraBridge } from './ClareiraSaraBridge';
+import { ClareiraAndroidBridge } from './ClareiraAndroidBridge';
 import { InputTransducer } from './InputTransducer';
 import {
   NucleoApps,
@@ -55,6 +56,7 @@ class ProjetoClareiraSystem {
   private homeostasis: HomeostasisManager;
   private vagus: VagusNerve;
   private saraBridge: ClareiraSaraBridge;
+  private readonly androidBridge = new ClareiraAndroidBridge();
   private readonly inputTransducer = new InputTransducer();
   
   private _initialized = false;
@@ -395,6 +397,30 @@ class ProjetoClareiraSystem {
     return [header, ...rows]
       .map(row => row.map(value => JSON.stringify(value)).join(','))
       .join('\n');
+  }
+
+  async getAndroidSnapshot(timeoutMs = 5000) {
+    return this.androidBridge.snapshot(timeoutMs);
+  }
+
+  async setAndroidBrightness(percent: number, timeoutMs = 5000) {
+    return this.androidBridge.setBrightness(percent, timeoutMs);
+  }
+
+  async requestAndroidKillBackground(packageName: string, timeoutMs = 5000) {
+    return this.androidBridge.killBackground(packageName, timeoutMs);
+  }
+
+  async openAndroidWifiPanel(timeoutMs = 5000) {
+    return this.androidBridge.openWifiPanel(timeoutMs);
+  }
+
+  async requestAndroidBluetoothEnable(timeoutMs = 5000) {
+    return this.androidBridge.requestBluetoothEnable(timeoutMs);
+  }
+
+  async openAndroidAirplaneSettings(timeoutMs = 5000) {
+    return this.androidBridge.openAirplaneSettings(timeoutMs);
   }
 
   async syncStateToSara(correlationId?: string) {
