@@ -59,10 +59,8 @@ class VagusPlexus {
 
   getActive(nodeId: string): VagusBranch | null {
     const main = this.primary.get(nodeId);
-    if (main?.active && main.node.active) return main;
-    return (this.backups.get(nodeId) ?? []).find(
-      branch => branch.active && branch.node.active
-    ) ?? null;
+    if (main?.active) return main;
+    return (this.backups.get(nodeId) ?? []).find(branch => branch.active) ?? null;
   }
 
   all(): VagusBranch[] {
@@ -225,6 +223,11 @@ export class VagusNerve {
     signalsOut: number;
     branches: VagusBranchMetrics[];
   } {
+    const branches = this.plexus.all();
+    const uniqueNodeIds = new Set(
+      branches.filter(branch => branch.active).map(branch => branch.node.id),
+    );
+
     return {
       name: this.name,
       version: this.version,
@@ -234,7 +237,9 @@ export class VagusNerve {
       queuedEfferent: this.efferentQueue.length,
       signalsIn: this.signalsIn,
       signalsOut: this.signalsOut,
-      branches: this.plexus.all().map(branch => branch.snapshot()),
+      branches: branches.map(branch => branch.snapshot()),
+      activeNodeBranches: uniqueNodeIds.size,
+      redundantBranches: Math.max(0, branches.length - uniqueNodeIds.size),
     };
   }
 }
