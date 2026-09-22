@@ -10,10 +10,14 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.divibisoul.soul.SoulRuntimeBusHolder
+import com.divibisoul.soul.core.SoulEvent
+import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.data.FeedbackRepository
 import com.divibisoul.soul.data.LogSynchronizer
 import com.divibisoul.soul.network.SaraClient
 import com.divibisoul.soul.network.SecureEndpointConfigStore
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,6 +73,23 @@ class CycleMissionWorker(
             val cycleId = inputData.getString("cycle_id")
             val correlation = UUID.randomUUID().toString()
             val result = sara.cycle(input, cycleId, correlation)
+            val dashboard = DashboardStateStore(applicationContext)
+            dashboard.load()
+            dashboard.patch {
+                it.copy(
+                    lastCycleId = result.cycleId,
+                    lastTraceHash = result.traceHash
+                )
+            }
+            (SoulRuntimeBusHolder.bus ?: SoulRuntimeBusHolder.create()).publish(
+                SoulEvent.SaraCycleCompleted(
+                    cycleId = result.cycleId,
+                    correlationId = result.correlationId,
+                    traceHash = result.traceHash,
+                    converged = result.converged,
+                    rollbackPerformed = result.rollbackPerformed
+                )
+            )
             repo.append(
                 "SaraCycleCompleted",
                 JSONObject()
@@ -80,7 +101,14 @@ class CycleMissionWorker(
                     .toString()
             )
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            val dashboard = DashboardStateStore(applicationContext)
+            dashboard.load()
+            dashboard.patch {
+                it.copy(errors = (it.errors + ((e as? com.divibisoul.soul.network.SaraException)?.code ?: "MISSION_ERROR")).takeLast(50))
+            }
             repo.append(
                 "SaraCycleFailed",
                 JSONObject()
