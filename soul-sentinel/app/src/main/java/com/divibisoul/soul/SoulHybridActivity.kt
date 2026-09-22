@@ -8,6 +8,7 @@ import com.divibisoul.soul.core.SoulEvent
 import com.divibisoul.soul.core.SoulEventBus
 import com.divibisoul.soul.core.SystemEventCollector
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import org.json.JSONObject
 
 /** Hosts the local hybrid UI and provides bidirectional Mesh <-> WebView execution. */
