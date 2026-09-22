@@ -6,7 +6,7 @@
  * runtime Clareira e deixa integrações externas em adaptadores explícitos.
  */
 import type { VagalCommand, VagalSignal } from './types';
-import { VAGUS_BRANCH_QUEUE_SIZE } from './types';
+import { VAGUS_BRANCH_QUEUE_SIZE, VAGUS_TICK_INTERVAL_MS } from './types';
 import type { HomeostasisManager } from './HomeostasisManager';
 import type { ProcessingNode } from './ProcessingNode';
 
@@ -158,7 +158,7 @@ export class VagusNerve {
   start(): void {
     if (this.interval) return;
     this._active = true;
-    this.interval = setInterval(() => this.tick(), 20);
+    this.interval = setInterval(() => this.tick(), VAGUS_TICK_INTERVAL_MS);
   }
 
   stop(): void {
