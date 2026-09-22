@@ -25,6 +25,7 @@ class ClareiraAndroidCapabilities(private val context: Context) {
                 val result = actions.setBrightness(percent)
                 JSONObject()
                     .put("success", result.success)
+                    .put("executionStatus", if (result.success) "API_REQUEST_ACCEPTED" else "API_REQUEST_FAILED")
                     .put("message", result.message)
                     .put("percent", percent)
             }
@@ -34,12 +35,13 @@ class ClareiraAndroidCapabilities(private val context: Context) {
                 val result = actions.killBackground(packageName)
                 JSONObject()
                     .put("success", result.success)
+                    .put("executionStatus", if (result.success) "PROCESS_STOP_REQUESTED" else "API_REQUEST_FAILED")
                     .put("message", result.message)
                     .put("packageName", packageName)
             }
             "clareira.android.wifi_panel" -> {
                 actions.openWifiPanel()
-                JSONObject().put("success", true).put("action", capability)
+                JSONObject().put("success", true).put("executionStatus", "ANDROID_INTENT_DISPATCHED").put("action", capability)
             }
             "clareira.android.bluetooth_request" -> {
                 actions.requestBluetoothEnable()
