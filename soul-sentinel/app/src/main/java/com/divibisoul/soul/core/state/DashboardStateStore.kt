@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.json.JSONArray
+import org.json.JSONObject
 
 private val Context.dashboardDataStore by preferencesDataStore("soul_dashboard")
 
@@ -37,6 +39,49 @@ class DashboardStateStore(private val context: Context) {
     suspend fun set(state: DashboardState) = mutex.withLock {
         _state.value = state
         context.dashboardDataStore.edit { p -> writePrefs(p, state) }
+    }
+
+    suspend fun captureSafetySnapshot(reason: String) = mutex.withLock {
+        val s = _state.value
+        val snapshot = JSONObject()
+            .put("reason", reason)
+            .put("captured_at", System.currentTimeMillis())
+            .put("hardware", s.hardware)
+            .put("battery_thermal", s.batteryThermal)
+            .put("sara_health", s.saraHealth)
+            .put("n07_health", s.n07Health)
+            .put("last_cycle_id", s.lastCycleId)
+            .put("last_trace_hash", s.lastTraceHash)
+            .put("root_status", s.rootStatus)
+            .put("queue_depth", s.queueDepth)
+            .put("errors", JSONArray(s.errors))
+        context.dashboardDataStore.edit { it[SAFETY_SNAPSHOT] = snapshot.toString() }
+    }
+
+    suspend fun safetySnapshot(): String? = mutex.withLock {
+        context.dashboardDataStore.data.first()[SAFETY_SNAPSHOT]
+    }
+
+    suspend fun restoreSafetySnapshot(): Boolean = mutex.withLock {
+        val raw = context.dashboardDataStore.data.first()[SAFETY_SNAPSHOT] ?: return@withLock false
+        val json = runCatching { JSONObject(raw) }.getOrNull() ?: return@withLock false
+        val restored = DashboardState(
+            hardware = json.optString("hardware", "UNAVAILABLE"),
+            batteryThermal = json.optString("battery_thermal", "UNAVAILABLE"),
+            saraHealth = json.optString("sara_health", "UNCONFIGURED"),
+            n07Health = json.optString("n07_health", "DISABLED"),
+            lastCycleId = json.optString("last_cycle_id").takeIf { it.isNotBlank() && it != "null" },
+            lastTraceHash = json.optString("last_trace_hash").takeIf { it.isNotBlank() && it != "null" },
+            rootStatus = json.optString("root_status", "UNKNOWN"),
+            queueDepth = json.optInt("queue_depth", 0),
+            errors = runCatching {
+                val values = json.optJSONArray("errors") ?: JSONArray()
+                List(values.length()) { index -> values.optString(index) }.filter(String::isNotBlank)
+            }.getOrDefault(emptyList())
+        )
+        _state.value = restored
+        context.dashboardDataStore.edit { p -> writePrefs(p, restored) }
+        true
     }
 
     suspend fun patch(transform: (DashboardState) -> DashboardState) = mutex.withLock {
@@ -79,5 +124,6 @@ class DashboardStateStore(private val context: Context) {
         private val ROOT_STATUS = stringPreferencesKey("root_status")
         private val QUEUE_DEPTH = stringPreferencesKey("queue_depth")
         private val ERRORS = stringPreferencesKey("errors")
+        private val SAFETY_SNAPSHOT = stringPreferencesKey("safety_snapshot")
     }
 }
