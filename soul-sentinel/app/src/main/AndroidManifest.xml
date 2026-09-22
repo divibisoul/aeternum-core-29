@@ -11,6 +11,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <provider
+        android:name="rikka.shizuku.ShizukuProvider"
+        android:authorities="${applicationId}.shizuku"
+        android:enabled="true"
+        android:exported="true"
+        android:multiprocess="false"
+        android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
     <application android:allowBackup="true" android:label="Soul" android:supportsRtl="true" android:theme="@style/Theme.SoulSentinel">
         <activity android:name=".SoulAiSessionActivity" android:exported="false" />
         <activity android:name=".SoulHybridActivity" android:exported="true">
