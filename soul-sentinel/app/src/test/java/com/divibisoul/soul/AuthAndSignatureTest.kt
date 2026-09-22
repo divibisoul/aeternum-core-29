@@ -8,12 +8,10 @@ import org.junit.Test
 
 class AuthAndSignatureTest {
     @Test fun rbacIsExplicit() {
-        assertTrue(AuthAndSignature::class.java != null)
-        assertTrue(com.divibisoul.soul.core.security.AuthAndSignature(
-            org.mockito.Mockito.mock(android.content.Context::class.java)
-        ).can(LocalRole.OBSERVER, "read"))
-        assertFalse(com.divibisoul.soul.core.security.AuthAndSignature(
-            org.mockito.Mockito.mock(android.content.Context::class.java)
-        ).can(LocalRole.OBSERVER, "root"))
+        assertTrue(AuthAndSignature.canRole(LocalRole.OBSERVER, "read"))
+        assertFalse(AuthAndSignature.canRole(LocalRole.OBSERVER, "root"))
+        assertTrue(AuthAndSignature.canRole(LocalRole.OPERATOR, "health"))
+        assertFalse(AuthAndSignature.canRole(LocalRole.OPERATOR, "destructive"))
+        assertTrue(AuthAndSignature.canRole(LocalRole.ADMIN, "root"))
     }
 }
