@@ -40,9 +40,27 @@ class SoulAdminPlusRuntime(
     private val root = RootGate()
     private val shizuku = ShizukuOrchestrator()
     private val missions = MissionControl(appContext)
-    private val intentQueue = IntentQueueManager(scope)
     private val watchdog = AndroidWatchdog(appContext, bus, missions)
     private val feedback = FeedbackRepository(appContext)
+    private val intentQueue = IntentQueueManager(
+        scope = scope,
+        onFailure = { intent, error ->
+            bus.publish(
+                SoulEvent.MissionProgress(
+                    intent.id,
+                    "FAILED",
+                    error.message ?: "Intent execution failed"
+                )
+            )
+            scope.launch(Dispatchers.Default) {
+                dashboard.patch {
+                    it.copy(
+                        errors = (it.errors + "QUEUE_" + intent.id + ":" + (error.message ?: "UNKNOWN")).takeLast(50)
+                    )
+                }
+            }
+        }
+    )
     private var job: Job? = null
 
     fun start() {
@@ -111,7 +129,8 @@ class SoulAdminPlusRuntime(
                 hardware = snapshot.manufacturer + " " + snapshot.model +
                     " | API " + snapshot.apiLevel +
                     " | CPU cores " + snapshot.cpuCores +
-                    " | NPU " + snapshot.hasNpu,
+                    " | NPU " + (snapshot.hasNpu?.toString() ?: "UNKNOWN") +
+                    " | NNAPI " + snapshot.nnapiAvailable,
                 batteryThermal = "battery=" + (snapshot.batteryLevel?.toString() ?: "unavailable") +
                     "% temp=" + (snapshot.batteryTempC?.toString() ?: "unavailable") +
                     "C thermal=" + hardware.getThermalSnapshot().joinToString("|"),
@@ -125,7 +144,8 @@ class SoulAdminPlusRuntime(
                     .put("battery", snapshot.batteryLevel)
                     .put("battery_temp_c", snapshot.batteryTempC)
                     .put("thermal_zones", snapshot.thermalZones.size)
-                    .put("npu_available", snapshot.hasNpu)
+                    .put("npu_evidence", snapshot.hasNpu)
+                    .put("nnapi_available", snapshot.nnapiAvailable)
                     .toString()
             )
         )
