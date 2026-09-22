@@ -114,6 +114,11 @@ export class ResourceManager {
     }
   }
 
+  recordObservedExecution(executionMs: number): void {
+    if (!Number.isFinite(executionMs) || executionMs < 0) return;
+    this._executionWindowMs += executionMs;
+  }
+
   /**
    * Adjust module priority dynamically
    */
