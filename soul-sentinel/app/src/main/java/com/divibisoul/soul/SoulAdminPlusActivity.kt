@@ -21,7 +21,7 @@ import com.divibisoul.soul.core.security.LocalRole
 import com.divibisoul.soul.core.security.PrivilegedAuthGate
 import com.divibisoul.soul.core.security.RootGate
 import com.divibisoul.soul.core.security.ShizukuOrchestrator
-import com.divibisoul.soul.runtime.MissionControl
+import com.divibisoul.soul.runtime.SoulAdminPlusRuntimeRegistry
 import com.divibisoul.soul.core.federation.FederationStatusMatrix
 import com.divibisoul.soul.core.state.DashboardState
 import com.divibisoul.soul.core.state.DashboardStateStore
@@ -30,7 +30,9 @@ import com.divibisoul.soul.network.N07Exception
 import com.divibisoul.soul.network.SaraClient
 import com.divibisoul.soul.network.SaraException
 import com.divibisoul.soul.network.SecureEndpointConfigStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SoulAdminPlusActivity : FragmentActivity() {
     private lateinit var config: SecureEndpointConfigStore
@@ -166,7 +168,11 @@ class SoulAdminPlusActivity : FragmentActivity() {
                         Button(onClick = {
                             scope.launch {
                                 try {
-                                    MissionControl(this@SoulAdminPlusActivity).enqueueCycleMission(input)
+                                    val runtime = SoulAdminPlusRuntimeRegistry.get(
+                                        this@SoulAdminPlusActivity,
+                                        SoulRuntimeBusHolder.bus ?: SoulRuntimeBusHolder.create()
+                                    )
+                                    runtime.runCycle(input)
                                     output = "MISSION_ENQUEUED"
                                 } catch (e: Exception) {
                                     output = e.message ?: "MISSION_ERROR"
@@ -237,17 +243,19 @@ class SoulAdminPlusActivity : FragmentActivity() {
                                 return@launch
                             }
 
-                            val shizuku = ShizukuOrchestrator().state()
-                            val cfg = config.read()
-                            output = if (shizuku.running && shizuku.permissionGranted) {
-                                runCatching { ShizukuOrchestrator().execute("id") }.getOrElse {
-                                    "SHIZUKU_ERROR: " + (it.message ?: "unknown")
+                            output = withContext(Dispatchers.IO) {
+                                val shizuku = ShizukuOrchestrator().state()
+                                val cfg = config.read()
+                                if (shizuku.running && shizuku.permissionGranted) {
+                                    runCatching { ShizukuOrchestrator().execute("id") }.getOrElse {
+                                        "SHIZUKU_ERROR: " + (it.message ?: "unknown")
+                                    }
+                                } else if (cfg.rootEnabled) {
+                                    val rootStatus = RootGate().status()
+                                    if (rootStatus.available) "ROOT_AVAILABLE" else "NO_PRIVILEGED_CHANNEL"
+                                } else {
+                                    "NO_PRIVILEGED_CHANNEL"
                                 }
-                            } else if (cfg.rootEnabled) {
-                                val rootStatus = RootGate().status()
-                                if (rootStatus.available) "ROOT_AVAILABLE" else "NO_PRIVILEGED_CHANNEL"
-                            } else {
-                                "NO_PRIVILEGED_CHANNEL"
                             }
                         }
                     }) { Text("DIAGNOSTICAR CANAL") }
