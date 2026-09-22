@@ -33,9 +33,18 @@ class SystemEventCollector(
                         bus.publish(SoulEvent.BatteryChanged(pct, charging))
                         publishDeviceSnapshot(pct, charging, batteryTemp)
                     }
-                    Intent.ACTION_SCREEN_ON -> bus.publish(SoulEvent.ScreenChanged(true))
-                    Intent.ACTION_SCREEN_OFF -> bus.publish(SoulEvent.ScreenChanged(false))
-                    ConnectivityManager.CONNECTIVITY_ACTION -> bus.publish(SoulEvent.NetworkChanged(readNetwork()))
+                    Intent.ACTION_SCREEN_ON -> {
+                        bus.publish(SoulEvent.ScreenChanged(true))
+                        publishCurrentDeviceSnapshot()
+                    }
+                    Intent.ACTION_SCREEN_OFF -> {
+                        bus.publish(SoulEvent.ScreenChanged(false))
+                        publishCurrentDeviceSnapshot()
+                    }
+                    ConnectivityManager.CONNECTIVITY_ACTION -> {
+                        bus.publish(SoulEvent.NetworkChanged(readNetwork()))
+                        publishCurrentDeviceSnapshot()
+                    }
                 }
             }
         }
