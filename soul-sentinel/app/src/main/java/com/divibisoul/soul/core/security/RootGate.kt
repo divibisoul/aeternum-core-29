@@ -1,7 +1,6 @@
 package com.divibisoul.soul.core.security
 
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.topjohnwu.superuser.Shell
 
 class RootUnavailableException(message: String = "ROOT_UNAVAILABLE") : Exception(message)
 
@@ -15,25 +14,32 @@ class RootGate {
     private val allowed = setOf("id", "getenforce", "dumpsys", "pm", "am", "settings", "top", "logcat")
 
     fun status(): RootStatus {
-        val root = runSu("id").getOrNull()?.contains("uid=0") == true
-        val selinux = runSu("getenforce").getOrNull()?.contains("Enforcing", true)
-        val magisk = runSu("command -v magisk").isSuccess
+        val shell = runCatching { Shell.getShell() }.getOrNull()
+        val root = shell?.isRoot == true
+        val selinux = runLibsu("getenforce").getOrNull()?.contains("Enforcing", true)
+        val magisk = runLibsu("command -v magisk").isSuccess
         return RootStatus(root, selinux, magisk)
     }
 
     fun execute(command: String): String {
         val binary = command.trim().split(Regex("\s+")).firstOrNull().orEmpty()
-        if (binary !in allowed) throw SecurityException("ROOT_COMMAND_NOT_ALLOWED:$binary")
-        return runSu(command).getOrElse { throw RootUnavailableException() }
+        if (binary !in allowed) throw SecurityException("ROOT_COMMAND_NOT_ALLOWED:" + binary)
+        val shell = runCatching { Shell.getShell() }.getOrElse {
+            throw RootUnavailableException(it.message ?: "ROOT_UNAVAILABLE")
+        }
+        if (!shell.isRoot) throw RootUnavailableException()
+        val result = Shell.cmd(command).exec()
+        if (!result.isSuccess) throw IllegalStateException(
+            result.getErr().joinToString("\n").ifBlank { "ROOT_COMMAND_FAILED" }
+        )
+        return result.getOut().joinToString("\n")
     }
 
     fun snapshot(command: String): String? = runCatching { execute(command) }.getOrNull()
 
-    private fun runSu(command: String): Result<String> = runCatching {
-        val process = ProcessBuilder("su", "-c", command).redirectErrorStream(true).start()
-        val output = BufferedReader(InputStreamReader(process.inputStream)).readText().trim()
-        val code = process.waitFor()
-        if (code != 0) error(output.ifBlank { "SU_EXIT_$code" })
-        output
+    private fun runLibsu(command: String): Result<String> = runCatching {
+        val result = Shell.cmd(command).exec()
+        if (!result.isSuccess) error(result.getErr().joinToString("\n").ifBlank { "COMMAND_FAILED" })
+        result.getOut().joinToString("\n").trim()
     }
 }
