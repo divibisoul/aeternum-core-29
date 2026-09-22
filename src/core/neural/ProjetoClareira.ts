@@ -445,6 +445,10 @@ class ProjetoClareiraSystem {
     );
   }
 
+  async auditStateThroughSara(correlationId?: string) {
+    return this.saraBridge.auditLatestState(correlationId);
+  }
+
   async dispatchVagalCommandToSara(
     nodeId: string,
     command: 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
