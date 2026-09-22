@@ -12,7 +12,7 @@ import java.util.Base64
 enum class LocalRole { ADMIN, OPERATOR, OBSERVER }
 
 class AuthAndSignature(private val context: Context) {
-    private val ecAlias = "soul-admin-event-signing-p256-v1"
+    private val ecAlias = "soul-admin-event-signing-v1"
     private val edAlias = "soul-admin-event-signing-ed25519-v1"
 
     private fun keyStore(): java.security.KeyStore =
