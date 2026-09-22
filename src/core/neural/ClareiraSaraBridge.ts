@@ -89,12 +89,15 @@ export class ClareiraSaraBridge {
     let executed = 0;
     let failed = 0;
     for (const item of commands) {
-      const nodeId = typeof item.node_id === 'string' ? item.node_id : '';
       const eventId = typeof item.event_id === 'string' ? item.event_id : '';
-      const commandEnvelope = payload;
-      const rawCommand = typeof (item as { command?: unknown }).command === 'string'
-        ? (item as { command: string }).command
-        : '';
+      const envelope = item.payload && typeof item.payload === 'object'
+        ? item.payload as Record<string, unknown>
+        : {};
+      const nodeId = typeof envelope.node_id === 'string' ? envelope.node_id : '';
+      const commandEnvelope = envelope.payload && typeof envelope.payload === 'object'
+        ? envelope.payload as Record<string, unknown>
+        : {};
+      const rawCommand = typeof envelope.command === 'string' ? envelope.command : '';
       const validCommands = new Set(['calm', 'turbo', 'reduce_thermal', 'shutdown', 'resume']);
       if (!nodeId || !eventId || !validCommands.has(rawCommand)) {
         failed += 1;
