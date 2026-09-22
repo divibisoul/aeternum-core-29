@@ -54,6 +54,9 @@ dependencies {
     implementation("com.github.topjohnwu.libsu:core:6.0.0")
     implementation("org.tensorflow:tensorflow-lite:2.17.0")
 
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.1")
+
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
 }
