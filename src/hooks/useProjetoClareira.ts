@@ -22,9 +22,15 @@ export function useProjetoClareira() {
     setRunning(ProjetoClareira.running);
 
     // Atualizar métricas periodicamente
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       setMetrics(ProjetoClareira.getMetrics());
       setRunning(ProjetoClareira.running);
+      try {
+        await ProjetoClareira.syncStateToSara();
+        await ProjetoClareira.dispatchVagalCommandToSara('NC-001', 'resume', {}, 0.1);
+      } catch {
+        // SARA is an external dependency; local Clareira continues operating.
+      }
     }, 2000);
 
     return () => {
