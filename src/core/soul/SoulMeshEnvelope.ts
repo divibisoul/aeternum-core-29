@@ -35,7 +35,7 @@ export async function verifyEnvelope<T>(
   }
   return verifyCanonicalEnvelope(envelope, encoder.encode(secret), {
     nowMs: now,
-    maxClockSkewMs: 5 * 60 * 1000,
+    maxClockSkewMs: 30 * 1000,
     requireContractVersion: true,
   });
 }
