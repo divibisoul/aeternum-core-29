@@ -183,19 +183,19 @@ export class AeternumAGI {
     this.selfHealing.integrity_scanner.registerModule('godel_agent', () => {
       const state = this.godelAgent.getMetaCognitionState();
       return healingProvider(
-        Math.max(0, Math.min(1, state.modelingAccuracy)),
-        0,
-        0,
+        Number.isFinite(state.modelingAccuracy) ? Math.max(0, Math.min(1, state.modelingAccuracy)) : null,
+        null,
+        null,
         this._godelContinuousInterval !== null,
       );
     });
     this.selfHealing.integrity_scanner.registerModule('recursive_lattice', () => {
       const metrics = this.neuralLattice.getMetrics();
-      return healingProvider(Math.max(0, Math.min(1, metrics.globalFitness)), 0, 0, this.neuralLattice.isRunning);
+      return healingProvider(Math.max(0, Math.min(1, metrics.globalFitness)), null, null, this.neuralLattice.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('darwin_machine', () => {
       const metrics = this.darwinMachine.getMetrics();
-      return healingProvider(Math.max(0, Math.min(1, metrics.avgFitness)), 0, 0, this.darwinMachine.isRunning);
+      return healingProvider(Math.max(0, Math.min(1, metrics.avgFitness)), null, null, this.darwinMachine.isRunning);
     });
     this.selfHealing.integrity_scanner.registerModule('ethics_guardian', () => {
       const metrics = this.ethicalOptimizer.getMetrics();
@@ -220,7 +220,7 @@ export class AeternumAGI {
     });
     this.selfHealing.integrity_scanner.registerModule('safe_core', () => {
       const active = this.safeCore.isActive();
-      return healingProvider(active ? 1 : 0, 0, active ? 0 : 1, active);
+      return healingProvider(null, null, null, active);
     });
     this.selfHealing.integrity_scanner.registerModule('self_healing', () => {
       return healingProvider(null, null, null, this.selfHealing.isRunning);
