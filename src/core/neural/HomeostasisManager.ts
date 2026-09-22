@@ -156,36 +156,25 @@ export class HomeostasisManager {
    */
   private calculateGlobalStress(): void {
     let totalStress = 0;
-
-    // Se não há estados reportados, stress é baixo (sistema estável)
-    if (this.nodeStates.size === 0) {
-      this.globalStress = 0.5; // Valor inicial estável
-      return;
-    }
-
     let totalEnergy = 0;
     let energySamples = 0;
 
     for (const state of this.nodeStates.values()) {
-      const loadStress = Math.max(0, state.loadRatio - 0.8) * 10; // >80% carga
+      const loadStress = Math.max(0, state.loadRatio - 0.8) * 10;
       const thermalStress = Math.max(0, state.temperature - THERMAL_STRESS_WARN) * 2;
       totalStress += loadStress + thermalStress;
       if (state.active) {
         totalEnergy += state.loadRatio;
-        energySamples++;
+        energySamples += 1;
       }
     }
 
-    // Adicionar stress por nós inativos (mas não no início)
-    const inactiveNodes = this.allNodes.filter(node => !node.active).length;
-    if (this.nodeStates.size > 0) {
-      totalStress += inactiveNodes * 2.0; // Reduzido de 5.0 para 2.0
-    }
+    const inactiveNodes = Math.max(0, this.allNodes.filter(node => !node.active).length);
+    totalStress += inactiveNodes * 2.0;
 
-    this.globalStress = totalStress;
     const internalEnergyScore = energySamples > 0
       ? Math.max(0, Math.min(100, (totalEnergy / energySamples) * 100))
-      : 0;
+      : 100;
 
     const devicePenalty = this.deviceState
       ? Math.max(0, 25 - this.deviceState.batteryPercent) * 0.2
@@ -196,20 +185,18 @@ export class HomeostasisManager {
 
     this.globalStress = Math.min(
       100,
-      this.globalStress + devicePenalty + thermalPenalty,
+      totalStress + devicePenalty + thermalPenalty,
     );
 
     this.energyScore = this.deviceState
       ? Math.min(internalEnergyScore, this.deviceState.batteryPercent)
       : internalEnergyScore;
-    this.stressHistory.push(totalStress);
 
-    // Manter histórico limitado
+    this.stressHistory.push(this.globalStress);
     if (this.stressHistory.length > 100) {
       this.stressHistory.shift();
     }
 
-    // Emitir evento de telemetria
     EventBus.emit('telemetry:update', {
       latencyMs: 0,
       tokensPerSecond: 0,
