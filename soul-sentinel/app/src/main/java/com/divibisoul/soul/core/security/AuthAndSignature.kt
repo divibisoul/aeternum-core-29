@@ -37,9 +37,13 @@ class AuthAndSignature(private val context: Context) {
         return Base64.getEncoder().encodeToString(signature)
     }
 
-    fun can(role: LocalRole, action: String): Boolean = when (role) {
+    fun can(role: LocalRole, action: String): Boolean = canRole(role, action)
+
+    companion object {
+        fun canRole(role: LocalRole, action: String): Boolean = when (role) {
         LocalRole.ADMIN -> true
         LocalRole.OPERATOR -> action !in setOf("root", "destructive", "credential")
         LocalRole.OBSERVER -> action in setOf("observe", "health", "read")
+        }
     }
 }
