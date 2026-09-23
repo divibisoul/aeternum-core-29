@@ -151,18 +151,23 @@ async function proxy(req, res) {
     try {
       const message = JSON.parse(rawBody.toString('utf8'));
       if (message?.protocol === PROTOCOL && message.source === 'N07' && message.target === 'N01') {
-        if (message.contractVersion !== CONTRACT_VERSION || !message.id || !message.correlationId || !['response', 'error'].includes(message.kind)) {
-          writeDirect(res, 400, {
-            protocol: PROTOCOL, contractVersion: CONTRACT_VERSION, id: crypto.randomUUID(),
-            correlationId: message.correlationId || crypto.randomUUID(), source: 'N01', target: 'N07',
-            kind: 'error', capability: message.capability || '',
-            payload: { error: 'INVALID_N07_RESPONSE_CONTRACT' }, timestamp: Date.now(),
-          });
+        if (message.kind === 'request') {
+          // N07→N01 is a real inbound request; only N01 responses are terminated here.
+          // Forward the request to the canonical internal Mesh runtime below.
+        } else {
+          if (message.contractVersion !== CONTRACT_VERSION || !message.id || !message.correlationId || !['response', 'error'].includes(message.kind)) {
+            writeDirect(res, 400, {
+              protocol: PROTOCOL, contractVersion: CONTRACT_VERSION, id: crypto.randomUUID(),
+              correlationId: message.correlationId || crypto.randomUUID(), source: 'N01', target: 'N07',
+              kind: 'error', capability: message.capability || '',
+              payload: { error: 'INVALID_N07_RESPONSE_CONTRACT' }, timestamp: Date.now(),
+            });
+            return;
+          }
+          if (SECRET && SECRET.length >= 16) verifyN07Response(message);
+          writeDirect(res, message.kind === 'error' ? 502 : 200, message);
           return;
         }
-        if (SECRET && SECRET.length >= 16) verifyN07Response(message);
-        writeDirect(res, message.kind === 'error' ? 502 : 200, message);
-        return;
       }
     } catch {
       // Let the internal server return its normal INVALID_JSON response.
