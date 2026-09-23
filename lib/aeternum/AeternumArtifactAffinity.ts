@@ -2,7 +2,8 @@
  * AETERNUM artifact affinity registry.
  * Host affinity is balanced placement across N01-N07 + SARA.
  * It is NOT a transfer of canonical execution authority.
- * Functional artifacts covered by L1-L5: 48. Target: 6 per participant.
+ * L1-L5 functional artifacts: 48. L6 adds 9 functional + 1 support index = 58 total affinity entries.
+ * Balance target is as-even-as-possible: 7 or 8 entries per participant (spread <= 1).
  */
 export const AETERNUM_ARTIFACT_PARTICIPANTS = ["N01","N02","N03","N04","N05","N06","N07","SARA"] as const;
 export type AeternumArtifactParticipant = typeof AETERNUM_ARTIFACT_PARTICIPANTS[number];
@@ -698,6 +699,160 @@ const ARTIFACTS = [
     "domain": "monitor/synthesis",
     "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
     "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.CommandProcessingModule",
+    "lot": "L6",
+    "name": "CommandProcessingModule",
+    "host": "N01",
+    "sourceRepo": "divibisoul/aeternum-core-29",
+    "sourcePath": "lib/aeternum/system/CommandProcessingModule.ts",
+    "canonicalAuthority": "N01/EventBus+HortaCore",
+    "kind": "engine",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "system/command-processing",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.CommandProcessingUI",
+    "lot": "L6",
+    "name": "CommandProcessingUI",
+    "host": "N04",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbots",
+    "sourcePath": "src/aeternum/system/CommandProcessingUI.tsx",
+    "canonicalAuthority": "N01/command-processing",
+    "kind": "ui",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "system/command-processing-ui",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "<user-supplied CommandProcessingUI concept; no legacy file found>",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.ERUAuditModule",
+    "lot": "L6",
+    "name": "ERUAuditModule",
+    "host": "SARA",
+    "sourceRepo": "divibisoul/SARA",
+    "sourcePath": "src/sara/meta/ERUAuditModule.py",
+    "canonicalAuthority": "SARA/GovernanceBackend+DecisionTrace",
+    "kind": "policy",
+    "canonicalAffinity": "M7_EVOLUTION",
+    "domain": "system/eru-audit",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.FullCognitionModule",
+    "lot": "L6",
+    "name": "FullCognitionModule",
+    "host": "N06",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbot-2000",
+    "sourcePath": "src/aeternum/system/FullCognitionModule.ts",
+    "canonicalAuthority": "N06Processor",
+    "kind": "engine",
+    "canonicalAffinity": "M4_MIND",
+    "domain": "system/full-cognition",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "components/FullCognitionModal.tsx",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.ModuleDetailModule",
+    "lot": "L6",
+    "name": "ModuleDetailModule",
+    "host": "N03",
+    "sourceRepo": "divibisoul/nexus-aeternum-fusion",
+    "sourcePath": "src/aeternum/system/ModuleDetailModule.ts",
+    "canonicalAuthority": "N03AgentRegistry+SoulMeshCapabilityRegistry",
+    "kind": "projection",
+    "canonicalAffinity": "M8_GOVERNANCE_MEMORY",
+    "domain": "system/module-detail",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "<user-supplied ModuleDetailModal concept; no legacy file found>",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.OmniModeModule",
+    "lot": "L6",
+    "name": "OmniModeModule",
+    "host": "N07",
+    "sourceRepo": "divibisoul/Orquestrador-",
+    "sourcePath": "src/aeternum/system/OmniModeModule.ts",
+    "canonicalAuthority": "N07/SARA orchestration boundary",
+    "kind": "policy",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "system/omni-mode",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "components/OmniModeModal.tsx",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.QuantumCoreModule",
+    "lot": "L6",
+    "name": "QuantumCoreModule",
+    "host": "N06",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbot-2000",
+    "sourcePath": "src/aeternum/system/QuantumCoreModule.ts",
+    "canonicalAuthority": "N06Processor",
+    "kind": "engine",
+    "canonicalAffinity": "M4_MIND",
+    "domain": "system/parallel-branch-compute",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "<user-supplied QuantumCoreModal concept; no legacy file found>",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.IconsModule",
+    "lot": "L6",
+    "name": "IconsModule",
+    "host": "N02",
+    "sourceRepo": "divibisoul/Eternium-",
+    "sourcePath": "src/aeternum/system/IconsModule.ts",
+    "canonicalAuthority": "N02 visual/component surface",
+    "kind": "support",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "system/icons",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "components/icons.tsx",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.SynthesisLoaderModule",
+    "lot": "L6",
+    "name": "SynthesisLoaderModule",
+    "host": "N04",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbots",
+    "sourcePath": "src/aeternum/system/SynthesisLoaderModule.ts",
+    "canonicalAuthority": "N04 presentation/runtime host",
+    "kind": "projection",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "system/synthesis-loader",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "components/SynthesisLoader.tsx",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L6.SystemComponentsIndex",
+    "lot": "L6",
+    "name": "SystemComponentsIndex",
+    "host": "N05",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbot",
+    "sourcePath": "src/aeternum/system/index.ts",
+    "canonicalAuthority": "Federated index only",
+    "kind": "support",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "system/federation-index",
+    "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
   }
 ] as const;
 export const AETERNUM_ARTIFACT_AFFINITY = ARTIFACTS;
@@ -707,8 +862,16 @@ export function getArtifactAffinityCounts() { return Object.fromEntries(AETERNUM
 export function validateArtifactBalance() {
   const counts = getArtifactAffinityCounts() as Record<AeternumArtifactParticipant, number>;
   const errors: string[] = [];
-  for (const participant of AETERNUM_ARTIFACT_PARTICIPANTS) { if (counts[participant] !== 6) errors.push(`BALANCE_MISMATCH:${participant}:${counts[participant]}`); }
+  const values = AETERNUM_ARTIFACT_PARTICIPANTS.map((participant) => counts[participant]);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  for (const participant of AETERNUM_ARTIFACT_PARTICIPANTS) {
+    if (counts[participant] < 7 || counts[participant] > 8) {
+      errors.push(`BALANCE_RANGE_MISMATCH:${participant}:${counts[participant]}`);
+    }
+  }
+  if (max - min > 1) errors.push(`BALANCE_SPREAD_EXCEEDED:${min}:${max}`);
   const ids = ARTIFACTS.map((artifact) => artifact.id);
-  if (new Set(ids).size !== ids.length) errors.push('DUPLICATE_ARTIFACT_ID');
-  return { ok: errors.length === 0, counts, errors };
+  if (new Set(ids).size !== ids.length) errors.push("DUPLICATE_ARTIFACT_ID");
+  return { ok: errors.length === 0, counts, errors, min, max };
 }
