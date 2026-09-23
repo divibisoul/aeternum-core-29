@@ -1,6 +1,5 @@
 import { aeternumBus, AeternumEventBus } from "../EventBus";
 import { aeternumHortaCore, AeternumHortaCore } from "../HortaCore";
-import { aeternumWormhole, AeternumWormholeRegistry } from "../WormholeRegistry";
 
 export type VagusTrafficReport = {
   id: string;
@@ -21,21 +20,8 @@ export class VagusNerveReportModule {
   constructor(
     private readonly bus: AeternumEventBus = aeternumBus,
     private readonly state: AeternumHortaCore = aeternumHortaCore,
-    registry: AeternumWormholeRegistry = aeternumWormhole,
   ) {
     this.active = state.get<boolean>(`${this.id}.active`) ?? false;
-    registry.register(
-      {
-        id: "M8_GOVERNANCE_MEMORY",
-        name: "Governança e Memória",
-        owner: "N01",
-        state: "adapter",
-        capabilities: ["neural-monitoring", "traffic-analysis", "health-report"],
-        dependencies: ["M1_CORE"],
-        evidence: ["lib/aeternum/governance/VagusNerveReportModule.ts"],
-      },
-      this,
-    );
     bus.on("governance.vagus.report.activate", () => this.activate());
     bus.on("governance.vagus.report.deactivate", () => this.deactivate());
     bus.on("governance.vagus.report.generate", () => {
