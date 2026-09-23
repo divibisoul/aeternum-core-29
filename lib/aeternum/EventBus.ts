@@ -31,7 +31,7 @@ export class AeternumEventBus {
 
   once<T>(event: string, listener: Listener<T>): Unsubscribe {
     let unsubscribe: Unsubscribe = () => undefined;
-    unsubscribe = this.on<T>(event, async (data) => {
+    unsubscribe = this.on<T>(event, async data => {
       unsubscribe();
       await listener(data);
     });
@@ -50,7 +50,6 @@ export class AeternumEventBus {
   }
 
   getHistory(): AeternumEvent[] {
-    let sequence = 0;
     return CoreEventBus.getLog()
       .filter(item => item.event === "aeternum:bridge")
       .map(item => {
@@ -59,7 +58,7 @@ export class AeternumEventBus {
           event: envelope.event,
           data: envelope.data,
           timestamp: item.timestamp,
-          sequence: ++sequence,
+          sequence: item.sequence,
         };
       });
   }
