@@ -38,6 +38,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
     private lateinit var dashboard: DashboardStateStore
     private lateinit var sara: SaraClient
     private lateinit var n07: N07Client
+    private lateinit var octaCore: com.divibisoul.soul.network.OctaCoreClient
     private lateinit var runtime: SoulAdminPlusRuntime
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +49,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
         dashboard = runtime.dashboard()
         sara = runtime.sara()
         n07 = runtime.n07()
+        octaCore = runtime.octaCore()
         runtime.start()
 
         androidx.core.content.ContextCompat.startForegroundService(
@@ -116,6 +118,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
             StatusCard("Battery / Thermal", state.batteryThermal)
             StatusCard("SARA", state.saraHealth)
             StatusCard("N07", state.n07Health)
+            StatusCard("Octacore / G7", state.octaCoreHealth)
             StatusCard("Privileged channel", state.rootStatus)
             StatusCard("Queue", state.queueDepth.toString())
             StatusCard("Last cycle", state.lastCycleId ?: "NONE")
@@ -224,16 +227,36 @@ class SoulAdminPlusActivity : FragmentActivity() {
 
             Card {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("N07", style = MaterialTheme.typography.titleLarge)
-                    Button(onClick = {
-                        scope.launch {
-                            try {
-                                output = n07.health().toString()
-                            } catch (e: N07Exception) {
-                                output = e.code + ": " + e.message
+                    Text("N07 / OCTACORE", style = MaterialTheme.typography.titleLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            scope.launch {
+                                try {
+                                    output = n07.health().toString()
+                                } catch (e: N07Exception) {
+                                    output = e.code + ": " + e.message
+                                }
                             }
-                        }
-                    }) { Text("REFRESH N07 HEALTH") }
+                        }) { Text("REFRESH N07") }
+                        OutlinedButton(onClick = {
+                            scope.launch {
+                                try {
+                                    output = octaCore.health().toString()
+                                } catch (e: com.divibisoul.soul.network.OctaCoreException) {
+                                    output = e.code + ": " + e.message
+                                }
+                            }
+                        }) { Text("REFRESH OCTACORE") }
+                        OutlinedButton(onClick = {
+                            scope.launch {
+                                try {
+                                    output = octaCore.inventory().toString()
+                                } catch (e: com.divibisoul.soul.network.OctaCoreException) {
+                                    output = e.code + ": " + e.message
+                                }
+                            }
+                        }) { Text("INVENTORY G0–G7") }
+                    }
                 }
             }
 
