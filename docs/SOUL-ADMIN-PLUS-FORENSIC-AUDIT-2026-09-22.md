@@ -92,3 +92,18 @@ A segunda passagem encontrou mais três problemas de integração e os corrigiu:
 
 Estado N07 após a correção: main = `b33cf720379aa17dfbe45a01fbc423d24806a69c`.
 Estado SARA: sem alteração nesta passagem; contrato inspecionado continua o limite autoritativo para o client.
+
+
+## Unfreeze — Octacore/HortaCore/Vagus/Mesh fusion
+
+The Plus front is now ACTIVE rather than frozen for this stage. The Android layer remains a control/telemetry client and does not become a second SARA or second Mesh.
+
+- OctacoreClient: real authenticated N07 Octacore transport.
+- DashboardStateStore: persists Octacore/G7 health alongside existing SARA/N07 state.
+- Cockpit: observes Octacore health and G0–G7 inventory.
+- N07/G7 remains scheduler + SuperGPU owner.
+- Existing N07 SuperGPU runtime is attached once to Octacore; no duplicate compute runtime.
+- HortaCore is fused into the same N07 runtime and emits control events through VagusBus.
+- N07 remote jobs use the canonical Soul Mesh.
+- G6 can invoke the full federated context flow through N07 Mesh with the original correlation ID.
+- Existing Plus watchdog/root/auth/logging/mission facilities remain preserved.
