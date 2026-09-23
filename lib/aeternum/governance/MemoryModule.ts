@@ -1,6 +1,5 @@
 import { aeternumBus } from "../EventBus";
 import { aeternumHortaCore } from "../HortaCore";
-import { aeternumWormhole } from "../WormholeRegistry";
 
 export type MemoryWriteRequest = {
   state: Record<string, unknown>;
@@ -24,21 +23,6 @@ export class MemoryModule {
 
   constructor(private readonly executor?: MemoryExecutor) {
     this.active = aeternumHortaCore.get<boolean>(`${this.id}.active`) ?? false;
-    aeternumWormhole.register(
-      {
-        id: "M8_GOVERNANCE_MEMORY",
-        name: "Governança e Memória",
-        owner: "N07_SARA",
-        state: "adapter",
-        capabilities: ["memory-adapter", "versioned-memory", "context-retrieval"],
-        dependencies: ["M1_CORE", "M6_IMMUNITY"],
-        evidence: [
-          "SARA RegenerativeMemory",
-          "lib/aeternum/governance/MemoryModule.ts",
-        ],
-      },
-      this,
-    );
 
     aeternumBus.on("governance.memory.activate", () => this.activate());
     aeternumBus.on("governance.memory.deactivate", () => this.deactivate());
