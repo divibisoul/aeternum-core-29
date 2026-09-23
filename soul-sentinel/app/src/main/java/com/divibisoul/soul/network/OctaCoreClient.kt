@@ -95,16 +95,44 @@ class OctaCoreClient(private val configStore: SecureEndpointConfigStore) {
     suspend fun submit(job: OctaCoreJob) =
         request("POST", "/v1/octacore/submit", job.toJson(), job.correlationId)
 
-    suspend fun batch(jobs: List<OctaCoreJob>, correlationId: String = UUID.randomUUID().toString()) =
-        request(
-            "POST",
-            "/v1/octacore/batch",
-            JSONObject().put(
-                "jobs",
-                JSONArray().apply { jobs.forEach { put(it.toJson()) } }
-            ),
-            correlationId
-        )
+    suspend fun batch(
+        jobs: List<OctaCoreJob>,
+        correlationId: String = UUID.randomUUID().toString()
+    ): JSONArray = withContext(Dispatchers.IO) {
+        val cfg = configStore.read()
+        if (!cfg.n07Enabled) throw OctaCoreException("N07_DISABLED", "N07 feature is disabled")
+        val base = cfg.n07BaseUrl ?: throw OctaCoreException("N07_DISABLED", "N07_BASE_URL not configured")
+        val token = configStore.n07Token() ?: throw OctaCoreException("N07_UNAUTHORIZED", "N07_TOKEN not configured")
+        val payload = JSONArray().apply { jobs.forEach { put(it.toJson()) } }
+        val request = Request.Builder()
+            .url(base + "/v1/octacore/batch")
+            .header("Authorization", "Bearer " + token)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("X-Correlation-ID", correlationId)
+            .post(payload.toString().toRequestBody(media))
+            .build()
+        val client = OkHttpClient.Builder()
+            .connectTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .readTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .writeTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .callTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .build()
+        val response = runCatching { client.newCall(request).execute() }
+            .getOrElse { throw OctaCoreException("OCTACORE_UNAVAILABLE", it.message ?: "Octacore batch unavailable") }
+        response.use {
+            val text = it.body?.string().orEmpty()
+            if (!it.isSuccessful) {
+                val code = if (it.code == 401 || it.code == 403) "OCTACORE_UNAUTHORIZED" else "OCTACORE_UNAVAILABLE"
+                throw OctaCoreException(code, text.ifBlank { "HTTP " + it.code })
+            }
+            try {
+                JSONArray(text)
+            } catch (error: Exception) {
+                throw OctaCoreException("OCTACORE_INVALID_RESPONSE", error.message ?: "Invalid Octacore batch response")
+            }
+        }
+    }
 
     suspend fun executeFederatedContextCycle(
         input: String,
