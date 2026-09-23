@@ -120,8 +120,11 @@ class SoulAdminPlusRuntime(
             }
             try {
                 val health = hortaCore.health()
-                val nested = health.optJSONObject("hortacore_json")
+                val metadata = health.optJSONObject("metadata")
+                val raw = metadata?.optString("hortacore_json").orEmpty()
+                val nested = runCatching { JSONObject(raw) }.getOrNull()
                 val status = nested?.optJSONObject("octacore")?.optString("status")
+                    ?: nested?.optString("status")
                     ?: health.optString("status", "UNKNOWN")
                 dashboard.patch { it.copy(hortaCoreHealth = status) }
             } catch (e: Exception) {
