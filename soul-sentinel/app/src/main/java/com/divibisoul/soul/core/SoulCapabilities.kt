@@ -25,7 +25,7 @@ class SoulCapabilityRegistry(private val context: Context) {
         Capability(
             SoulAiTools.REQUEST_SUGGESTIONS,
             "Nucleus05",
-            CapabilityAvailability.AVAILABLE,
+            CapabilityAvailability.UNKNOWN,
             CapabilityRisk.MEDIUM,
             "1"
         ),

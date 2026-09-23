@@ -30,3 +30,16 @@ This document tracks the recovery and integration work toward an Android APK.
 
 ## Rule
 Do not delete legacy implementations until their functionality has been mapped and a replacement has been validated.
+
+
+---
+
+## Branch overlay — 2026-09-22 — Soul Admin Plus forensic recovery
+
+This appendix is additive and does not rewrite the historical baseline above.
+
+- The historical main baseline percentages above remain historical; they are not reused as current Plus percentages.
+- On `feat/soul-admin-android-plus-final`, an additive Android layer now exists under `soul-sentinel`.
+- Implementation is REAL at source level; build/APK/runtime commissioning is still OPEN because CI execution is currently unobservable and there is no verified device run in this environment.
+- No production ONLINE status is declared for SARA/N07.
+- No legacy implementation was deleted by the Plus branch.

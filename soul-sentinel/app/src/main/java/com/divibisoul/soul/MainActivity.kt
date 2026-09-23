@@ -101,6 +101,11 @@ class MainActivity : ComponentActivity() {
                 OutlinedButton(onClick = { stopAdmin(); enabled = false }) {
                     Text("DESATIVAR")
                 }
+                OutlinedButton(onClick = {
+                    startActivity(Intent(this@MainActivity, SoulAdminPlusActivity::class.java))
+                }) {
+                    Text("SOUL ADMIN PLUS")
+                }
             }
 
             Card {

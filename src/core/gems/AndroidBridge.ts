@@ -64,8 +64,10 @@ export type AndroidToWebMessage =
  * Default configuration for POCO C85 (from user's screenshots)
  */
 export const DEFAULT_BRIDGE_CONFIG: AndroidBridgeConfig = {
-  ip: '192.168.18.35',
-  port: 40513,
+  // Endpoint must be supplied by the actual connected device/session.
+  // No device-specific IP is embedded as a runtime default.
+  ip: '',
+  port: 0,
   autoReconnect: true,
   reconnectIntervalMs: 5000,
   shizukuPreferred: true,
