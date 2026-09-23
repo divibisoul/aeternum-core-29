@@ -27,6 +27,8 @@ import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.network.N07Client
 import com.divibisoul.soul.network.N07Exception
 import com.divibisoul.soul.network.SaraClient
+import com.divibisoul.soul.network.HortaCoreClient
+import com.divibisoul.soul.network.HortaCoreException
 import com.divibisoul.soul.network.SaraException
 import com.divibisoul.soul.network.SecureEndpointConfigStore
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +41,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
     private lateinit var sara: SaraClient
     private lateinit var n07: N07Client
     private lateinit var octaCore: com.divibisoul.soul.network.OctaCoreClient
+    private lateinit var hortaCore: HortaCoreClient
     private lateinit var runtime: SoulAdminPlusRuntime
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +53,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
         sara = runtime.sara()
         n07 = runtime.n07()
         octaCore = runtime.octaCore()
+        hortaCore = runtime.hortaCore()
         runtime.start()
 
         androidx.core.content.ContextCompat.startForegroundService(
@@ -119,6 +123,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
             StatusCard("SARA", state.saraHealth)
             StatusCard("N07", state.n07Health)
             StatusCard("Octacore / G7", state.octaCoreHealth)
+            StatusCard("HortaCore fusion", state.hortaCoreHealth)
             StatusCard("Privileged channel", state.rootStatus)
             StatusCard("Queue", state.queueDepth.toString())
             StatusCard("Last cycle", state.lastCycleId ?: "NONE")
@@ -256,6 +261,15 @@ class SoulAdminPlusActivity : FragmentActivity() {
                                 }
                             }
                         }) { Text("INVENTORY G0–G7") }
+                        OutlinedButton(onClick = {
+                            scope.launch {
+                                try {
+                                    output = hortaCore.health().toString()
+                                } catch (e: HortaCoreException) {
+                                    output = e.code + ": " + e.message
+                                }
+                            }
+                        }) { Text("REFRESH HORTACORE") }
                     }
                 }
             }
