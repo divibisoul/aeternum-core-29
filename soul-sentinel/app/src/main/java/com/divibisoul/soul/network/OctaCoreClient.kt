@@ -85,6 +85,56 @@ class OctaCoreClient(private val configStore: SecureEndpointConfigStore) {
     suspend fun submit(job: JSONObject, correlationId: String = job.optString("correlation_id").ifBlank { UUID.randomUUID().toString() }) =
         request("POST", "/v1/octacore/submit", job.toString(), correlationId)
 
+    private suspend fun requestArray(
+        method: String,
+        path: String,
+        body: String? = null,
+        correlationId: String = UUID.randomUUID().toString(),
+    ): JSONArray = withContext(Dispatchers.IO) {
+        val cfg = configStore.read()
+        if (!cfg.n07Enabled) throw OctaCoreException("OCTACORE_DISABLED", "FEATURE_N07_ENABLED is disabled")
+        val base = cfg.n07BaseUrl ?: throw OctaCoreException("OCTACORE_DISABLED", "N07_BASE_URL not configured")
+        val token = configStore.n07Token() ?: throw OctaCoreException("OCTACORE_UNAUTHORIZED", "N07_TOKEN not configured")
+        val request = Request.Builder()
+            .url(base + path)
+            .header("Authorization", "Bearer $token")
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .header("X-Correlation-ID", correlationId)
+            .method(method, (body ?: "[]").toRequestBody(jsonMedia))
+            .build()
+        val client = OkHttpClient.Builder()
+            .connectTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .readTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .writeTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .callTimeout(cfg.requestTimeoutMs, TimeUnit.MILLISECONDS)
+            .build()
+        val response = try {
+            client.newCall(request).execute()
+        } catch (e: Exception) {
+            throw OctaCoreException("OCTACORE_UNAVAILABLE", e.message ?: "Octacore transport unavailable")
+        }
+        response.use {
+            val raw = it.body?.string().orEmpty()
+            if (!it.isSuccessful) {
+                val code = when (it.code) {
+                    401, 403 -> "OCTACORE_UNAUTHORIZED"
+                    404 -> "OCTACORE_NOT_FOUND"
+                    408, 429 -> "OCTACORE_RATE_LIMITED"
+                    else -> "OCTACORE_UNAVAILABLE"
+                }
+                throw OctaCoreException(code, raw.ifBlank { "HTTP ${'
+}
+}{it.code}" })
+            }
+            try {
+                JSONArray(raw)
+            } catch (e: Exception) {
+                throw OctaCoreException("OCTACORE_INVALID_RESPONSE", e.message ?: "Invalid JSON array")
+            }
+        }
+    }
+
     suspend fun batch(jobs: JSONArray, correlationId: String = UUID.randomUUID().toString()) =
-        request("POST", "/v1/octacore/batch", jobs.toString(), correlationId)
+        requestArray("POST", "/v1/octacore/batch", jobs.toString(), correlationId)
 }
