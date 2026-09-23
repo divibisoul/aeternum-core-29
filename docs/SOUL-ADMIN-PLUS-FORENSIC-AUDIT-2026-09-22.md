@@ -56,7 +56,7 @@ O ambiente de trabalho não possui Gradle/Android SDK utilizável para uma build
 Ainda faltam um dispositivo/emulador Android executando a build e um endpoint SARA/N07 configurado para testes online. Sem isso, a integração é classificada como IMPLEMENTADA/VALIDAÇÃO OPEN, não ONLINE.
 
 ### OctaCore
-OctaCore continua explicitamente BLOQUEADO para definição interna: a especificação original dos oito componentes/contratos não foi recuperada. Nenhuma redefinição foi inventada.
+A especificação agora está DESBLOQUEADA pela definição autoritativa fornecida para G0–G7. O que permanece BLOQUEADO é a certificação operacional/E2E: cada slot precisa de contrato executável, health/capability observável e transporte real. Nenhuma capacidade foi apagada ou substituída.
 
 ### TCE / compute/transcendental
 O pacote legado `compute/transcendental` do N07 continua ISOLADO e DESABILITADO por padrão. Ele contém `SimulatedExecutor` e é uma camada de simulação determinística, não uma prova de hardware nem um caminho de execução produtivo. Não foi apagado.
@@ -122,3 +122,16 @@ Current Plus state:
 - APK build/install and Android field commissioning remain OPEN.
 
 The current certification boundary remains: N07 Octacore/HortaCore focused gate PASS; G0 SARA validation OPEN until its own CI returns PASS.
+
+
+## Audit pass III — Octacore corrective wave
+
+- Octacore specification: **UNBLOCKED**.
+- G0–G7 inventory: all eight slots retained.
+- G1–G6 adapters are classified by source evidence; runtime liveness is not inferred.
+- G7 is attached to the canonical existing SuperGPU runtime at the final wiring boundary; no second production SuperGPU is introduced.
+- Barrier semantics were corrected to be independent of job-list ordering and to publish one join event per barrier.
+- N04 adapter runtime is dynamically loaded only after capability validation, keeping server-only imports out of isolated adapter tests.
+- N06 now advertises the Octacore wrapper separately from N06-owned cognitive capabilities.
+- N03 legacy peer client was extended to the canonical N07-inclusive topology.
+- Android Shizuku was moved away from removed/legacy direct process API toward the real UserService binder boundary; AIDL generation was enabled explicitly.
