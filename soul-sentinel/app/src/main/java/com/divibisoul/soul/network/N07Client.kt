@@ -76,6 +76,21 @@ class N07Client(private val configStore: SecureEndpointConfigStore) {
      * caller to provide its numeric array in a "values" field; no object payload
      * is silently sent to the []float64 contract.
      */
+    suspend fun executeOperation(
+        operation: String,
+        metadata: Map<String, String> = emptyMap(),
+        correlationId: String = UUID.randomUUID().toString()
+    ): JSONObject = request(
+        "POST",
+        "/v1/execute",
+        JSONObject()
+            .put("operation", operation)
+            .put("payload", JSONArray())
+            .put("metadata", JSONObject().apply { metadata.forEach { (key, value) -> put(key, value) } })
+            .put("correlationId", correlationId),
+        correlationId
+    )
+
     suspend fun execute(operation: String, payload: JSONObject, correlationId: String): JSONObject {
         val values = payload.optJSONArray("values")
             ?: throw N07Exception("N07_INVALID_REQUEST", "N07 execute payload requires numeric array field 'values'")
