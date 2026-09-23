@@ -9,7 +9,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
     capabilities: ["event-bus", "state-store", "registry", "neural-addressing"],
     dependencies: [],
     evidence: [
-      "lib/aeternum/EventBus.ts",
+      "src/core/EventBus.ts (runtime event authority)",
+      "lib/aeternum/EventBus.ts (typed AETERNUM facade over the core bus)",
       "lib/aeternum/HortaCore.ts",
       "lib/aeternum/WormholeRegistry.ts",
       "lib/aeternum/NeuralCoordinates.ts",
