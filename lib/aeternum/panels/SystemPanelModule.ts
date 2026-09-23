@@ -19,7 +19,7 @@ export class SystemPanelModule {
 
   constructor() {
     void aeternumBus.on("mode.changed", (data: { mode?: string }) => {
-      if (data?.mode && ["HARMONY","ANALYSIS","ABSTRACT","SYNTHESIS"].includes(data.mode)) {
+      if (data?.mode && ["HARMONY", "ANALYSIS", "ABSTRACT", "SYNTHESIS"].includes(data.mode)) {
         this.state.activeMode = data.mode as SystemMode;
         this.publish();
       }
@@ -34,6 +34,7 @@ export class SystemPanelModule {
       if (id) this.state.activeModules = this.state.activeModules.filter(item => item !== id);
       this.publish();
     });
+    void aeternumBus.on("system.boot.complete", () => this.publish());
   }
 
   activate(): void {
@@ -64,11 +65,20 @@ export class SystemPanelModule {
     this.publish();
   }
 
-  getState(): SystemPanelState { return { ...this.state, activeModules: [...this.state.activeModules] }; }
+  getState(): SystemPanelState {
+    const bootTime = aeternumHortaCore.get<number>("system.bootTime");
+    const uptime = bootTime === undefined ? null : Math.max(0, Date.now() - bootTime);
+    return {
+      ...this.state,
+      uptime,
+      activeModules: [...this.state.activeModules],
+    };
+  }
 
   private publish(): void {
-    aeternumHortaCore.set("system.panel.state", this.getState());
-    void aeternumBus.emit("panel.state.updated", this.getState());
+    const snapshot = this.getState();
+    aeternumHortaCore.set("system.panel.state", snapshot);
+    void aeternumBus.emit("panel.state.updated", snapshot);
   }
 }
 
