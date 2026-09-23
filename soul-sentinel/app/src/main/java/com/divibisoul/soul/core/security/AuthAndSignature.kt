@@ -20,18 +20,20 @@ class AuthAndSignature(private val context: Context) {
 
     private fun ensureEd25519(ks: java.security.KeyStore): PrivateKey? = runCatching {
         if (!ks.containsAlias(edAlias)) {
-            KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore").apply {
-                initialize(
-                    KeyGenParameterSpec.Builder(
-                        edAlias,
-                        KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
-                    )
-                        .setAlgorithmParameterSpec(ECGenParameterSpec("ed25519"))
-                        .setDigests(KeyProperties.DIGEST_NONE)
-                        .build()
+            val generator = KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                "AndroidKeyStore",
+            )
+            generator.initialize(
+                KeyGenParameterSpec.Builder(
+                    edAlias,
+                    KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY,
                 )
-                .generateKeyPair()
-            }
+                    .setAlgorithmParameterSpec(ECGenParameterSpec("ed25519"))
+                    .setDigests(KeyProperties.DIGEST_NONE)
+                    .build(),
+            )
+            generator.generateKeyPair()
         }
         val key = ks.getKey(edAlias, null) as PrivateKey
         Signature.getInstance("Ed25519").initSign(key)
@@ -40,18 +42,20 @@ class AuthAndSignature(private val context: Context) {
 
     private fun ensureP256(ks: java.security.KeyStore): PrivateKey {
         if (!ks.containsAlias(ecAlias)) {
-            KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore").apply {
-                initialize(
-                    KeyGenParameterSpec.Builder(
-                        ecAlias,
-                        KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
-                    )
-                        .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-                        .setDigests(KeyProperties.DIGEST_SHA256)
-                        .build()
+            val generator = KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                "AndroidKeyStore",
+            )
+            generator.initialize(
+                KeyGenParameterSpec.Builder(
+                    ecAlias,
+                    KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY,
                 )
-                .generateKeyPair()
-            }
+                    .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
+                    .setDigests(KeyProperties.DIGEST_SHA256)
+                    .build(),
+            )
+            generator.generateKeyPair()
         }
         return ks.getKey(ecAlias, null) as PrivateKey
     }
