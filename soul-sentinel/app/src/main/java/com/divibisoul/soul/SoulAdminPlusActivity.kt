@@ -26,6 +26,7 @@ import com.divibisoul.soul.core.federation.FederationStatusMatrix
 import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.network.N07Client
 import com.divibisoul.soul.network.N07Exception
+import com.divibisoul.soul.network.OctaCoreException
 import com.divibisoul.soul.network.SaraClient
 import com.divibisoul.soul.network.SaraException
 import com.divibisoul.soul.network.SecureEndpointConfigStore
@@ -116,6 +117,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
             StatusCard("Battery / Thermal", state.batteryThermal)
             StatusCard("SARA", state.saraHealth)
             StatusCard("N07", state.n07Health)
+            StatusCard("Octacore", state.octaCoreHealth)
             StatusCard("Privileged channel", state.rootStatus)
             StatusCard("Queue", state.queueDepth.toString())
             StatusCard("Last cycle", state.lastCycleId ?: "NONE")
@@ -224,7 +226,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
 
             Card {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("N07", style = MaterialTheme.typography.titleLarge)
+                    Text("N07 / OCTACORE", style = MaterialTheme.typography.titleLarge)
                     Button(onClick = {
                         scope.launch {
                             try {
@@ -234,6 +236,15 @@ class SoulAdminPlusActivity : FragmentActivity() {
                             }
                         }
                     }) { Text("REFRESH N07 HEALTH") }
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            try {
+                                output = runtime.octaCore().inventory().toString()
+                            } catch (e: OctaCoreException) {
+                                output = e.code + ": " + e.message
+                            }
+                        }
+                    }) { Text("REFRESH OCTACORE INVENTORY") }
                 }
             }
 
