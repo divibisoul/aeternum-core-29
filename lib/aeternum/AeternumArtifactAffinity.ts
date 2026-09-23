@@ -2,8 +2,9 @@
  * AETERNUM artifact affinity registry.
  * Host affinity is balanced placement across N01-N07 + SARA.
  * It is NOT a transfer of canonical execution authority.
- * L1-L5 functional artifacts: 48. L6 adds 9 functional + 1 support index = 58 total affinity entries.
- * Balance target is as-even-as-possible: 7 or 8 entries per participant (spread <= 1).
+ * L1-L5 functional artifacts: 48. L6 adds 9 functional + 1 support index = 58 affinity entries.
+ * L7 adds 13 distributed integration/projection/provenance entries = 71 total affinity entries.
+ * Balance target is as-even-as-possible: 8 or 9 entries per participant (spread <= 1).
  */
 export const AETERNUM_ARTIFACT_PARTICIPANTS = ["N01","N02","N03","N04","N05","N06","N07","SARA"] as const;
 export type AeternumArtifactParticipant = typeof AETERNUM_ARTIFACT_PARTICIPANTS[number];
@@ -853,6 +854,192 @@ const ARTIFACTS = [
     "domain": "system/federation-index",
     "preservation": "existing source retained; host is federated surface affinity, not deletion or authority transfer",
     "federation": "SOUL_MESH / AETERNUM shared contracts; runtime reachability must be proven separately"
+  },
+  {
+    "id": "L7.SystemPanelModule",
+    "lot": "L7",
+    "name": "SystemPanelModule",
+    "host": "N01",
+    "sourceRepo": "divibisoul/aeternum-core-29",
+    "sourcePath": "lib/aeternum/panels/SystemPanelModule.ts",
+    "canonicalAuthority": "N01/EventBus+HortaCore",
+    "kind": "engine",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "panel/system-state",
+    "preservation": "existing source retained; panel is an adapter and does not replace legacy UI",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; observed state only"
+  },
+  {
+    "id": "L7.SystemPanelUI",
+    "lot": "L7",
+    "name": "SystemPanelUI",
+    "host": "N02",
+    "sourceRepo": "divibisoul/Eternium-",
+    "sourcePath": "src/aeternum/panels/SystemPanelUI.tsx",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "components/SystemPanel.tsx",
+    "canonicalAuthority": "N01/system-panel",
+    "kind": "ui",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "panel/system-ui",
+    "preservation": "legacy SystemPanel.tsx retained; new UI is a non-destructive projection",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; callbacks are explicit"
+  },
+  {
+    "id": "L7.EngineeringPanelModule",
+    "lot": "L7",
+    "name": "EngineeringPanelModule",
+    "host": "N04",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbots",
+    "sourcePath": "src/aeternum/panels/EngineeringPanelModule.ts",
+    "canonicalAuthority": "N04/Nucleus04Processor",
+    "kind": "engine",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "panel/engineering-runtime",
+    "preservation": "existing N04 processor remains sole capability execution authority",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; no local capability engine"
+  },
+  {
+    "id": "L7.EngineeringPanelUI",
+    "lot": "L7",
+    "name": "EngineeringPanelUI",
+    "host": "N02",
+    "sourceRepo": "divibisoul/Eternium-",
+    "sourcePath": "src/aeternum/panels/EngineeringPanelUI.tsx",
+    "canonicalAuthority": "N04/engineering-panel",
+    "kind": "ui",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "panel/engineering-ui",
+    "preservation": "legacy architecture UI remains untouched",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; presentation only"
+  },
+  {
+    "id": "L7.AuditPanelModule",
+    "lot": "L7",
+    "name": "AuditPanelModule",
+    "host": "N03",
+    "sourceRepo": "divibisoul/nexus-aeternum-fusion",
+    "sourcePath": "src/aeternum/audit/AuditPanelModule.ts",
+    "canonicalAuthority": "Injected audit source; SARA remains governance authority",
+    "kind": "projection",
+    "canonicalAffinity": "M8_GOVERNANCE_MEMORY",
+    "domain": "panel/audit-projection",
+    "preservation": "no second governance engine; entries are explicit observations",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; source must be injected"
+  },
+  {
+    "id": "L7.AuditPanelUI",
+    "lot": "L7",
+    "name": "AuditPanelUI",
+    "host": "N03",
+    "sourceRepo": "divibisoul/nexus-aeternum-fusion",
+    "sourcePath": "src/aeternum/audit/AuditPanelUI.tsx",
+    "canonicalAuthority": "N03/AuditPanelModule",
+    "kind": "ui",
+    "canonicalAffinity": "M8_GOVERNANCE_MEMORY",
+    "domain": "panel/audit-ui",
+    "preservation": "legacy audit UI remains untouched",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; presentation only"
+  },
+  {
+    "id": "L7.ASASFPanelModule",
+    "lot": "L7",
+    "name": "ASASFPanelModule",
+    "host": "SARA",
+    "sourceRepo": "divibisoul/SARA",
+    "sourcePath": "src/sara/meta/ASASFPanelModule.py",
+    "canonicalAuthority": "SARA/GovernanceBackend+DecisionTrace",
+    "kind": "policy",
+    "canonicalAffinity": "M6_IMMUNITY",
+    "domain": "panel/asasf-remediation",
+    "preservation": "no synthetic remediation; execution requires injected real executor",
+    "federation": "SARA governance + SOUL Mesh federation"
+  },
+  {
+    "id": "L7.ASASFPanelUI",
+    "lot": "L7",
+    "name": "ASASFPanelUI",
+    "host": "N06",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbot-2000",
+    "sourcePath": "src/aeternum/panels/ASASFPanelUI.tsx",
+    "canonicalAuthority": "SARA/ASASFPanelModule",
+    "kind": "ui",
+    "canonicalAffinity": "M6_IMMUNITY",
+    "domain": "panel/asasf-ui",
+    "preservation": "presentation only; no remediation authority",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; state is supplied"
+  },
+  {
+    "id": "L7.ChatEngineModule",
+    "lot": "L7",
+    "name": "ChatEngineModule",
+    "host": "N05",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbot",
+    "sourcePath": "src/aeternum/chat/ChatEngineModule.ts",
+    "canonicalAuthority": "Injected N05 chat delegate",
+    "kind": "engine",
+    "canonicalAffinity": "M3_LANGUAGE",
+    "domain": "panel/chat-engine",
+    "preservation": "no synthetic response generation; delegate is mandatory at execution time",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime binding must be proven"
+  },
+  {
+    "id": "L7.AppOrchestrator",
+    "lot": "L7",
+    "name": "AppOrchestrator",
+    "host": "N01",
+    "sourceRepo": "divibisoul/aeternum-core-29",
+    "sourcePath": "lib/aeternum/orchestration/AppOrchestrator.ts",
+    "canonicalAuthority": "N01/AeternumOrchestrator",
+    "kind": "orchestrator",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "panel/app-orchestration",
+    "preservation": "wraps the canonical orchestrator; does not create a second transport",
+    "federation": "AETERNUM EventBus/HortaCore/Wormhole + SOUL Mesh"
+  },
+  {
+    "id": "L7.GenesisModule",
+    "lot": "L7",
+    "name": "GenesisModule",
+    "host": "N07",
+    "sourceRepo": "divibisoul/Orquestrador-",
+    "sourcePath": "src/aeternum/foundation/GenesisModule.ts",
+    "canonicalAuthority": "Provenance metadata; no execution authority",
+    "kind": "provenance",
+    "canonicalAffinity": "M8_GOVERNANCE_MEMORY",
+    "domain": "panel/genesis-provenance",
+    "preservation": "user-supplied historical claims are marked as provenance, not execution evidence",
+    "federation": "SOUL_MESH / AETERNUM shared contracts"
+  },
+  {
+    "id": "L7.PanelsIndex",
+    "lot": "L7",
+    "name": "PanelsIndex",
+    "host": "N07",
+    "sourceRepo": "divibisoul/Orquestrador-",
+    "sourcePath": "src/aeternum/foundation/panels-index.ts",
+    "canonicalAuthority": "Federated index only",
+    "kind": "support",
+    "canonicalAffinity": "M2_ORCHESTRATION",
+    "domain": "panel/federation-index",
+    "preservation": "index contains descriptors only; no duplicate runtime",
+    "federation": "SOUL_MESH / AETERNUM shared contracts"
+  },
+  {
+    "id": "L7.AppIntegration",
+    "lot": "L7",
+    "name": "AppIntegration",
+    "host": "N05",
+    "sourceRepo": "divibisoul/nextjs-ai-chatbot",
+    "sourcePath": "src/aeternum/integration/App.tsx",
+    "legacySourceRepo": "divibisoul/Eternium-",
+    "legacySourcePath": "App.tsx",
+    "canonicalAuthority": "Host application remains canonical; adapter is additive",
+    "kind": "integration",
+    "canonicalAffinity": "M3_LANGUAGE",
+    "domain": "panel/app-integration",
+    "preservation": "root App.tsx was not replaced; integration boundary is additive",
+    "federation": "AETERNUM/SOUL integration boundary; boot delegate is explicit"
   }
 ] as const;
 export const AETERNUM_ARTIFACT_AFFINITY = ARTIFACTS;
@@ -866,7 +1053,7 @@ export function validateArtifactBalance() {
   const min = Math.min(...values);
   const max = Math.max(...values);
   for (const participant of AETERNUM_ARTIFACT_PARTICIPANTS) {
-    if (counts[participant] < 7 || counts[participant] > 8) {
+    if (counts[participant] < 8 || counts[participant] > 9) {
       errors.push(`BALANCE_RANGE_MISMATCH:${participant}:${counts[participant]}`);
     }
   }
