@@ -75,3 +75,31 @@ Each nucleus is intended to expose five inbound and five outbound peer routes. L
 ## Important architectural decision
 
 The Android/Web project in N01 is not discarded. The Android side remains the native execution layer. Web/chat functionality is consumed as an AI capability where appropriate rather than duplicated as a second independent chatbot subsystem.
+
+
+## Federated expansion: N01–N07 + SARA
+
+The federation boundary is eight identities with distinct authority roles:
+
+| Node | Authority boundary | Android access |
+|---|---|---|
+| N01 | Android + canonical Mesh | Local/native |
+| N02 | Conversation + provider | Through N07 federation |
+| N03 | Perception + audio | Through N07 federation |
+| N04 | Chat + tools + documents | Through N07 federation |
+| N05 | Inference + conversation | Through N07 federation |
+| N06 | Cognitive | Through N07 federation |
+| N07 | Orchestration + federation + compute | Authenticated HTTPS application boundary |
+| SARA | Regeneration + audit + ethics + strategy + memory + rollback + provenance + governance | Authenticated SARA service boundary, normally via N07 or an explicitly configured direct service |
+
+N07 is the seventh runtime/control-plane component, not a replacement for N01–N06. SARA is not N08 and does not replace any SOUL nucleus.
+
+The Android Soul Admin layer therefore does not create seven direct peer clients. It owns the local Android boundary (N01), consumes N07 as the federation control plane, and consumes SARA as the regenerative authority. Remote N02–N06 ownership remains with their native runtimes and is delegated by N07.
+
+### Fusion rule
+
+Functionally similar capabilities may share contracts, telemetry, transport, correlation, health, authorization and adapters. Their native ownership, authority and identity remain distinct.
+
+### Evidence rule
+
+A route declaration is not proof of runtime connectivity. Remote ONLINE requires transport availability, authentication, request/response correlation, validation and health evidence.

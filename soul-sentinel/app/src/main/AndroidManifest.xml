@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -10,6 +11,14 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <provider
+        android:name="rikka.shizuku.ShizukuProvider"
+        android:authorities="${applicationId}.shizuku"
+        android:enabled="true"
+        android:exported="true"
+        android:multiprocess="false"
+        android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
     <application android:allowBackup="true" android:label="Soul" android:supportsRtl="true" android:theme="@style/Theme.SoulSentinel">
         <activity android:name=".SoulAiSessionActivity" android:exported="false" />
         <activity android:name=".SoulHybridActivity" android:exported="true">
@@ -19,6 +28,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity" android:exported="false" />
+        <activity android:name=".SoulAdminPlusActivity" android:exported="false" />
         <service android:name=".SoulAdminService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="device-administration-context-monitor" />
         </service>

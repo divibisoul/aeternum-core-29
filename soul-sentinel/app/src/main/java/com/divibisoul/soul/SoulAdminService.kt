@@ -5,8 +5,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.ComponentCallbacks2
 import android.os.IBinder
 import android.util.Log
+import com.divibisoul.soul.runtime.SoulAdminPlusRuntime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +22,7 @@ class SoulAdminService : Service() {
     private lateinit var config: SoulConfig
     private lateinit var cortex: SoulCortex
     private lateinit var actions: SoulActions
+    private lateinit var plus: SoulAdminPlusRuntime
 
     override fun onCreate() {
         super.onCreate()
@@ -29,10 +32,18 @@ class SoulAdminService : Service() {
         createChannel()
         startForeground(NOTIFICATION_ID, notification("Soul Admin active — observing Android"))
 
+        plus = com.divibisoul.soul.runtime.SoulAdminPlusRuntimeRegistry.get(
+            context = this,
+            bus = SoulRuntimeBusHolder.bus ?: SoulRuntimeBusHolder.create()
+        )
+        plus.start()
+        plus.watchdog().let(::registerComponentCallbacks)
+
         scope.launch {
             while (isActive) {
-                runCycle()
-                delay(config.checkIntervalMs)
+                val reduced = plus.watchdog().isLoadReduced()
+                if (!reduced) runCycle()
+                delay(if (reduced) 60_000L else config.checkIntervalMs)
             }
         }
     }
@@ -40,8 +51,6 @@ class SoulAdminService : Service() {
     private fun runCycle() {
         cortex.evaluate().forEach { decision ->
             Log.i("SoulAdmin", "${decision.action}: ${decision.reason}")
-            // Android moderno impede várias alterações administrativas silenciosas.
-            // O Cortex registra a decisão; a camada de ações trata apenas capacidades permitidas.
         }
     }
 
@@ -64,12 +73,11 @@ class SoulAdminService : Service() {
             .setOngoing(true)
             .build()
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // O ciclo já foi iniciado em onCreate. Não criar um segundo loop aqui.
-        return START_STICKY
-    }
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
+        plus.watchdog().let { unregisterComponentCallbacks(it) }
+        plus.stop()
         scope.cancel()
         super.onDestroy()
     }
@@ -79,5 +87,16 @@ class SoulAdminService : Service() {
     companion object {
         const val CHANNEL = "soul_admin"
         const val NOTIFICATION_ID = 7001
+    }
+}
+
+object SoulRuntimeBusHolder {
+    @Volatile
+    var bus: com.divibisoul.soul.core.SoulEventBus? = null
+        private set
+
+    @Synchronized
+    fun create(): com.divibisoul.soul.core.SoulEventBus {
+        return bus ?: com.divibisoul.soul.core.SoulEventBus().also { bus = it }
     }
 }
