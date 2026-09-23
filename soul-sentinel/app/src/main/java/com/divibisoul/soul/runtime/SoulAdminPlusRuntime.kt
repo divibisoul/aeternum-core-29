@@ -15,6 +15,7 @@ import com.divibisoul.soul.core.state.DashboardStateStore
 import com.divibisoul.soul.data.FeedbackRepository
 import com.divibisoul.soul.data.LogSyncWorker
 import com.divibisoul.soul.network.N07Client
+import com.divibisoul.soul.network.OctaCoreClient
 import com.divibisoul.soul.network.SaraClient
 import com.divibisoul.soul.network.SecureEndpointConfigStore
 import kotlinx.coroutines.CoroutineScope
@@ -37,6 +38,7 @@ class SoulAdminPlusRuntime(
     private val dashboard = DashboardStateStore(appContext)
     private val sara = SaraClient(config)
     private val n07 = N07Client(config)
+    private val octaCore = OctaCoreClient(config)
     private val root = RootGate()
     private val shizuku = ShizukuOrchestrator()
     private val missions = MissionControl(appContext)
@@ -104,10 +106,21 @@ class SoulAdminPlusRuntime(
                 dashboard.patch { it.copy(n07Health = health.optString("status", "UNKNOWN")) }
             } catch (e: Exception) {
                 val code = (e as? com.divibisoul.soul.network.N07Exception)?.code ?: "N07_UNAVAILABLE"
-                dashboard.patch { it.copy(n07Health = code, errors = it.errors + code) }
+                dashboard.patch { it.copy(n07Health = code, errors = (it.errors + code).takeLast(50)) }
+            }
+
+            try {
+                val health = octaCore.health()
+                val octaStatus = health.optString("status", "UNKNOWN")
+                dashboard.patch { it.copy(octaCoreHealth = octaStatus) }
+                bus.publish(SoulEvent.OctaCoreHealthChanged(octaStatus))
+            } catch (e: Exception) {
+                val code = (e as? com.divibisoul.soul.network.OctaCoreException)?.code ?: "OCTACORE_UNAVAILABLE"
+                dashboard.patch { it.copy(octaCoreHealth = code, errors = (it.errors + code).takeLast(50)) }
+                bus.publish(SoulEvent.OctaCoreUnavailable(code))
             }
         } else {
-            dashboard.patch { it.copy(n07Health = "DISABLED") }
+            dashboard.patch { it.copy(n07Health = "DISABLED", octaCoreHealth = "DISABLED") }
         }
 
         val cfgForPrivilege = config.read()
@@ -196,6 +209,7 @@ class SoulAdminPlusRuntime(
     fun dashboard(): DashboardStateStore = dashboard
     fun sara(): SaraClient = sara
     fun n07(): N07Client = n07
+    fun octaCore(): OctaCoreClient = octaCore
     fun feedback(): FeedbackRepository = feedback
 
     @Synchronized
