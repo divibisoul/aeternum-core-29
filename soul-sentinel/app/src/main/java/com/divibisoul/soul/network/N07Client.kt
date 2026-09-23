@@ -128,6 +128,6 @@ class N07Client(private val configStore: SecureEndpointConfigStore) {
      * string and therefore could not identify an N07 tool. It now fails explicitly
      * instead of sending a malformed request.
      */
-    suspend fun intent(input: String, correlationId: String) =
+    suspend fun intent(input: String, correlationId: String): Nothing =
         throw N07Exception("N07_INVALID_REQUEST", "N07 intent requires tool + structured input; use intent(tool, input, correlationId)")
 }
