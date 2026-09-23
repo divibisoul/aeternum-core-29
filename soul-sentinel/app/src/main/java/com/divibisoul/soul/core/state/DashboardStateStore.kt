@@ -19,6 +19,7 @@ data class DashboardState(
     val batteryThermal: String = "UNAVAILABLE",
     val saraHealth: String = "UNCONFIGURED",
     val n07Health: String = "DISABLED",
+    val octaCoreHealth: String = "DISABLED",
     val lastCycleId: String? = null,
     val lastTraceHash: String? = null,
     val rootStatus: String = "UNKNOWN",
@@ -50,6 +51,7 @@ class DashboardStateStore(private val context: Context) {
             .put("battery_thermal", s.batteryThermal)
             .put("sara_health", s.saraHealth)
             .put("n07_health", s.n07Health)
+            .put("octacore_health", s.octaCoreHealth)
             .put("last_cycle_id", s.lastCycleId)
             .put("last_trace_hash", s.lastTraceHash)
             .put("root_status", s.rootStatus)
@@ -70,6 +72,7 @@ class DashboardStateStore(private val context: Context) {
             batteryThermal = json.optString("battery_thermal", "UNAVAILABLE"),
             saraHealth = json.optString("sara_health", "UNCONFIGURED"),
             n07Health = json.optString("n07_health", "DISABLED"),
+            octaCoreHealth = json.optString("octacore_health", "DISABLED"),
             lastCycleId = json.optString("last_cycle_id").takeIf { it.isNotBlank() && it != "null" },
             lastTraceHash = json.optString("last_trace_hash").takeIf { it.isNotBlank() && it != "null" },
             rootStatus = json.optString("root_status", "UNKNOWN"),
@@ -95,6 +98,7 @@ class DashboardStateStore(private val context: Context) {
         batteryThermal = p[BATTERY_THERMAL] ?: "UNAVAILABLE",
         saraHealth = p[SARA_HEALTH] ?: "UNCONFIGURED",
         n07Health = p[N07_HEALTH] ?: "DISABLED",
+        octaCoreHealth = p[OCTACORE_HEALTH] ?: "DISABLED",
         lastCycleId = p[LAST_CYCLE],
         lastTraceHash = p[LAST_TRACE],
         rootStatus = p[ROOT_STATUS] ?: "UNKNOWN",
@@ -107,6 +111,7 @@ class DashboardStateStore(private val context: Context) {
         p[BATTERY_THERMAL] = s.batteryThermal
         p[SARA_HEALTH] = s.saraHealth
         p[N07_HEALTH] = s.n07Health
+        p[OCTACORE_HEALTH] = s.octaCoreHealth
         if (s.lastCycleId == null) p.remove(LAST_CYCLE) else p[LAST_CYCLE] = s.lastCycleId
         if (s.lastTraceHash == null) p.remove(LAST_TRACE) else p[LAST_TRACE] = s.lastTraceHash
         p[ROOT_STATUS] = s.rootStatus
@@ -119,6 +124,7 @@ class DashboardStateStore(private val context: Context) {
         private val BATTERY_THERMAL = stringPreferencesKey("battery_thermal")
         private val SARA_HEALTH = stringPreferencesKey("sara_health")
         private val N07_HEALTH = stringPreferencesKey("n07_health")
+        private val OCTACORE_HEALTH = stringPreferencesKey("octacore_health")
         private val LAST_CYCLE = stringPreferencesKey("last_cycle")
         private val LAST_TRACE = stringPreferencesKey("last_trace")
         private val ROOT_STATUS = stringPreferencesKey("root_status")
