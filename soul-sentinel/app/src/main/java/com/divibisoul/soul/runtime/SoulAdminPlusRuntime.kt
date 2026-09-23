@@ -165,8 +165,8 @@ class SoulAdminPlusRuntime(
                     " | NNAPI " + snapshot.nnapiAvailable,
                 batteryThermal = "battery=" + (snapshot.batteryLevel?.toString() ?: "unavailable") +
                     "% temp=" + (snapshot.batteryTempC?.toString() ?: "unavailable") +
-                    "C thermal=" + hardware.getThermalSnapshot().joinToString("|"),
-                queueDepth = intentQueue.depth().toInt()
+                    "C thermal=" + thermalSnapshot.joinToString("|"),
+                queueDepth = queueDepth.toInt()
             )
         }
         watchdog.check(dashboard.state.value.saraHealth == "ok")
