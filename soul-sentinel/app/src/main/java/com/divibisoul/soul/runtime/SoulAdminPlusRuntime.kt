@@ -43,7 +43,7 @@ class SoulAdminPlusRuntime(
     private val octaCore = OctaCoreClient(config)
     private val hortaCore = HortaCoreClient(config)
     private val root = RootGate()
-    private val shizuku = ShizukuOrchestrator()
+    private val shizuku = ShizukuOrchestrator(appContext)
     private val missions = MissionControl(appContext)
     private val watchdog = AndroidWatchdog(appContext, bus, missions, dashboard, scope)
     private val feedback = FeedbackRepository(appContext)
@@ -218,6 +218,7 @@ class SoulAdminPlusRuntime(
         missions.resume()
     }
     fun requestShizukuPermission() = shizuku.requestPermissionIfNeeded()
+    fun shizuku(): ShizukuOrchestrator = shizuku
     fun shizukuState() = shizuku.state()
     fun watchdog(): AndroidWatchdog = watchdog
     fun dashboard(): DashboardStateStore = dashboard
