@@ -154,6 +154,8 @@ class SoulAdminPlusRuntime(
 
     private suspend fun refreshHardware() {
         val snapshot = hardware.detect()
+        val thermalSnapshot = hardware.getThermalSnapshot()
+        val queueDepth = intentQueue.depth()
         dashboard.patch {
             it.copy(
                 hardware = snapshot.manufacturer + " " + snapshot.model +
