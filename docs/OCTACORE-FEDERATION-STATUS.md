@@ -36,3 +36,9 @@ The Plus front is now **UNFROZEN / ACTIVE IMPLEMENTATION** for the HortaCore fus
 - The Plus cockpit exposes the fused HortaCore health alongside N07, Octacore/G7 and SARA state.
 
 This is implementation-level fusion. It is not a claim that the Android APK or a distributed production transport is online.
+
+## G0 evidence update — 2026-09-23
+
+SARA G0 CI returned PASS on `e7d5b595ac6713b7ffec85940cbe007cd0d4389e` in validation run `35819484466` and CI run `35819484461`. The G0 kernel API, canonical SaraModule contract and Vagus control/health path are now validated by the SARA suite.
+
+The earlier historical freeze remains intact; the current Plus/HortaCore fusion stage remains UNFROZEN / ACTIVE IMPLEMENTATION.
