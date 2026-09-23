@@ -107,3 +107,18 @@ The Plus front is now ACTIVE rather than frozen for this stage. The Android laye
 - N07 remote jobs use the canonical Soul Mesh.
 - G6 can invoke the full federated context flow through N07 Mesh with the original correlation ID.
 - Existing Plus watchdog/root/auth/logging/mission facilities remain preserved.
+
+## Current evidence correction — 2026-09-23
+
+The historical entries above are preserved. During the Octacore fusion pass, one real accidental deletion was discovered in `src/sara/meta/octacore_kernel.py`: the `_worker_loop` implementation and additional G0 kernel methods had been removed during an earlier slicing-based merge. They were explicitly restored rather than replaced with a new implementation. The latest branch comparisons show zero removed files.
+
+Current Plus state:
+
+- **UNFROZEN / ACTIVE IMPLEMENTATION** for the HortaCore ⊕ VagusBus ⊕ Mesh ⊕ Octacore integration stage.
+- Added authenticated `HortaCoreClient` over the existing N07 `/v1/execute` contract.
+- Added persistent HortaCore health to DashboardStateStore and cockpit visibility.
+- Existing OctacoreClient, SARAClient, N07Client, watchdog, root/auth, logging and mission facilities remain intact.
+- No second Mesh, scheduler or SARA authority was introduced.
+- APK build/install and Android field commissioning remain OPEN.
+
+The current certification boundary remains: N07 Octacore/HortaCore focused gate PASS; G0 SARA validation OPEN until its own CI returns PASS.
