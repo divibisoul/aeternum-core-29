@@ -19,7 +19,7 @@ class OctaCoreClient(private val configStore: SecureEndpointConfigStore) {
     private suspend fun request(
         method: String,
         path: String,
-        body: JSONObject? = null,
+        body: String? = null,
         correlationId: String = UUID.randomUUID().toString(),
     ): JSONObject = withContext(Dispatchers.IO) {
         val cfg = configStore.read()
@@ -39,7 +39,7 @@ class OctaCoreClient(private val configStore: SecureEndpointConfigStore) {
 
         if (method == "POST") {
             builder.header("Content-Type", "application/json")
-            builder.post((body ?: JSONObject()).toString().toRequestBody(jsonMedia))
+            builder.post((body ?: "{}").toRequestBody(jsonMedia))
         } else {
             builder.get()
         }
@@ -83,8 +83,8 @@ class OctaCoreClient(private val configStore: SecureEndpointConfigStore) {
         request("GET", "/v1/octacore/inventory", correlationId = correlationId)
 
     suspend fun submit(job: JSONObject, correlationId: String = job.optString("correlation_id").ifBlank { UUID.randomUUID().toString() }) =
-        request("POST", "/v1/octacore/submit", job, correlationId)
+        request("POST", "/v1/octacore/submit", job.toString(), correlationId)
 
     suspend fun batch(jobs: JSONArray, correlationId: String = UUID.randomUUID().toString()) =
-        request("POST", "/v1/octacore/batch", JSONObject().put("jobs", jobs), correlationId)
+        request("POST", "/v1/octacore/batch", jobs.toString(), correlationId)
 }
