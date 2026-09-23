@@ -59,6 +59,10 @@ try {
   assert.equal(saraConfigured(), false);
   assert.equal(saraHealthConfigured(), false);
   assert.equal(saraDescribe().configured, false);
+  const describedIds = saraDescribe().operations.map(operation => operation.id);
+  assert.equal(describedIds.includes('sara.octacore'), true);
+  assert.equal(describedIds.includes('sara.mesh.status'), true);
+  assert.equal(describedIds.includes('sara.mesh.probe'), true);
 
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
