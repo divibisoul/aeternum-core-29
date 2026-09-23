@@ -11,14 +11,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
-    <provider
-        android:name="rikka.shizuku.ShizukuProvider"
-        android:authorities="${applicationId}.shizuku"
-        android:enabled="true"
-        android:exported="true"
-        android:multiprocess="false"
-        android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
-
     <application android:allowBackup="true" android:label="Soul" android:supportsRtl="true" android:theme="@style/Theme.SoulSentinel">
         <activity android:name=".SoulAiSessionActivity" android:exported="false" />
         <activity android:name=".SoulHybridActivity" android:exported="true">
@@ -29,6 +21,13 @@
         </activity>
         <activity android:name=".MainActivity" android:exported="false" />
         <activity android:name=".SoulAdminPlusActivity" android:exported="false" />
+    <provider
+        android:name="rikka.shizuku.ShizukuProvider"
+        android:authorities="${applicationId}.shizuku"
+        android:enabled="true"
+        android:exported="true"
+        android:multiprocess="false"
+        android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
         <service android:name=".SoulAdminService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="device-administration-context-monitor" />
         </service>
