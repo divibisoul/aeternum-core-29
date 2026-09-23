@@ -20,6 +20,8 @@ sealed interface SoulEvent {
         override val timestamp: Long = System.currentTimeMillis()
     ) : SoulEvent
     data class SaraUnavailable(val code: String, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
+    data class OctaCoreHealthChanged(val status: String, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
+    data class OctaCoreUnavailable(val code: String, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
     data class RootStateChanged(val status: String, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
     data class MissionProgress(val missionId: String, val status: String, val detail: String? = null, override val timestamp: Long = System.currentTimeMillis()) : SoulEvent
     data class WatchdogAlert(
