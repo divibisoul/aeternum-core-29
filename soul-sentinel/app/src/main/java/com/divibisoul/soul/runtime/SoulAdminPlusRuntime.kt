@@ -16,6 +16,8 @@ import com.divibisoul.soul.data.FeedbackRepository
 import com.divibisoul.soul.data.LogSyncWorker
 import com.divibisoul.soul.network.N07Client
 import com.divibisoul.soul.network.OctaCoreClient
+import com.divibisoul.soul.network.HortaCoreClient
+import com.divibisoul.soul.network.HortaCoreException
 import com.divibisoul.soul.network.SaraClient
 import com.divibisoul.soul.network.SecureEndpointConfigStore
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +41,7 @@ class SoulAdminPlusRuntime(
     private val sara = SaraClient(config)
     private val n07 = N07Client(config)
     private val octaCore = OctaCoreClient(config)
+    private val hortaCore = HortaCoreClient(config)
     private val root = RootGate()
     private val shizuku = ShizukuOrchestrator()
     private val missions = MissionControl(appContext)
@@ -114,6 +117,16 @@ class SoulAdminPlusRuntime(
             } catch (e: Exception) {
                 val code = (e as? com.divibisoul.soul.network.OctaCoreException)?.code ?: "OCTACORE_UNAVAILABLE"
                 dashboard.patch { it.copy(octaCoreHealth = code, errors = it.errors + code) }
+            }
+            try {
+                val health = hortaCore.health()
+                val nested = health.optJSONObject("hortacore_json")
+                val status = nested?.optJSONObject("octacore")?.optString("status")
+                    ?: health.optString("status", "UNKNOWN")
+                dashboard.patch { it.copy(hortaCoreHealth = status) }
+            } catch (e: Exception) {
+                val code = (e as? HortaCoreException)?.code ?: "HORTACORE_UNAVAILABLE"
+                dashboard.patch { it.copy(hortaCoreHealth = code, errors = it.errors + code) }
             }
         } else {
             dashboard.patch { it.copy(n07Health = "DISABLED", octaCoreHealth = "DISABLED") }
@@ -206,6 +219,7 @@ class SoulAdminPlusRuntime(
     fun sara(): SaraClient = sara
     fun n07(): N07Client = n07
     fun octaCore(): OctaCoreClient = octaCore
+    fun hortaCore(): HortaCoreClient = hortaCore
     fun feedback(): FeedbackRepository = feedback
 
     @Synchronized
