@@ -101,7 +101,7 @@ class OctaCoreClient(private val configStore: SecureEndpointConfigStore) {
             "/v1/octacore/batch",
             JSONObject().put(
                 "jobs",
-                JSONArray(jobs.map { it.toJson() })
+                JSONArray().apply { jobs.forEach { put(it.toJson()) } }
             ),
             correlationId
         )
