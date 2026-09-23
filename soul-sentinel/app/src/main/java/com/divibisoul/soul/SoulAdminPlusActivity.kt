@@ -19,7 +19,6 @@ import com.divibisoul.soul.core.security.AuthAndSignature
 import com.divibisoul.soul.core.security.LocalRole
 import com.divibisoul.soul.core.security.PrivilegedAuthGate
 import com.divibisoul.soul.core.security.RootGate
-import com.divibisoul.soul.core.security.ShizukuOrchestrator
 import com.divibisoul.soul.runtime.SoulAdminPlusRuntime
 import com.divibisoul.soul.runtime.SoulAdminPlusRuntimeRegistry
 import com.divibisoul.soul.core.federation.FederationStatusMatrix
@@ -172,7 +171,7 @@ class SoulAdminPlusActivity : FragmentActivity() {
                             }
                         }) { Text("SALVAR") }
                         OutlinedButton(onClick = {
-                            scope.launch { ShizukuOrchestrator().requestPermissionIfNeeded() }
+                            scope.launch { runtime.requestShizukuPermission() }
                         }) { Text("SOLICITAR SHIZUKU") }
                     }
                 }
@@ -291,10 +290,10 @@ class SoulAdminPlusActivity : FragmentActivity() {
                             }
 
                             output = withContext(Dispatchers.IO) {
-                                val shizuku = ShizukuOrchestrator().state()
+                                val shizuku = runtime.shizuku().state()
                                 val cfg = config.read()
                                 if (shizuku.running && shizuku.permissionGranted) {
-                                    runCatching { ShizukuOrchestrator().execute("id") }.getOrElse {
+                                    runCatching { runtime.shizuku().execute("id") }.getOrElse {
                                         "SHIZUKU_ERROR: " + (it.message ?: "unknown")
                                     }
                                 } else if (cfg.rootEnabled) {
