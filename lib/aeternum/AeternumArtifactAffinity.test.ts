@@ -6,14 +6,15 @@ import {
   validateArtifactBalance,
 } from "./AeternumArtifactAffinity";
 
-test("L1-L5 functional artifact affinity is balanced 6x8", () => {
-  assert.equal(AETERNUM_ARTIFACT_AFFINITY.length, 48);
+test("L1-L6 artifact affinity stays balanced within one entry per participant", () => {
+  assert.equal(AETERNUM_ARTIFACT_AFFINITY.length, 58);
 
   const validation = validateArtifactBalance();
   assert.equal(validation.ok, true);
-  for (const participant of AETERNUM_ARTIFACT_PARTICIPANTS) {
-    assert.equal(validation.counts[participant], 6);
-  }
+  const counts = AETERNUM_ARTIFACT_PARTICIPANTS.map(participant => validation.counts[participant]);
+  assert.ok(Math.min(...counts) >= 7);
+  assert.ok(Math.max(...counts) <= 8);
+  assert.ok(Math.max(...counts) - Math.min(...counts) <= 1);
 
   const ids = AETERNUM_ARTIFACT_AFFINITY.map((artifact) => artifact.id);
   assert.equal(new Set(ids).size, ids.length);
