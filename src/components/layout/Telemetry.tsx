@@ -13,6 +13,7 @@ import { useModuleRegistry } from '@/core/ModuleRegistry';
 import { ProjetoClareira, type SystemMetrics } from '@/core/neural';
 import { ConscienciaAlgoritmicaInstance } from '@/core/layers/ConscienciaAlgoritmica';
 import { PerformanceMonitor, type PerformanceMetrics } from '@/lib/monitoring/PerformanceMonitor';
+import { AeternumAGI } from '@/core/agi';
 import { cn } from '@/lib/utils';
 
 interface MetricProps {
@@ -56,6 +57,7 @@ export function Telemetry() {
   const [neuralMetrics, setNeuralMetrics] = useState<SystemMetrics | null>(null);
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
   const [conscienciaActive, setConscienciaActive] = useState(false);
+  const [agiState, setAgiState] = useState<{active:number; total:number}>({ active: 0, total: 0 });
 
   // Update uptime every second
   useEffect(() => {
@@ -80,6 +82,12 @@ export function Telemetry() {
       // Check if ConscienciaAlgoritmica is active
       const conscienciaMetrics = ConscienciaAlgoritmicaInstance.getMetrics();
       setConscienciaActive(conscienciaMetrics.processamentosTotal > 0);
+      const agi = AeternumAGI.getInstance();
+      const full = agi.getFullMetrics();
+      setAgiState({
+        active: full.overall.activeSubsystems,
+        total: full.overall.subsystems,
+      });
     }, 1000);
 
     return () => {
@@ -107,9 +115,9 @@ export function Telemetry() {
     return 'normal';
   };
 
-  const systemLevel = neuralMetrics 
-    ? Math.min(5, Math.max(1, Math.round((1 - neuralMetrics.globalStress / 5) * 5)))
-    : 4;
+  const systemLevel = agiState.total > 0
+    ? Math.min(5, Math.max(0, Math.round((agiState.active / agiState.total) * 5)))
+    : 0;
 
   return (
     <motion.div
@@ -134,8 +142,8 @@ export function Telemetry() {
         <Metric
           icon={Zap}
           label="FPS"
-          value={performanceMetrics?.fps?.toFixed(0) || '60'}
-          status={performanceMetrics && performanceMetrics.fps < 50 ? 'warning' : 'normal'}
+          value={performanceMetrics ? performanceMetrics.fps.toFixed(0) : 'NÃO MENSURÁVEL'}
+          status={performanceMetrics ? (performanceMetrics.fps < 50 ? 'warning' : 'normal') : 'normal'}
         />
       </div>
 
@@ -144,7 +152,7 @@ export function Telemetry() {
         {/* AGI 17 engines */}
         <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-primary/10 border border-primary/30">
           <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono text-[10px] text-primary">AGI:17/17</span>
+          <span className="font-mono text-[10px] text-primary">AGI:{agiState.active}/{agiState.total}</span>
         </div>
 
         {/* Neural */}
@@ -185,7 +193,7 @@ export function Telemetry() {
         <Metric
           icon={Cpu}
           label="Memory"
-          value={performanceMetrics?.memoryMB?.toFixed(0) || '0'}
+          value={performanceMetrics ? performanceMetrics.memoryMB.toFixed(0) : 'NÃO MENSURÁVEL'}
           unit="MB"
           status={performanceMetrics && performanceMetrics.memoryMB > 500 ? 'warning' : 'normal'}
         />
