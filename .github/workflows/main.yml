@@ -60,12 +60,13 @@ jobs:
     steps:
       # --- Preparação ---
       - name: Baixar código (com submódulos)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
+          fetch-depth: 0
 
       - name: Configurar Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -219,9 +220,9 @@ jobs:
             # 1. Atualizar dependências
             pip install --upgrade -r requirements.txt 2>/dev/null || true
             # 2. Linters e formatação
-            pip install black flake8 2>/dev/null || true
-            black . 2>/dev/null || true
-            flake8 . --max-line-length=120 --count --statistics 2>/dev/null || true
+            pip install black flake8 2>/dev/null
+            black .
+            flake8 . --max-line-length=120 --count --statistics
             # 3. Recompilar com otimização
             for nucleo in N01 N02 N03 N04 N05 N06 N07; do
               if [ -f "nucleos/$nucleo/Makefile" ]; then
@@ -240,8 +241,15 @@ jobs:
               echo "✅ Reparo bem‑sucedido na tentativa $ATTEMPT."
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
-              git add . && git commit -m "fix: reparo automático (tentativa $ATTEMPT)" || true
-              git push || true
+              git add .
+              if git diff --cached --quiet; then
+                echo "REPAIR_NO_SOURCE_CHANGES=TRUE"
+              else
+                git commit -m "fix: reparo automático (tentativa $ATTEMPT)"
+                BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+                git push origin "HEAD:${BRANCH}"
+                echo "REPAIR_PUBLISHED=TRUE"
+              fi
               # Dispara regeneração após reparo
               echo "REGENERATE_AFTER_REPAIR=true" >> $GITHUB_ENV
               exit 0
@@ -309,7 +317,7 @@ jobs:
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # --- Fechar issues e PRs obsoletos (stale) ---
       - name: Fechar issues/PRs inativos
@@ -325,7 +333,7 @@ jobs:
           exempt-issue-labels: 'pinned,security,enhancement'
           exempt-pr-labels: 'pinned,work-in-progress'
           operations-per-run: 100
-          delete-branch: true
+          delete-branch: false
           enable-statistics: true
 
       # --- Limpar branches mescladas ---
@@ -339,16 +347,7 @@ jobs:
             });
             const mergedBranches = branches.filter(b => b.name !== 'main' && b.name !== 'principal');
             for (const branch of mergedBranches) {
-              try {
-                await github.rest.git.deleteRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `heads/${branch.name}`,
-                });
-                console.log(`Branch ${branch.name} removida.`);
-              } catch (e) {
-                console.log(`Não foi possível remover ${branch.name}: ${e.message}`);
-              }
+              console.log(`Branch candidata à limpeza: ${branch.name}. Nenhuma remoção automática é executada.`);
             }
 
       # --- Verificar segurança de dependências (usando Trivy) ---
@@ -361,7 +360,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload do relatório Trivy
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 
