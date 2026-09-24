@@ -1,8 +1,10 @@
 /**
- * CAMADA SIMBÓLICA - Experimental (Quantum, Morfogenético)
- * 
- * Adaptação de camada_simbolica.py para TypeScript
- * Implementa campo morfogenético, barramento quântico e tunelamento cognitivo
+ * CAMADA SIMBÓLICA - Modelos simbólicos e analógicos
+ *
+ * Adaptação de camada_simbolica.py para TypeScript.
+ * As classes históricas "quântico"/"túnel"/"entrelacamento" são preservadas
+ * por compatibilidade, mas representam operadores lógicos do sistema, não
+ * fenômenos físicos de mecânica quântica.
  */
 
 import { EventBus } from '../EventBus';
@@ -89,6 +91,20 @@ interface EventoSuperposto {
   dados: unknown;
   timestamp: number;
   probabilidade: number;
+  modelType: 'SYMBOLIC_PRIORITY';
+}
+
+function stableHash(input: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function deterministicUnit(input: string): number {
+  return stableHash(input) / 0xFFFFFFFF;
 }
 
 /**
@@ -150,12 +166,13 @@ export class BarramentoQuantico {
       }
     }
     
-    // Adicionar à superposição
+    // Prioridade simbólica determinística, sem alegar aleatoriedade quântica.
     const eventoSuperposto: EventoSuperposto = {
       evento,
       dados,
       timestamp: Date.now(),
-      probabilidade: Math.random(), // Probabilidade quântica simulada
+      probabilidade: deterministicUnit(`${evento}\u0000${origem}`),
+      modelType: 'SYMBOLIC_PRIORITY',
     };
     
     this.eventosSupepostos.push(eventoSuperposto);
@@ -165,7 +182,7 @@ export class BarramentoQuantico {
       this.eventosSupepostos.shift();
     }
     
-    console.log(`[BarramentoQuantico] Emitido simbólico: ${evento} (prob: ${eventoSuperposto.probabilidade.toFixed(3)})`);
+    console.log(`[BarramentoQuantico] Emitido modelo simbólico: ${evento} (prioridade: ${eventoSuperposto.probabilidade.toFixed(3)})`);
   }
 
   /**
@@ -208,7 +225,7 @@ export class BarramentoQuantico {
 /**
  * TunelamentoCognitivo - Permite "saltos" instantâneos entre estados cognitivos
  * 
- * Simula o tunelamento quântico para transições cognitivas não-lineares
+ * Modela uma transição não-linear como probabilidade simbólica determinística.
  */
 export class TunelamentoCognitivo {
   private estados: Map<string, unknown> = new Map();
@@ -263,9 +280,10 @@ export class TunelamentoCognitivo {
   }
 
   private calcularProbabilidade(de: string, para: string): number {
-    // Simula decaimento exponencial da barreira
     const barreiraCognitiva = Math.abs(de.length - para.length) * 0.1 + 0.5;
-    return Math.exp(-barreiraCognitiva) * (0.5 + Math.random() * 0.5);
+    const base = Math.exp(-barreiraCognitiva);
+    const modulation = 0.75 + deterministicUnit(`${de}\u0000${para}`) * 0.25;
+    return Math.max(0, Math.min(1, base * modulation));
   }
 
   getMetrics(): { tunelamentos: number; estadosRegistrados: number } {
@@ -279,7 +297,7 @@ export class TunelamentoCognitivo {
 /**
  * EntrelacamentoSistemico - Conecta componentes distantes do sistema
  * 
- * Simula entrelamento quântico para sincronização instantânea
+ * Modela pareamento lógico determinístico para sincronização de estados.
  */
 export class EntrelacamentoSistemico {
   private pares: Map<string, { parceiro: string; estado: 'up' | 'down' }> = new Map();
@@ -296,7 +314,7 @@ export class EntrelacamentoSistemico {
    * Cria entrelamento entre dois componentes
    */
   entrelacar(componente1: string, componente2: string): void {
-    const estadoInicial = Math.random() > 0.5 ? 'up' : 'down';
+    const estadoInicial = deterministicUnit(`${componente1}\u0000${componente2}`) >= 0.5 ? 'up' : 'down';
     const estadoOposto = estadoInicial === 'up' ? 'down' : 'up';
     
     this.pares.set(componente1, { parceiro: componente2, estado: estadoInicial });
@@ -315,7 +333,7 @@ export class EntrelacamentoSistemico {
     
     this.sincronizacoes++;
     
-    // Ao medir, o parceiro colapsa para estado oposto
+    // Ao medir, o parceiro lógico é atualizado para o estado complementar.
     const parceiroInfo = this.pares.get(info.parceiro);
     if (parceiroInfo) {
       parceiroInfo.estado = info.estado === 'up' ? 'down' : 'up';
