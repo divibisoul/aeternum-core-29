@@ -280,17 +280,20 @@ export function SystemDashboard() {
                 {/* ARQUITETURA QUADRANGULAR */}
                 <Section 
                   icon={Shield} 
-                  title="Arquitetura Quadrangular" 
-                  status="online"
+                  title="Arquitetura Quadrangular"
+                  status="warning"
                   color="blue-400"
                 >
+                  <div className="mb-2 text-[10px] text-yellow-400">
+                    Estado da implementação: NÃO MENSURÁVEL — não há executor/registro funcional identificado para os quatro lados.
+                  </div>
                   <div className="grid grid-cols-2 gap-2">
                     {/* Estabilidade */}
                     <div className="bg-green-500/10 rounded-lg p-2 text-center">
                       <Shield className="h-4 w-4 mx-auto text-green-400 mb-1" />
                       <div className="text-[10px] text-muted-foreground">Estabilidade</div>
                       <div className="text-xs font-mono font-bold text-green-400">
-                        {performanceMetrics?.fps || 60} FPS
+                        {performanceMetrics ? `${performanceMetrics.fps.toFixed(0)} FPS` : "NÃO MENSURÁVEL"}
                       </div>
                     </div>
                     
@@ -299,7 +302,7 @@ export function SystemDashboard() {
                       <Zap className="h-4 w-4 mx-auto text-yellow-400 mb-1" />
                       <div className="text-[10px] text-muted-foreground">Performance</div>
                       <div className="text-xs font-mono font-bold text-yellow-400">
-                        {performanceMetrics?.latency || '<1'}ms
+                        {performanceMetrics ? performanceMetrics.latency : "NÃO MENSURÁVEL"}ms
                       </div>
                     </div>
                     
@@ -317,7 +320,7 @@ export function SystemDashboard() {
                       <Settings2 className="h-4 w-4 mx-auto text-purple-400 mb-1" />
                       <div className="text-[10px] text-muted-foreground">Otimização</div>
                       <div className="text-xs font-mono font-bold text-purple-400">
-                        {performanceMetrics?.memoryMB || 0}MB
+                        {performanceMetrics ? `${performanceMetrics.memoryMB.toFixed(0)}MB` : "NÃO MENSURÁVEL"}
                       </div>
                     </div>
                   </div>
