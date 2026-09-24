@@ -1,26 +1,29 @@
 /**
  * Advanced Connectivity Manager
- * Origem: aeternum-core-self
- * 
- * Gerencia conectividade mesh, IoT e networking quântico
- * entre os subsistemas AGI.
+ *
+ * Provides a real observation boundary for the SOUL internal connectivity
+ * model. Registration is not the same as network connectivity.
  */
-
 export interface MeshNode {
   id: string;
   type: string;
   status: 'connected' | 'disconnected' | 'syncing';
   latency: number;
   lastSeen: number;
+  observed: boolean;
 }
 
 export interface ConnectivityMetrics {
   meshNodes: number;
   avgLatency: number;
-  bandwidth: number; // Mbps simulated
-  reliability: number; // 0-1
+  bandwidth: number;
+  reliability: number;
   iotDevices: number;
   quantumEncrypted: boolean;
+  observed: boolean;
+  bandwidthSource: 'OBSERVED' | 'UNOBSERVED';
+  reliabilitySource: 'OBSERVED' | 'UNOBSERVED';
+  encryptionSource: 'OBSERVED' | 'UNOBSERVED';
 }
 
 export class ConnectivityManager {
@@ -28,8 +31,12 @@ export class ConnectivityManager {
   private _initialized = false;
   private _running = false;
   private _tickInterval: ReturnType<typeof setInterval> | null = null;
-  private _bandwidth = 1000; // Mbps
-  private _reliability = 0.999;
+  private _bandwidth = 0;
+  private _reliability = 0;
+  private _bandwidthObserved = false;
+  private _reliabilityObserved = false;
+  private _quantumEncryptionObserved = false;
+  private _quantumEncrypted = false;
 
   get initialized(): boolean { return this._initialized; }
   get isRunning(): boolean { return this._running; }
@@ -37,22 +44,22 @@ export class ConnectivityManager {
   initialize(): void {
     if (this._initialized) return;
 
-    // Auto-register AGI subsystems as mesh nodes
     const subsystems = [
       'consciousness', 'godel', 'darwin', 'lattice',
       'safeCore', 'selfHealing', 'ethics', 'hyperSafety',
       'nip', 'quantumNeural'
     ];
 
-    subsystems.forEach(id => {
+    for (const id of subsystems) {
       this.meshNetwork.set(id, {
         id,
         type: 'agi-subsystem',
-        status: 'connected',
-        latency: Math.random() * 2, // < 2ms
-        lastSeen: Date.now()
+        status: 'disconnected',
+        latency: 0,
+        lastSeen: 0,
+        observed: false,
       });
-    });
+    }
 
     this._initialized = true;
   }
@@ -60,64 +67,103 @@ export class ConnectivityManager {
   start(tickMs: number = 5000): void {
     if (this._running) return;
     this._running = true;
-
-    this._tickInterval = setInterval(() => {
-      this.tick();
-    }, tickMs);
+    this._tickInterval = setInterval(() => this.tick(), tickMs);
+    this.tick();
   }
 
   stop(): void {
-    if (this._tickInterval) {
-      clearInterval(this._tickInterval);
-      this._tickInterval = null;
-    }
+    if (this._tickInterval) clearInterval(this._tickInterval);
+    this._tickInterval = null;
     this._running = false;
   }
 
   private tick(): void {
-    for (const [, node] of this.meshNetwork) {
-      // Simulate latency fluctuation
-      node.latency = Math.max(0.1, node.latency + (Math.random() - 0.5) * 0.3);
-      node.lastSeen = Date.now();
-      
-      // Very rare disconnection simulation
-      if (Math.random() < 0.001) {
-        node.status = 'syncing';
-        setTimeout(() => { node.status = 'connected'; }, 2000);
+    // No synthetic network fluctuation is generated. Network state changes only
+    // through explicit observations from a real transport/peer.
+    for (const node of this.meshNetwork.values()) {
+      if (node.observed && node.lastSeen > 0 && Date.now() - node.lastSeen > 15000) {
+        node.status = 'disconnected';
       }
     }
+  }
 
-    // Bandwidth/reliability fluctuation
-    this._bandwidth = Math.max(500, Math.min(2000, this._bandwidth + (Math.random() - 0.5) * 50));
-    this._reliability = Math.max(0.99, Math.min(1, this._reliability + (Math.random() - 0.5) * 0.001));
+  recordNodeObservation(id: string, observation: {
+    status: MeshNode['status'];
+    latencyMs: number;
+    observedAt?: number;
+  }): void {
+    if (!this.meshNetwork.has(id)) {
+      this.meshNetwork.set(id, {
+        id,
+        type: 'external-observed',
+        status: observation.status,
+        latency: observation.latencyMs,
+        lastSeen: observation.observedAt ?? Date.now(),
+        observed: true,
+      });
+      return;
+    }
+    const node = this.meshNetwork.get(id)!;
+    node.status = observation.status;
+    node.latency = Math.max(0, Number.isFinite(observation.latencyMs) ? observation.latencyMs : 0);
+    node.lastSeen = observation.observedAt ?? Date.now();
+    node.observed = true;
+  }
+
+  recordBandwidthObservation(mbps: number): void {
+    if (!Number.isFinite(mbps) || mbps < 0) throw new Error('Invalid bandwidth observation');
+    this._bandwidth = mbps;
+    this._bandwidthObserved = true;
+  }
+
+  recordReliabilityObservation(value: number): void {
+    if (!Number.isFinite(value) || value < 0 || value > 1) throw new Error('Invalid reliability observation');
+    this._reliability = value;
+    this._reliabilityObserved = true;
+  }
+
+  recordEncryptionObservation(encrypted: boolean): void {
+    this._quantumEncrypted = encrypted;
+    this._quantumEncryptionObserved = true;
   }
 
   registerNode(id: string, type: string): void {
+    const existing = this.meshNetwork.get(id);
+    if (existing) {
+      existing.type = type;
+      return;
+    }
     this.meshNetwork.set(id, {
-      id, type,
-      status: 'connected',
-      latency: Math.random() * 5,
-      lastSeen: Date.now()
+      id,
+      type,
+      status: 'disconnected',
+      latency: 0,
+      lastSeen: 0,
+      observed: false,
     });
   }
 
   getMetrics(): ConnectivityMetrics {
     const nodes = Array.from(this.meshNetwork.values());
-    const connected = nodes.filter(n => n.status === 'connected');
-    
+    const connectedObserved = nodes.filter(n => n.status === 'connected' && n.observed);
+
     return {
       meshNodes: nodes.length,
-      avgLatency: connected.length > 0
-        ? connected.reduce((s, n) => s + n.latency, 0) / connected.length
+      avgLatency: connectedObserved.length > 0
+        ? connectedObserved.reduce((sum, node) => sum + node.latency, 0) / connectedObserved.length
         : 0,
       bandwidth: this._bandwidth,
       reliability: this._reliability,
-      iotDevices: 0, // No real IoT in browser
-      quantumEncrypted: true
+      iotDevices: 0,
+      quantumEncrypted: this._quantumEncrypted,
+      observed: connectedObserved.length > 0 || this._bandwidthObserved || this._reliabilityObserved || this._quantumEncryptionObserved,
+      bandwidthSource: this._bandwidthObserved ? 'OBSERVED' : 'UNOBSERVED',
+      reliabilitySource: this._reliabilityObserved ? 'OBSERVED' : 'UNOBSERVED',
+      encryptionSource: this._quantumEncryptionObserved ? 'OBSERVED' : 'UNOBSERVED',
     };
   }
 
   getNodes(): MeshNode[] {
-    return Array.from(this.meshNetwork.values());
+    return Array.from(this.meshNetwork.values()).map(node => ({ ...node }));
   }
 }
