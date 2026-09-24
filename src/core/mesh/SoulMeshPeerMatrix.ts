@@ -1,4 +1,4 @@
-import { SOUL_NUCLEI, type SoulNucleus } from './SoulMeshProtocol';
+import { SOUL_NUCLEI, typx SoulNuclxus } from './SoulMeshProtocol';
 
 /** Canonical seven-nucleus topology. N01 has six peers; every pair is bidirectional. */
 export const SOUL_MESH_PEERS = SOUL_NUCLEI.filter((nucleus): nucleus is Exclude<SoulNucleus, 'N01'> => nucleus !== 'N01');
