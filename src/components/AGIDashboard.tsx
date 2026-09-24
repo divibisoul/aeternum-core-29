@@ -68,7 +68,7 @@ export function AGIDashboard() {
               Aeternum AGI
               {metrics && (
                 <Badge className="bg-emerald-500/20 text-emerald-400 text-[10px]">
-                  {metrics.overall.activeSubsystems}/{metrics.overall.subsystems} ONLINE
+                  {metrics.overall.activeSubsystems}/{metrics.overall.subsystems} LOOPS ATIVOS
                 </Badge>
               )}
             </CardTitle>
@@ -116,11 +116,11 @@ export function AGIDashboard() {
                       {[
                         { name: 'SAIIC', status: metrics?.saiic?.isRunning, metric: metrics?.saiic?.overallIntegrity, priority: true },
                         { name: 'ResourceMgr', status: metrics?.resources?.isRunning, metric: null, label: `${metrics?.resources?.modulesManaged ?? 0} mods` },
-                        { name: 'GodelAgent', status: true, metric: metrics?.godelMeta?.selfAwareness },
+                        { name: 'GodelAgent', status: Boolean(metrics?.godelMeta), metric: metrics?.godelMeta?.selfAwareness },
                         { name: 'DarwinMachine', status: metrics?.darwin?.isRunning, metric: metrics?.darwin?.avgFitness },
                         { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                         { name: 'Consciousness', status: metrics?.consciousness?.isRunning, metric: null },
-                        { name: 'SafeCore', status: true, metric: null },
+                        { name: 'SafeCore', status: Boolean(metrics?.overall?.initialized), metric: null },
                         { name: 'SelfHealing', status: metrics?.healing?.observedModules > 0, metric: metrics?.healing?.overallScore },
                         { name: 'EthicalOpt', status: metrics?.ethics?.isRunning, metric: metrics?.ethics?.auditMetrics?.avgScore },
                         { name: 'HyperSafety', status: metrics?.safety !== null, metric: metrics?.safety?.overallHealth },
@@ -194,8 +194,8 @@ export function AGIDashboard() {
                       {metrics?.connectivity && (
                         <div className="space-y-1 text-[10px]">
                           <div className="flex justify-between"><span className="text-muted-foreground">Mesh Nodes</span><span className="font-mono">{metrics.connectivity.meshNodes}</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Avg Latency</span><span className="font-mono">{metrics.connectivity.avgLatency.toFixed(1)}ms</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Reliability</span><span className="font-mono text-emerald-400">{(metrics.connectivity.reliability * 100).toFixed(2)}%</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Avg Latency</span><span className="font-mono">{metrics.connectivity.avgLatency > 0 ? metrics.connectivity.avgLatency.toFixed(1) + 'ms' : 'NÃO MENSURÁVEL'}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Reliability</span><span className="font-mono text-emerald-400">{metrics.connectivity.reliabilitySource === 'OBSERVED' ? (metrics.connectivity.reliability * 100).toFixed(2) + '%' : 'NÃO MENSURÁVEL'}</span></div>
                         </div>
                       )}
                       {metrics?.resources && (
@@ -284,11 +284,11 @@ function SAIICDashboard({ metrics, agi }: { metrics: any; agi: any }) {
             <div className="space-y-1 text-[10px]">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Integridade Geral</span>
-                <span className={`font-mono ${metrics.overallIntegrity > 0.9 ? 'text-emerald-400' : metrics.overallIntegrity > 0.7 ? 'text-amber-400' : 'text-red-400'}`}>
-                  {(metrics.overallIntegrity * 100).toFixed(1)}%
+                <span className={`font-mono ${metrics.overallIntegrity === null ? 'text-muted-foreground' : metrics.overallIntegrity > 0.9 ? 'text-emerald-400' : metrics.overallIntegrity > 0.7 ? 'text-amber-400' : 'text-red-400'}`}>
+                  {metrics.overallIntegrity === null ? 'NÃO MENSURÁVEL' : (metrics.overallIntegrity * 100).toFixed(1) + '%'}
                 </span>
               </div>
-              <Progress value={metrics.overallIntegrity * 100} className="h-1.5" />
+              {metrics.overallIntegrity !== null && <Progress value={metrics.overallIntegrity * 100} className="h-1.5" />}
               <div className="flex justify-between"><span className="text-muted-foreground">Ciclos de Scan</span><span className="font-mono">{metrics.scanCycles}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Módulos Monitorados</span><span className="font-mono">{metrics.modulesMonitored}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Ações Anticorpo</span><span className="font-mono text-orange-400">{metrics.totalAnticorpoActions}</span></div>
