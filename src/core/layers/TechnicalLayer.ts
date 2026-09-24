@@ -153,6 +153,16 @@ export class SupervisionadoEvolutivo {
   }
 
   treinar(dados: number[][], labels: number[], epochs: number = 20): { accuracy: number; generations: number } {
+    if (!Array.isArray(dados) || !Array.isArray(labels) || dados.length === 0 || dados.length !== labels.length) {
+      throw new Error('SUPERVISED_DATASET_REQUIRED');
+    }
+    if (!dados.every(row => Array.isArray(row) && row.length > 0 && row.every(value => Number.isFinite(value)))) {
+      throw new Error('SUPERVISED_DATASET_INVALID');
+    }
+    if (!labels.every(label => Number.isInteger(label) && label >= 0 && label < 3)) {
+      throw new Error('SUPERVISED_LABELS_INVALID');
+    }
+
     let bestFitness = 0;
     
     for (let epoch = 0; epoch < epochs; epoch++) {
@@ -322,10 +332,18 @@ export class TransformerExistencial {
 /**
  * MaquinaFusaoCognitiva - Integra múltiplos módulos de aprendizado
  */
+export interface TrainingDataset {
+  data: number[][];
+  labels: number[];
+}
+
+export type TrainingDatasetProvider = () => TrainingDataset | null;
+
 export class MaquinaFusaoCognitiva {
   private aprendizadoReforco: AprendizadoReforcoContinuo;
   private supervisionado: SupervisionadoEvolutivo;
   private transformer: TransformerExistencial;
+  private trainingDatasetProvider: TrainingDatasetProvider | null = null;
 
   constructor() {
     this.aprendizadoReforco = new AprendizadoReforcoContinuo();
@@ -338,37 +356,50 @@ export class MaquinaFusaoCognitiva {
     });
   }
 
+  registerTrainingDatasetProvider(provider: TrainingDatasetProvider): void {
+    if (typeof provider !== 'function') throw new Error('TRAINING_DATASET_PROVIDER_INVALID');
+    this.trainingDatasetProvider = provider;
+  }
+
+  clearTrainingDatasetProvider(): void {
+    this.trainingDatasetProvider = null;
+  }
+
   /**
-   * Acelera aprendizado integrando múltiplas abordagens
+   * Acelera aprendizado integrando múltiplas abordagens.
+   * O ramo supervisionado só executa com dataset real fornecido pelo proprietário.
    */
   acelerarAprendizado(experiencia: number[]): {
     coerencia: number;
     resultados: {
       reforco: Float32Array;
-      evolutivo: { accuracy: number };
+      evolutivo: { accuracy: number | null };
       transformer: { entropy: number };
     };
   } {
     // Processo de reforço
     const reforcoResult = this.aprendizadoReforco.processar(experiencia);
     
-    // Processo evolutivo (criar dados sintéticos)
-    const dadosSinteticos = Array(20).fill(null).map(() => 
-      Array(10).fill(null).map(() => Math.random())
-    );
-    const labelsSinteticos = dadosSinteticos.map(() => Math.floor(Math.random() * 3));
-    const evolutivoResult = this.supervisionado.treinar(dadosSinteticos, labelsSinteticos, 5);
-    
+    let evolutivoAccuracy: number | null = null;
+    const dataset = this.trainingDatasetProvider?.() ?? null;
+    if (dataset) {
+      const evolutivoResult = this.supervisionado.treinar(dataset.data, dataset.labels, 5);
+      evolutivoAccuracy = evolutivoResult.accuracy;
+    }
+
     // Processo transformer
     const sequencia = [experiencia, experiencia.map(x => x * 0.9), experiencia.map(x => x * 1.1)];
     const transformerResult = this.transformer.processar(sequencia);
     
     // Calcular coerência (média ponderada das métricas)
     const reforcoScore = this.aprendizadoReforco.isConverged() ? 1 : 0.5;
-    const evolutivoScore = evolutivoResult.accuracy;
     const transformerScore = transformerResult.attentionEntropy < 2 ? 1 : 0.5;
-    
-    const coerencia = (reforcoScore + evolutivoScore + transformerScore) / 3;
+    const scores = [
+      reforcoScore,
+      evolutivoAccuracy,
+      transformerScore,
+    ].filter((value): value is number => value !== null && Number.isFinite(value));
+    const coerencia = scores.reduce((sum, value) => sum + value, 0) / Math.max(1, scores.length);
     
     console.log(`[MaquinaFusao] Coerência: ${coerencia.toFixed(4)}`);
     
@@ -376,7 +407,7 @@ export class MaquinaFusaoCognitiva {
       coerencia,
       resultados: {
         reforco: reforcoResult,
-        evolutivo: { accuracy: evolutivoResult.accuracy },
+        evolutivo: { accuracy: evolutivoAccuracy },
         transformer: { entropy: transformerResult.attentionEntropy },
       },
     };
