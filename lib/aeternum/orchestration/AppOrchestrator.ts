@@ -74,7 +74,9 @@ export class AppOrchestrator {
     };
     aeternumHortaCore.set("system.appOrchestrator.status", "READY");
     aeternumHortaCore.set("system.boot.snapshot", { ...this.snapshot, evidence: { ...this.snapshot.evidence } });
-    void aeternumBus.emit("system.boot.complete", { ...this.snapshot, evidence: { ...this.snapshot.evidence } });
+    // AeternumOrchestrator already emits the canonical system.boot.complete event.
+    // This wrapper reports readiness without duplicating completion evidence.
+    void aeternumBus.emit("system.app.ready", { ...this.snapshot, evidence: { ...this.snapshot.evidence } });
     return { ...this.snapshot, evidence: { ...this.snapshot.evidence } };
   }
 
