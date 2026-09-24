@@ -1,4 +1,4 @@
-import { R1_PEER_ROUTES } from './SoulMeshPeerMatrix';
+import { R1_PEER_ROUTES, SOUL_MESH_DIRECTIONAL_CHANNEL_COUNT, SOUL_MESH_CHANNEL_ENDPOINT_COUNT } from './SoulMeshPeerMatrix';
 
 describe('R1 Soul Mesh peer matrix', () => {
   it('has exactly six IN and six OUT routes for N01', () => {
