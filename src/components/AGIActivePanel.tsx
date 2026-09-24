@@ -240,13 +240,19 @@ export function AGIActivePanel() {
                   <div className="space-y-0.5 text-[9px]">
                     <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className={cn("font-mono", metrics.deviceStatus.connected ? 'text-emerald-400' : 'text-muted-foreground')}>{metrics.deviceStatus.connected ? 'CONECTADO' : 'OFFLINE'}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Shizuku</span><span className={cn("font-mono", metrics.deviceStatus.shizukuActive ? 'text-emerald-400' : 'text-muted-foreground')}>{metrics.deviceStatus.shizukuActive ? 'OK' : 'N/A'}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">CPU</span><span className="font-mono">{metrics.deviceStatus.cpu.toFixed(0)}%</span></div>
-                    <Progress value={metrics.deviceStatus.cpu} className="h-1" />
-                    <div className="flex justify-between"><span className="text-muted-foreground">RAM</span><span className="font-mono">{metrics.deviceStatus.ramUsedMb.toFixed(0)}/{metrics.deviceStatus.ramTotalMb}MB</span></div>
-                    <Progress value={(metrics.deviceStatus.ramUsedMb / Math.max(1, metrics.deviceStatus.ramTotalMb)) * 100} className="h-1" />
-                    <div className="flex justify-between"><span className="text-muted-foreground">Bateria</span><span className="font-mono">{metrics.deviceStatus.batteryPct.toFixed(0)}%</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Temp</span><span className={cn("font-mono", metrics.deviceStatus.temperature > 40 ? 'text-red-400' : 'text-emerald-400')}>{metrics.deviceStatus.temperature.toFixed(1)}°C</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Processos</span><span className="font-mono">{metrics.deviceStatus.runningProcesses}</span></div>
+                    {metrics.deviceStatus.metricsAvailable ? (
+                      <>
+                        <div className="flex justify-between"><span className="text-muted-foreground">CPU</span><span className="font-mono">{metrics.deviceStatus.cpu.toFixed(0)}%</span></div>
+                        <Progress value={metrics.deviceStatus.cpu} className="h-1" />
+                        <div className="flex justify-between"><span className="text-muted-foreground">RAM</span><span className="font-mono">{metrics.deviceStatus.ramUsedMb.toFixed(0)}/{metrics.deviceStatus.ramTotalMb}MB</span></div>
+                        <Progress value={(metrics.deviceStatus.ramUsedMb / Math.max(1, metrics.deviceStatus.ramTotalMb)) * 100} className="h-1" />
+                        <div className="flex justify-between"><span className="text-muted-foreground">Bateria</span><span className="font-mono">{metrics.deviceStatus.batteryPct.toFixed(0)}%</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Temp</span><span className={cn("font-mono", metrics.deviceStatus.temperature > 40 ? 'text-red-400' : 'text-emerald-400')}>{metrics.deviceStatus.temperature.toFixed(1)}°C</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Processos</span><span className="font-mono">{metrics.deviceStatus.runningProcesses}</span></div>
+                      </>
+                    ) : (
+                      <div className="text-[9px] text-muted-foreground">Telemetria do dispositivo não observada.</div>
+                    )}
                   </div>
                 )}
                 {!metrics?.deviceStatus?.connected && (
