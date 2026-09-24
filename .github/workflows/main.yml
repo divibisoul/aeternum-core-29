@@ -75,7 +75,7 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends build-essential curl jq
           pip install --upgrade pip setuptools wheel
-          pip install supabase-py pytest requests numpy python-dotenv
+          pip install supabase pytest requests numpy python-dotenv
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           if command -v nvidia-smi &> /dev/null; then
             pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
