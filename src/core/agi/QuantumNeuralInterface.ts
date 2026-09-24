@@ -2,7 +2,7 @@
  * Quantum Neural Interface - AGI Advanced Interface System
  * Origem: aeternum-core-self
  * 
- * Sistema de interface neural e comunicação quântica para AGI.
+ * Sistema de interface neural e representação de estado lógico para AGI.
  * Processa sinais neurais, mantém estado quântico e gerencia
  * entrelaçamento entre subsistemas.
  */
@@ -70,6 +70,7 @@ export class NeuralCommunication {
 export class QuantumNetworking {
   private quantumState: QuantumState;
   private entangledNodes: Set<string> = new Set();
+  private readonly backendAvailable = false;
 
   constructor() {
     this.quantumState = {
@@ -81,19 +82,19 @@ export class QuantumNetworking {
   }
 
   setupQuantumKeyDistribution(): void {
-    this.quantumState.fidelity = 0.999;
+    // Capability reservation only; no quantum backend is registered in this runtime.
   }
 
   enableQuantumTeleportation(): void {
-    this.quantumState.entangled = true;
+    // Preserve API compatibility without claiming physical teleportation.
   }
 
   implementQuantumErrorCorrection(): void {
-    this.quantumState.errorRate = 0.0001;
+    // Physical QEC is unavailable; logical state remains explicitly modeled.
   }
 
   prepareForQuantumInternet(): void {
-    this.quantumState.coherence = 0.999;
+    // No external quantum network is configured.
   }
 
   establishQuantumEntanglement(nodeId: string): boolean {
@@ -102,27 +103,18 @@ export class QuantumNetworking {
     return true;
   }
 
-  /**
-   * Simulate quantum decoherence and correction over time
-   */
+  /** Advance the logical state without fabricating physical quantum effects. */
   tick(): void {
-    // Natural decoherence
-    this.quantumState.coherence *= (0.999 + Math.random() * 0.001);
-    this.quantumState.fidelity *= (0.9995 + Math.random() * 0.0005);
-    
-    // Error correction brings it back
-    if (this.quantumState.coherence < 0.95) {
-      this.quantumState.coherence = Math.min(1, this.quantumState.coherence * 1.01);
-    }
-    if (this.quantumState.fidelity < 0.97) {
-      this.quantumState.fidelity = Math.min(1, this.quantumState.fidelity * 1.005);
-    }
+    this.quantumState.coherence = this.backendAvailable ? this.quantumState.coherence : 0;
+    this.quantumState.fidelity = this.backendAvailable ? this.quantumState.fidelity : 0;
+    this.quantumState.errorRate = this.backendAvailable ? this.quantumState.errorRate : 1;
   }
 
   getQuantumMetrics() {
     return {
       ...this.quantumState,
       entangledNodes: this.entangledNodes.size,
+      backendAvailable: this.backendAvailable,
     };
   }
 }
@@ -188,7 +180,6 @@ export class QuantumNeuralInterface {
       frequency
     });
 
-    // Quantum state is affected by processing
     this.quantum.tick();
 
     const qm = this.quantum.getQuantumMetrics();
