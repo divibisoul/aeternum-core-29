@@ -27,6 +27,7 @@ export interface ModuleHealth {
   uptime: number | null;
   observed: boolean;
   source: 'PROVIDER' | 'UNOBSERVED';
+  observationError?: string;
 }
 
 export interface ModuleHealthProvider {
@@ -54,6 +55,7 @@ export class IntegrityScanner {
         uptime: null,
         observed: false,
         source: 'UNOBSERVED',
+        observationError: undefined,
       });
     });
   }
@@ -115,6 +117,7 @@ export class IntegrityScanner {
         health.uptime = uptime;
         health.observed = true;
         health.source = 'PROVIDER';
+        health.observationError = undefined;
 
         const scoreParts = [
           performance,
@@ -149,12 +152,12 @@ export class IntegrityScanner {
         }
       } catch (error) {
         health.status = 'failed';
-        health.observed = true;
+        health.observed = false;
         health.source = 'PROVIDER';
-        health.errorRate = 1;
-        health.uptime = Date.now();
-        moduleScores[name] = 0;
-        observedCount++;
+        health.observationError = error instanceof Error ? error.message : String(error);
+        health.errorRate = null;
+        health.uptime = null;
+        moduleScores[name] = null;
         criticalIssues.push(`${name} - provider falhou: ${String(error)}`);
         recommendations.push(`Corrigir provider de telemetria de ${name}`);
       }
