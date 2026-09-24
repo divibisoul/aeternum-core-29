@@ -253,6 +253,18 @@ export class TransformerExistencial {
     return weights;
   }
 
+  private project(input: number[], weights: Float32Array): Float32Array {
+    const output = new Float32Array(this.embeddingDim);
+    for (let j = 0; j < this.embeddingDim; j++) {
+      let sum = 0;
+      for (let i = 0; i < Math.min(input.length, this.embeddingDim); i++) {
+        sum += (input[i] || 0) * weights[i * this.embeddingDim + j];
+      }
+      output[j] = sum;
+    }
+    return output;
+  }
+
   processar(sequencia: number[][]): { output: number[][]; attentionEntropy: number } {
     const seqLen = sequencia.length;
     
@@ -262,10 +274,10 @@ export class TransformerExistencial {
     // Compute attention scores
     for (let i = 0; i < seqLen; i++) {
       for (let j = 0; j < seqLen; j++) {
+        const query = this.project(sequencia[i], this.queryWeights);
+        const key = this.project(sequencia[j], this.keyWeights);
         let score = 0;
-        for (let k = 0; k < Math.min(sequencia[i].length, this.embeddingDim); k++) {
-          score += (sequencia[i][k] || 0) * (sequencia[j][k] || 0);
-        }
+        for (let k = 0; k < this.embeddingDim; k++) score += query[k] * key[k];
         attentionScores[i * seqLen + j] = score / Math.sqrt(this.headDim);
       }
     }
@@ -300,7 +312,8 @@ export class TransformerExistencial {
       for (let k = 0; k < this.embeddingDim; k++) {
         let sum = 0;
         for (let j = 0; j < seqLen; j++) {
-          sum += probs[j] * (sequencia[j][k] || 0);
+          const value = this.project(sequencia[j], this.valueWeights);
+          sum += probs[j] * value[k];
         }
         outputRow.push(sum);
       }
