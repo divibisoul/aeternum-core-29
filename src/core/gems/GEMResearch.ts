@@ -81,22 +81,12 @@ export class GEMResearch {
     return task.id;
   }
 
-  async processQuery(query: string): Promise<ResearchTask> {
-    const normalized = query.trim();
-    if (!normalized) throw new Error('RESEARCH_QUERY_REQUIRED');
-    const task: ResearchTask = {
-      id: `res_${Date.now()}_${this._completed.length}`,
-      query: normalized,
-      status: 'researching',
-      sources: [],
-      confidence: null,
-      timestamp: Date.now(),
-    };
-
+  private async processTask(task: ResearchTask): Promise<ResearchTask> {
     const provider = this._provider;
     try {
+      task.status = 'researching';
       if (!provider) throw new Error('RESEARCH_PROVIDER_UNAVAILABLE');
-      const data = await provider(normalized);
+      const data = await provider(task.query);
       if (!data || typeof data.result !== 'string' || !data.result.trim()) throw new Error('RESEARCH_EMPTY_RESULT');
       if (!Array.isArray(data.sources) || data.sources.length === 0) throw new Error('RESEARCH_SOURCES_REQUIRED');
       if (!Number.isFinite(data.confidence) || data.confidence < 0 || data.confidence > 1) throw new Error('RESEARCH_CONFIDENCE_INVALID');
@@ -111,18 +101,30 @@ export class GEMResearch {
       task.errorCode = error instanceof Error ? error.message : 'RESEARCH_FAILED';
       task.confidence = null;
     }
-
-    this._completed.push(task);
+    this._completed.push({ ...task, sources: [...task.sources] });
     if (this._completed.length > 100) this._completed.shift();
     return task;
+  }
+
+  async processQuery(query: string): Promise<ResearchTask> {
+    const normalized = query.trim();
+    if (!normalized) throw new Error('RESEARCH_QUERY_REQUIRED');
+    const task: ResearchTask = {
+      id: `res_${Date.now()}_${this._completed.length}`,
+      query: normalized,
+      status: 'queued',
+      sources: [],
+      confidence: null,
+      timestamp: Date.now(),
+    };
+    return this.processTask(task);
   }
 
   private cycle(): void {
     this._cyclesCompleted++;
     const next = this._queue.find(t => t.status === 'queued');
     if (!next) return;
-    next.status = 'researching';
-    void this.processQuery(next.query).then(() => {
+    void this.processTask(next).then(() => {
       const idx = this._queue.findIndex(t => t.id === next.id);
       if (idx >= 0) this._queue.splice(idx, 1);
     });
