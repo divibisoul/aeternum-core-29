@@ -12,6 +12,7 @@ export interface MetaGoal {
 }
 
 export interface AuditResult {
+  timestamp: number;
   success: boolean;
   ethicalViolations: string[];
   riskAssessment: 'low' | 'medium' | 'high' | 'critical';
@@ -58,6 +59,7 @@ export class ContinuousAuditSystem {
       violations.push(`Plano com violações: ${planScore.toFixed(2)}`);
 
     const result: AuditResult = {
+      timestamp: Date.now(),
       success: violations.length === 0,
       ethicalViolations: violations,
       riskAssessment: violations.length > 1 ? 'critical' : violations.length > 0 ? 'high' : 'low',
@@ -70,10 +72,18 @@ export class ContinuousAuditSystem {
   }
 
   getMetrics() {
-    if (this.auditHistory.length === 0) return { avgScore: 1, violations: 0, successRate: 1 };
+    if (this.auditHistory.length === 0) return { avgScore: null, violations: 0, successRate: null, audits: 0 };
     const successes = this.auditHistory.filter(a => a.success).length;
     const violations = this.auditHistory.reduce((s, a) => s + a.ethicalViolations.length, 0);
-    return { avgScore: successes / this.auditHistory.length, violations, successRate: successes / this.auditHistory.length };
+    return { avgScore: successes / this.auditHistory.length, violations, successRate: successes / this.auditHistory.length, audits: this.auditHistory.length };
+  }
+
+  getHistory(): AuditResult[] {
+    return this.auditHistory.map(result => ({
+      ...result,
+      ethicalViolations: [...result.ethicalViolations],
+      recommendations: [...result.recommendations],
+    }));
   }
 }
 
