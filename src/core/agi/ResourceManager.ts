@@ -36,7 +36,8 @@ export interface ResourceMetrics {
   totalMemoryUsage: number;
   rebalanceCount: number;
   avgQuantumSliceMs: number;
-  hotModules: string[]; // modules consuming most resources
+  hotModules: string[]; // modules consuming most allocated/estimated resources
+  measurementMode: 'ESTIMATED_FROM_EXECUTION';
 }
 
 export class ResourceManager {
@@ -139,13 +140,10 @@ export class ResourceManager {
     for (const profile of this.moduleProfiles.values()) {
       if (!profile.isActive) continue;
 
-      // Simulate CPU usage based on execution frequency and time
+      // This is a scheduling estimate, not hardware telemetry.
+      // No synthetic fluctuation is introduced.
       const cpuUsage = Math.min(1, (profile.lastExecutionMs / this._quantumSliceMs) * profile.cpuAllocation);
       totalCpu += cpuUsage;
-
-      // Simulate memory usage with gradual fluctuation
-      const memDelta = (Math.random() - 0.5) * 0.02;
-      profile.memoryAllocation = Math.max(0.01, Math.min(0.3, profile.memoryAllocation + memDelta));
       totalMem += profile.memoryAllocation;
     }
 
@@ -203,6 +201,7 @@ export class ResourceManager {
       rebalanceCount: this._rebalanceCount,
       avgQuantumSliceMs: this._quantumSliceMs,
       hotModules,
+      measurementMode: 'ESTIMATED_FROM_EXECUTION',
     };
   }
 
