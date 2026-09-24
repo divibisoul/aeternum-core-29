@@ -98,6 +98,7 @@ export class QuantumNetworking {
   }
 
   establishQuantumEntanglement(nodeId: string): boolean {
+    if (!this.backendAvailable) return false;
     this.entangledNodes.add(nodeId);
     this.quantumState.entangled = true;
     return true;
