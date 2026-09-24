@@ -19,6 +19,8 @@ export interface HealthMetrics {
   alertsGenerated: number;
   lastAnalysis: number;
   wearableConnected: boolean;
+  observed: boolean;
+  dataSource: 'WEARABLE' | 'UNOBSERVED';
   cyclesCompleted: number;
 }
 
@@ -44,6 +46,8 @@ export class GEMHealth {
     alertsGenerated: 0,
     lastAnalysis: Date.now(),
     wearableConnected: false,
+    observed: false,
+    dataSource: 'UNOBSERVED',
     cyclesCompleted: 0,
   };
   private _alerts: HealthAlert[] = [];
@@ -72,22 +76,19 @@ export class GEMHealth {
    * Receive real data from companion Android app
    */
   ingestWearableData(data: Partial<HealthMetrics>): void {
-    this._metrics = { ...this._metrics, ...data, wearableConnected: true };
+    this._metrics = { ...this._metrics, ...data, wearableConnected: true, observed: true, dataSource: 'WEARABLE' };
     this.analyzeAndAlert();
   }
 
   private cycle(): void {
-    // Simulate physiological drift when no wearable connected
-    if (!this._metrics.wearableConnected) {
-      this._metrics.heartRate = 65 + Math.random() * 20;
-      this._metrics.hrv = 40 + Math.random() * 30;
-      this._metrics.stressLevel = Math.max(0, Math.min(1, this._metrics.stressLevel + (Math.random() - 0.52) * 0.05));
-      this._metrics.fatigueIndex = Math.max(0, Math.min(1, this._metrics.fatigueIndex + (Math.random() - 0.48) * 0.03));
-    }
-
+    // No sensor/wearable data means no physiological measurement.
+    // Keep the loop alive for connectivity/state monitoring, but never
+    // fabricate health values or emit medical alerts from invented data.
     this._metrics.lastAnalysis = Date.now();
     this._metrics.cyclesCompleted++;
-    this.analyzeAndAlert();
+    if (this._metrics.observed) {
+      this.analyzeAndAlert();
+    }
 
     // Keep history bounded
     this._history.push({ ...this._metrics });
@@ -95,6 +96,7 @@ export class GEMHealth {
   }
 
   private analyzeAndAlert(): void {
+    if (!this._metrics.observed) return;
     const { heartRate, hrv, stressLevel, fatigueIndex } = this._metrics;
 
     // HRV anomaly detection

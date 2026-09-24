@@ -5,6 +5,7 @@ import { N01AgentRegistry } from './N01AgentRegistry';
 import type { SoulMeshMessage } from './SoulMeshProtocol';
 import { executeSuperComputePlan, createSuperComputePlan, summarizeSuperCompute, type SuperComputeTask } from './SoulSuperCompute';
 import { sendTo } from '../soul-mesh/peerClient';
+import { ProjetoClareira } from '../neural/ProjetoClareira';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -15,9 +16,35 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'neural.clareira.status', 'neural.clareira.stimulus', 'neural.clareira.decision'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
+
+      if (message.capability === 'neural.clareira.status') {
+        return {
+          nucleus: 'N01',
+          subsystem: 'ProjetoClareira',
+          status: ProjetoClareira.getStatus(),
+          metrics: ProjetoClareira.getMetrics(),
+        };
+      }
+
+      if (message.capability === 'neural.clareira.stimulus') {
+        const input = message.payload as { data?: unknown; criticality?: unknown; targetNodeId?: unknown };
+        if (typeof input?.data !== 'string' || !input.data.trim()) throw new Error('CLAREIRA_STIMULUS_DATA_REQUIRED');
+        const criticality = typeof input.criticality === 'number' ? input.criticality : 0.5;
+        if (!Number.isFinite(criticality) || criticality < 0 || criticality > 1) throw new Error('CLAREIRA_CRITICALITY_OUT_OF_RANGE');
+        const accepted = ProjetoClareira.injectStimulus(input.data, criticality, typeof input.targetNodeId === 'string' ? input.targetNodeId : undefined);
+        return { nucleus: 'N01', subsystem: 'ProjetoClareira', accepted, metrics: ProjetoClareira.getMetrics() };
+      }
+
+      if (message.capability === 'neural.clareira.decision') {
+        const input = message.payload as { action?: unknown; context?: unknown; priority?: unknown };
+        if (typeof input?.action !== 'string' || !input.action.trim()) throw new Error('CLAREIRA_ACTION_REQUIRED');
+        const priority = typeof input.priority === 'number' ? input.priority : 0.5;
+        if (!Number.isFinite(priority) || priority < 0 || priority > 1) throw new Error('CLAREIRA_PRIORITY_OUT_OF_RANGE');
+        return await ProjetoClareira.requestDecision(input.action, typeof input.context === 'string' ? input.context : 'general', priority);
+      }
 
       if (message.capability === 'supercompute.execute') {
         const input = message.payload as { tasks?: SuperComputeTask[] };
@@ -38,7 +65,7 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'neural.clareira.status', 'neural.clareira.stimulus', 'neural.clareira.decision'],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),

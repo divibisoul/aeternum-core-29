@@ -164,9 +164,9 @@ export class GEMDevice {
    * Execute a device action
    */
   executeAction(type: DeviceAction['type'], target?: string, command?: string): string {
-    // Safety check
-    if (target && WHITELIST.includes(target)) {
-      console.warn(`[GEM-Device] Ação bloqueada: ${target} está na whitelist`);
+    // Safety check: a target, when supplied, must be explicitly allowlisted.
+    if (target && !WHITELIST.includes(target)) {
+      console.warn(`[GEM-Device] Ação bloqueada: ${target} não está na whitelist`);
       return '';
     }
 
@@ -234,18 +234,10 @@ export class GEMDevice {
       this.sendCommand({ type: 'status_request' });
     }
 
-    // Simulate device metrics when disconnected (for UI testing)
-    if (!this._status.connected) {
-      this._status.cpu = 15 + Math.random() * 30;
-      this._status.ramUsedMb = 2048 + Math.random() * 2048;
-      this._status.ramTotalMb = 6144;
-      this._status.batteryPct = Math.max(10, this._status.batteryPct - Math.random() * 0.1);
-      this._status.temperature = 28 + Math.random() * 10;
-      this._status.runningProcesses = 80 + Math.floor(Math.random() * 40);
-    }
-
-    this._lastOptimization = Date.now();
-    this._optimizationCycles++;
+    // No connection means no device telemetry. Preserve last observed values
+    // rather than manufacturing CPU/RAM/battery/thermal/process metrics.
+    this._lastOptimization = this._status.connected ? Date.now() : this._lastOptimization;
+    if (this._status.connected) this._optimizationCycles++;
   }
 
   getMetrics(): DeviceMetrics {
