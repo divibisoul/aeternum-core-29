@@ -34,6 +34,7 @@ class ProjetoClareiraSystem {
   private _running = false;
   private startTime = 0;
   private packetsInjected = 0;
+  private roundRobinCursor = 0;
 
   constructor() {
     // Criar núcleo central
@@ -214,11 +215,17 @@ class ProjetoClareiraSystem {
       if (found) {
         target = found;
       } else {
-        target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+        EventBus.emit('system:error', {
+          source: 'projeto-clareira',
+          code: 'CLAREIRA_TARGET_NOT_FOUND',
+          targetNodeId,
+        });
+        return false;
       }
     } else {
-      // Selecionar aleatoriamente
-      target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+      // Deterministic balancing: no random target is invented.
+      target = this.allNodes[this.roundRobinCursor % this.allNodes.length];
+      this.roundRobinCursor = (this.roundRobinCursor + 1) % this.allNodes.length;
     }
 
     const success = target.receivePacket(packet);
@@ -243,30 +250,43 @@ class ProjetoClareiraSystem {
   }
 
   /**
-   * Executa simulação por duração especificada
+   * Executes a real operational window using only caller-supplied stimuli.
+   * Kept under the historical runSimulation name for source compatibility;
+   * it no longer fabricates packets or criticality values.
    */
   async runSimulation(durationMs: number = 5000): Promise<SystemMetrics> {
-    if (!this._running) {
-      this.start();
+    return this.runOperationalWindow(durationMs);
+  }
+
+  async runOperationalWindow(
+    durationMs: number = 5000,
+    stimuli: Array<{
+      data: string;
+      criticality?: number;
+      targetNodeId?: string;
+      delayMs?: number;
+    }> = []
+  ): Promise<SystemMetrics> {
+    if (!this._running) this.start();
+    const startedAt = Date.now();
+    const safeDuration = Math.max(0, durationMs);
+
+    for (const stimulus of stimuli) {
+      const delay = Math.max(0, stimulus.delayMs ?? 0);
+      if (Date.now() - startedAt + delay > safeDuration) break;
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      if (Date.now() - startedAt > safeDuration) break;
+      this.injectStimulus(
+        stimulus.data,
+        Math.max(0, Math.min(1, stimulus.criticality ?? 0.5)),
+        stimulus.targetNodeId
+      );
     }
 
-    const startTime = Date.now();
-    
-    // Injetar estímulos periódicos
-    const stimulusInterval = setInterval(() => {
-      if (Math.random() < 0.3) {
-        this.injectStimulus(
-          `Stimulus at ${Date.now()}`,
-          Math.random(),
-        );
-      }
-    }, 200);
-
-    // Aguardar duração
-    await new Promise(resolve => setTimeout(resolve, durationMs));
-
-    clearInterval(stimulusInterval);
-
+    const remaining = safeDuration - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise(resolve => setTimeout(resolve, remaining));
     return this.getMetrics();
   }
 
