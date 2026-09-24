@@ -286,7 +286,7 @@ export class AeternumAGI {
     });
     this.safetySystem.registerHealthProvider('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
-      return status.quantum.coherence;
+      return status.quantum.physicalBackendConfigured ? status.quantum.coherence : null;
     });
     this.safetySystem.registerHealthProvider('connectivity', () => {
       const metrics = this.connectivity.getMetrics();
