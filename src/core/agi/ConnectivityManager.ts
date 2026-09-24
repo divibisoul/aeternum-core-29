@@ -21,6 +21,8 @@ export interface ConnectivityMetrics {
   reliability: number; // 0-1
   iotDevices: number;
   quantumEncrypted: boolean;
+  observed: boolean;
+  transportVerified: boolean;
 }
 
 export class ConnectivityManager {
@@ -48,9 +50,9 @@ export class ConnectivityManager {
       this.meshNetwork.set(id, {
         id,
         type: 'agi-subsystem',
-        status: 'connected',
-        latency: Math.random() * 2, // < 2ms
-        lastSeen: Date.now()
+        status: 'disconnected',
+        latency: 0,
+        lastSeen: 0
       });
     });
 
@@ -75,29 +77,21 @@ export class ConnectivityManager {
   }
 
   private tick(): void {
+    // Connectivity state is observation-driven. No synthetic latency,
+    // bandwidth, reliability, or disconnect/reconnect events are generated.
     for (const [, node] of this.meshNetwork) {
-      // Simulate latency fluctuation
-      node.latency = Math.max(0.1, node.latency + (Math.random() - 0.5) * 0.3);
-      node.lastSeen = Date.now();
-      
-      // Very rare disconnection simulation
-      if (Math.random() < 0.001) {
-        node.status = 'syncing';
-        setTimeout(() => { node.status = 'connected'; }, 2000);
+      if (node.status === 'connected' && node.lastSeen > 0) {
+        node.lastSeen = node.lastSeen;
       }
     }
-
-    // Bandwidth/reliability fluctuation
-    this._bandwidth = Math.max(500, Math.min(2000, this._bandwidth + (Math.random() - 0.5) * 50));
-    this._reliability = Math.max(0.99, Math.min(1, this._reliability + (Math.random() - 0.5) * 0.001));
   }
 
   registerNode(id: string, type: string): void {
     this.meshNetwork.set(id, {
       id, type,
-      status: 'connected',
-      latency: Math.random() * 5,
-      lastSeen: Date.now()
+      status: 'syncing',
+      latency: 0,
+      lastSeen: 0
     });
   }
 
@@ -113,7 +107,9 @@ export class ConnectivityManager {
       bandwidth: this._bandwidth,
       reliability: this._reliability,
       iotDevices: 0, // No real IoT in browser
-      quantumEncrypted: true
+      quantumEncrypted: false,
+      observed: connected.length > 0,
+      transportVerified: connected.length > 0 && nodes.every((n) => n.status !== 'syncing')
     };
   }
 
