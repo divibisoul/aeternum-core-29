@@ -671,15 +671,15 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
                         <span className="text-muted-foreground">|</span>
                         <span className="text-sky-500">Π:{(message.eru_data.causal_reversal_efficiency * 100).toFixed(1)}%</span>
                         <span className="text-muted-foreground">|</span>
-                        <span className="text-violet-500">Ε:{(message.eru_data.ethical_conformance_score * 100).toFixed(1)}%</span>
+                        <span className="text-violet-500">Ε:{message.eru_data.ethical_conformance_score === null ? '—' : (message.eru_data.ethical_conformance_score * 100).toFixed(1) + '%'}</span>
                         <span className="text-muted-foreground">|</span>
                         <span className="text-amber-500">AGI:{message.eru_data.agi_subsystems_active}/17</span>
                         <span className="text-muted-foreground">|</span>
-                        <span className={message.eru_data.quantum_validation ? 'text-emerald-400' : 'text-destructive'}>
-                          Q:{message.eru_data.quantum_validation ? '✓' : '✗'}
+                        <span className={message.eru_data.quantum_validation === null ? 'text-muted-foreground' : message.eru_data.quantum_validation ? 'text-emerald-400' : 'text-destructive'}>
+                          Q:{message.eru_data.quantum_validation === null ? '—' : message.eru_data.quantum_validation ? '✓' : '✗'}
                         </span>
                         <span className="text-muted-foreground">|</span>
-                        <span className="text-red-400">SAIIC:{(message.eru_data.saiic_integrity * 100).toFixed(0)}%</span>
+                        <span className="text-red-400">SAIIC:{message.eru_data.saiic_integrity === null ? '—' : (message.eru_data.saiic_integrity * 100).toFixed(0) + '%'}</span>
                         <span className="text-muted-foreground">|</span>
                         <span className="text-pink-400">♥:{(message.eru_data.gem_health_stress * 100).toFixed(0)}%</span>
                         <span className="text-muted-foreground">|</span>
