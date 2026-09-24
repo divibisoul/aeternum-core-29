@@ -85,10 +85,10 @@ export function AGIDashboard() {
               <span className="text-sky-400">G:{((metrics.godelMeta?.selfAwareness ?? 0) * 100).toFixed(0)}%</span>
               <span className="text-violet-400">D:{((metrics.darwin?.avgFitness ?? 0) * 100).toFixed(0)}%</span>
               <span className="text-amber-400">L:{((metrics.lattice?.globalFitness ?? 0) * 100).toFixed(0)}%</span>
-              <span className="text-primary">Ε:{((metrics.ethics?.auditMetrics?.avgScore ?? 0) * 100).toFixed(0)}%</span>
+              <span className="text-primary">Ε:{metrics.ethics?.auditMetrics?.avgScore == null ? '—' : (metrics.ethics.auditMetrics.avgScore * 100).toFixed(0) + '%'}</span>
               <span className="text-orange-400">NIP:{metrics.nip?.saudeEpistemologica ?? '?'}</span>
-              <span className="text-cyan-400">Q:{((metrics.quantumNeural?.quantum?.coherence ?? 0) * 100).toFixed(0)}%</span>
-              <span className="text-red-400">SAIIC:{((metrics.saiic?.overallIntegrity ?? 0) * 100).toFixed(0)}%</span>
+              <span className="text-cyan-400">Q:{metrics.quantumNeural?.quantum?.physicalBackendConfigured ? (metrics.quantumNeural.quantum.coherence * 100).toFixed(0) + '%' : '—'}</span>
+              <span className="text-red-400">SAIIC:{metrics.saiic?.overallIntegrity == null ? '—' : (metrics.saiic.overallIntegrity * 100).toFixed(0) + '%'}</span>
             </div>
           )}
         </CardHeader>
@@ -200,9 +200,9 @@ export function AGIDashboard() {
                       )}
                       {metrics?.resources && (
                         <div className="space-y-1 text-[10px] pt-1 border-t border-border/30">
-                          <div className="flex justify-between"><span className="text-muted-foreground">CPU Usage</span><span className="font-mono">{(metrics.resources.totalCpuUsage * 100).toFixed(0)}%</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Memory</span><span className="font-mono">{(metrics.resources.totalMemoryUsage * 100).toFixed(0)}%</span></div>
-                          <div className="flex justify-between"><span className="text-muted-foreground">Quantum Slice</span><span className="font-mono">{metrics.resources.avgQuantumSliceMs.toFixed(0)}ms</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">CPU Usage</span><span className="font-mono">{metrics.resources.measurementSource === 'EXECUTION_ESTIMATE' ? (metrics.resources.totalCpuUsage * 100).toFixed(0) + '% est.' : (metrics.resources.totalCpuUsage * 100).toFixed(0) + '%'}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Memory</span><span className="font-mono">{metrics.resources.measurementSource === 'EXECUTION_ESTIMATE' ? (metrics.resources.totalMemoryUsage * 100).toFixed(0) + '% est.' : (metrics.resources.totalMemoryUsage * 100).toFixed(0) + '%'}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Quantum Slice</span><span className="font-mono">{metrics.resources.avgQuantumSliceMs.toFixed(0)}ms (scheduler)</span></div>
                           <div className="flex justify-between"><span className="text-muted-foreground">Rebalances</span><span className="font-mono">{metrics.resources.rebalanceCount}</span></div>
                         </div>
                       )}
@@ -219,9 +219,9 @@ export function AGIDashboard() {
                         <div className="space-y-1.5">
                           <div className="flex justify-between text-[10px]">
                             <span>Saúde Geral</span>
-                            <span className="font-mono text-emerald-400">{(metrics.safety.overallHealth * 100).toFixed(1)}%</span>
+                            <span className="font-mono text-emerald-400">{metrics.safety.overallHealth == null ? 'NÃO MENSURÁVEL' : (metrics.safety.overallHealth * 100).toFixed(1) + '%'}</span>
                           </div>
-                          <Progress value={metrics.safety.overallHealth * 100} className="h-1.5" />
+                          {metrics.safety.overallHealth != null && <Progress value={metrics.safety.overallHealth * 100} className="h-1.5" />}
                         </div>
                       )}
                     </CardContent>
@@ -315,7 +315,7 @@ function SAIICDashboard({ metrics, agi }: { metrics: any; agi: any }) {
                   {d.moduleId}
                 </span>
                 <span className="font-mono text-muted-foreground">
-                  CPU:{(d.cpuLoad * 100).toFixed(0)}% MEM:{(d.memoryUsage * 100).toFixed(0)}% ERR:{(d.errorRate * 100).toFixed(1)}%
+                  CPU:{d.cpuLoad == null ? '—' : (d.cpuLoad * 100).toFixed(0) + '%'} MEM:{d.memoryUsage == null ? '—' : (d.memoryUsage * 100).toFixed(0) + '%'} ERR:{d.errorRate == null ? '—' : (d.errorRate * 100).toFixed(1) + '%'}
                 </span>
               </div>
             ))}
