@@ -79,7 +79,15 @@ try {
   assert.equal(discovery.correlationId, correlationId);
   assert.deepEqual(discovery.payload.operations, ['sara.cycle@1.0.0']);
 
-  const cycle = await requestSara('sara.cycle', { input: 'preservar capacidade', cycle_id: correlationId }, correlationId);
+  const cycle = await requestSara('sara.cycle', {
+    input: 'preservar capacidade',
+    cycle_id: correlationId,
+    context: {
+      session_id: 'n01-session',
+      client: 'web',
+      probabilistic: { nodes: [] },
+    },
+  }, correlationId);
   assert.equal(cycle.provider, 'SARA');
   assert.equal(cycle.correlationId, correlationId);
   assert.equal(cycle.payload.cycle_id, correlationId);
