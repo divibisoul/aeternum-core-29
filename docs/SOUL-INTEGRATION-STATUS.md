@@ -11,10 +11,14 @@ This document tracks the recovery and integration work toward an Android APK.
 
 ## Integration targets
 1. Consolidate reusable Aeternum/Nexus/Eternium capabilities.
-2. Establish a canonical Soul application shell.
-3. Add an Android build layer without exposing secrets in the APK.
-4. Add native perception capabilities only through explicit Android bridges.
-5. Produce and validate a signed/debug APK build.
+2. Establish a canonical Soul hybrid application shell for web + native app surfaces.
+3. Keep the Android build layer as one native platform adapter without exposing secrets in the app.
+4. Add native perception/device capabilities only through explicit platform bridges.
+5. Produce and validate web/PWA and native app builds independently.
+
+## Platform scope
+
+Web/PWA and native App are first-class delivery surfaces over the same platform-neutral SOUL core. Android remains supported through the existing native bridge and is not the definition of the SOUL runtime.
 
 ## Status
 - Repository ownership/access: 100%
