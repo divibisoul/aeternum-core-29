@@ -75,57 +75,76 @@ class ExperienceMemory:
     def __init__(self, capacity=1000):
         self.buffer = deque(maxlen=capacity)
 
-    def add(self, task_embedding, chosen_cores, reward):
-        self.buffer.append((task_embedding, chosen_cores, reward))
+    def add(self, task_embedding, chosen_cores, reward=None):
+        self.buffer.append((task_embedding, list(chosen_cores), reward))
 
-    def sample(self, batch_size=32):
-        if len(self.buffer) < batch_size:
+    def pending_index(self):
+        for index in range(len(self.buffer) - 1, -1, -1):
+            if self.buffer[index][2] is None:
+                return index
+        return None
+
+    def sample(self, batch_size=32, num_cores=7):
+        ready = [item for item in self.buffer if item[2] is not None]
+        if len(ready) < batch_size:
             return None
-        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
-        batch = [self.buffer[i] for i in indices]
+        indices = np.random.choice(len(ready), batch_size, replace=False)
+        batch = [ready[i] for i in indices]
         tasks = torch.tensor([b[0] for b in batch], dtype=torch.float32)
-        cores = torch.tensor([b[1] for b in batch], dtype=torch.long)
-        rewards = torch.tensor([b[2] for b in batch], dtype=torch.float32)
-        return tasks.to(DEVICE), cores.to(DEVICE), rewards.to(DEVICE)
+        masks = torch.zeros((batch_size, num_cores), dtype=torch.float32)
+        for row, item in enumerate(batch):
+            for core_idx in item[1]:
+                if 0 <= core_idx < num_cores:
+                    masks[row, core_idx] = 1.0
+        rewards = torch.tensor([float(b[2]) for b in batch], dtype=torch.float32)
+        return tasks.to(DEVICE), masks.to(DEVICE), rewards.to(DEVICE)
 
 # ============================================================
 # 3. ORQUESTRADOR PRINCIPAL
 # ============================================================
 class SOULOrchestrator:
     def __init__(self):
-        self.router = NeuralRouter().to(DEVICE)
+        from sentence_transformers import SentenceTransformer
+        model_name = os.getenv("N07_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+        self.embedder = SentenceTransformer(model_name)
+        embedding_dim = self.embedder.get_sentence_embedding_dimension()
+        if not isinstance(embedding_dim, int) or embedding_dim <= 0:
+            raise RuntimeError("EMBEDDER_INVALID_DIMENSION")
+        self.embedding_dim = embedding_dim
+        self.router = NeuralRouter(input_dim=embedding_dim, num_cores=len(NUCLEOS)).to(DEVICE)
         self.optimizer = torch.optim.Adam(self.router.parameters(), lr=1e-4)
         self.memory = ExperienceMemory(capacity=2000)
         self.supabase = None
         if SUPABASE_URL and SUPABASE_KEY:
             self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        # Modelo de embedding (usamos um pequeno sentence-transformer ou similar)
-        try:
-            from sentence_transformers import SentenceTransformer
-            self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
-        except:
-            print("[N07] Fallback: usando dummy embedder (zeros)")
-            self.embedder = None
-        # Inicializa APIs externas
+        # O embedding deve vir de um modelo real carregado acima; ausência do modelo
+        # encerra a execução em vez de criar uma representação artificial.
         if OPENAI_API_KEY:
             openai.api_key = OPENAI_API_KEY
         if GEMINI_API_KEY:
             genai.configure(api_key=GEMINI_API_KEY)
 
     def embed_task(self, task_text):
-        """Gera embedding para uma tarefa (texto)."""
-        if self.embedder:
-            return self.embedder.encode(task_text, convert_to_tensor=True).cpu().numpy()
-        else:
-            # Dummy: vetor aleatório (apenas para teste)
-            return np.random.randn(768).astype(np.float32)
+        """Gera embedding real com o modelo carregado."""
+        if not isinstance(task_text, str) or not task_text.strip():
+            raise ValueError("TASK_TEXT_REQUIRED")
+        embedding = self.embedder.encode(
+            task_text,
+            convert_to_tensor=True,
+            normalize_embeddings=True,
+        ).detach().cpu().numpy().astype(np.float32)
+        if embedding.ndim != 1 or embedding.shape[0] != self.embedding_dim:
+            raise RuntimeError(
+                f"EMBEDDER_DIMENSION_MISMATCH:{embedding.shape[0]}!={self.embedding_dim}"
+            )
+        return embedding
 
     def route_task(self, task_embedding):
         """Escolhe os núcleos a ativar com base no embedding."""
         with torch.no_grad():
             tensor = torch.tensor(task_embedding, dtype=torch.float32).to(DEVICE)
             probs = self.router(tensor.unsqueeze(0)).squeeze(0)
-            # Seleciona top-3 núcleos (ou todos com probabilidade > threshold)
+            # Seleciona todos os núcleos acima do limiar; se nenhum, usa o máximo observado.
             threshold = 0.15
             selected = (probs > threshold).nonzero(as_tuple=True)[0].tolist()
             if not selected:  # fallback: pega o mais provável
@@ -133,7 +152,7 @@ class SOULOrchestrator:
             return selected, probs.cpu().numpy()
 
     def call_core(self, core_name, task_payload):
-        """Chama um núcleo via HTTP (ou gRPC) e retorna a resposta."""
+        """Chama um núcleo via HTTP e retorna a resposta observada."""
         url = NUCLEOS.get(core_name)
         if not url:
             return {"error": f"URL de {core_name} não configurada"}
@@ -152,7 +171,7 @@ class SOULOrchestrator:
         emb = self.embed_task(task_text)
         # 2. Roteamento
         selected_cores, probs = self.route_task(emb)
-        # 3. Disparar chamadas paralelas (simulação sequencial para simplificar)
+        # 3. Despacho sequencial determinístico (cada chamada é real ou retorna erro explícito)
         results = {}
         for core_idx in selected_cores:
             core_name = f"N{core_idx+1:02d}"
@@ -160,10 +179,8 @@ class SOULOrchestrator:
             results[core_name] = self.call_core(core_name, payload)
         # 4. Agregar resultados (exemplo: síntese com LLM externo)
         aggregated = self.synthesize(task_text, results)
-        # 5. Registrar experiência para metacognição (recompensa será definida depois)
-        #    Aqui, placeholder: recompensa = 1.0 por enquanto (será atualizada com feedback)
-        reward = 1.0
-        self.memory.add(emb.tolist(), selected_cores, reward)
+        # 5. Registrar experiência pendente; nenhuma recompensa é inventada.
+        self.memory.add(emb.tolist(), selected_cores, None)
         return {
             "task": task_text,
             "routed_cores": [f"N{idx+1:02d}" for idx in selected_cores],
@@ -178,25 +195,32 @@ class SOULOrchestrator:
         summary = "\n".join([f"{k}: {v}" for k, v in results.items()])
         prompt = f"Tarefa: {task_text}\nResultados parciais:\n{summary}\nForneça uma resposta consolidada e coerente."
         # Tenta usar OpenAI
+        synthesis_errors = []
         if OPENAI_API_KEY:
             try:
                 response = openai.ChatCompletion.create(
-                    model="gpt-4",
+                    model=os.getenv("OPENAI_MODEL", "gpt-4"),
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=300
                 )
                 return response.choices[0].message.content
-            except:
-                pass
+            except Exception as exc:
+                synthesis_errors.append(f"openai:{type(exc).__name__}:{exc}")
         # Fallback para Gemini
         if GEMINI_API_KEY:
             try:
-                model = genai.GenerativeModel('gemini-pro')
+                model = genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-pro"))
                 response = model.generate_content(prompt)
                 return response.text
-            except:
-                pass
-        # Fallback final: retorna o resumo bruto
+            except Exception as exc:
+                synthesis_errors.append(f"gemini:{type(exc).__name__}:{exc}")
+        # Fallback final: resultado bruto observado, sem alegar síntese LLM.
+        if synthesis_errors:
+            return json.dumps({
+                "status": "SYNTHESIS_FALLBACK",
+                "errors": synthesis_errors,
+                "observed_results": results,
+            }, ensure_ascii=False)
         return summary
 
     def meta_learn(self, feedback_reward):
@@ -204,30 +228,30 @@ class SOULOrchestrator:
         Metacognição: atualiza o roteador com base no feedback (recompensa) da última tarefa.
         Usa aprendizado por reforço simples (policy gradient) para ajustar os pesos.
         """
-        # Pega a última experiência armazenada e atualiza a recompensa
-        if len(self.memory.buffer) == 0:
-            return
-        # Simulação: atualizamos a recompensa da última experiência
-        last_exp = self.memory.buffer[-1]
-        task_emb, chosen_cores, _ = last_exp
-        # Substitui recompensa pelo feedback recebido
-        new_exp = (task_emb, chosen_cores, feedback_reward)
-        self.memory.buffer[-1] = new_exp
+        feedback = float(feedback_reward)
+        if not np.isfinite(feedback):
+            raise ValueError("feedback_reward deve ser finito")
+        index = self.memory.pending_index()
+        if index is None:
+            return {"status": "NO_PENDING_EXPERIENCE"}
+        task_emb, chosen_cores, _ = self.memory.buffer[index]
+        self.memory.buffer[index] = (task_emb, chosen_cores, feedback)
 
-        # Se tiver experiência suficiente, faz uma atualização por lote
-        batch = self.memory.sample(batch_size=32)
+        batch = self.memory.sample(batch_size=32, num_cores=len(NUCLEOS))
         if batch is None:
-            return
-        tasks, cores, rewards = batch
-        # Forward
-        logits = self.router(tasks)
-        # Calcula a perda: negativo da log-probabilidade das ações escolhidas ponderada pela recompensa
-        loss = -torch.mean(rewards * torch.gather(logits, 1, cores.unsqueeze(1)).squeeze())
-        # Backprop
+            return {
+                "status": "PENDING_BATCH",
+                "ready_experiences": sum(item[2] is not None for item in self.memory.buffer),
+            }
+        tasks, masks, rewards = batch
+        probabilities = self.router(tasks)
+        chosen_probability = torch.sum(probabilities * masks, dim=1).clamp_min(1e-8)
+        loss = -torch.mean(rewards * torch.log(chosen_probability))
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         print(f"[Metacognição] Loss atualizada: {loss.item():.4f}")
+        return {"status": "UPDATED", "loss": float(loss.item()), "feedback": feedback, "batch_size": int(len(rewards))}
 
 # ============================================================
 # 4. PONTO DE ENTRADA (para testes/execução)
@@ -241,6 +265,8 @@ if __name__ == "__main__":
     print(json.dumps(result, indent=2))
     # Simula um feedback de sucesso (ex: 1.0 = bom, -1.0 = ruim)
     # Aqui, em produção, viria de uma avaliação externa.
-    feedback = 0.8
-    orchestrator.meta_learn(feedback)
-    print("[N07] Metacognição aplicada.")
+    if os.getenv("N07_FEEDBACK_REWARD") is not None:
+        orchestrator.meta_learn(float(os.environ["N07_FEEDBACK_REWARD"]))
+        print("[N07] Metacognição aplicada com feedback externo.")
+    else:
+        print("[N07] Metacognição aguardando feedback externo; nenhuma recompensa foi inventada.")
