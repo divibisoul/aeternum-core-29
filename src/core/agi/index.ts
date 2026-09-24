@@ -263,14 +263,13 @@ export class AeternumAGI {
     // Register health providers for HyperSafetySystem (cross-layer)
     this.safetySystem.registerHealthProvider('consciousness', () => {
       const metrics = this.consciousness.getMetrics();
-      return metrics.isRunning ? 0.9 : 0.5;
+      return metrics.isRunning ? 1 : null;
     });
     this.safetySystem.registerHealthProvider('ethics', () => {
       return this.ethicalOptimizer.getMetrics().auditMetrics.avgScore;
     });
     this.safetySystem.registerHealthProvider('selfHealing', () => {
-      const health = this.selfHealing.getLatestHealth();
-      return health?.overallScore ?? 0.8;
+      return this.selfHealing.getLatestHealth()?.overallScore ?? null;
     });
     this.safetySystem.registerHealthProvider('evolution', () => {
       return this.darwinMachine.getMetrics().avgFitness;
@@ -280,15 +279,18 @@ export class AeternumAGI {
     });
     this.safetySystem.registerHealthProvider('nip', () => {
       const report = this.nip.getRelatorio();
-      return report.saudeEpistemologica === 'saudavel' ? 0.95
-        : report.saudeEpistemologica === 'rigida' ? 0.6 : 0.3;
+      if (report.saudeEpistemologica === 'saudavel') return 1;
+      if (report.saudeEpistemologica === 'rigida') return 0.6;
+      if (report.saudeEpistemologica === 'paralisada') return 0.3;
+      return null;
     });
     this.safetySystem.registerHealthProvider('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
       return status.quantum.coherence;
     });
     this.safetySystem.registerHealthProvider('connectivity', () => {
-      return this.connectivity.getMetrics().reliability;
+      const metrics = this.connectivity.getMetrics();
+      return metrics.reliabilitySource === 'OBSERVED' ? metrics.reliability : null;
     });
     this.safetySystem.registerHealthProvider('saiic', () => {
       return this.saiic.getMetrics().overallIntegrity;
