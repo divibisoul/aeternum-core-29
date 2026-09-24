@@ -78,6 +78,19 @@ export class GEMHealth {
    * Receive real data from companion Android app
    */
   ingestWearableData(data: Partial<HealthMetrics>): void {
+    const numericFields: Array<[keyof HealthMetrics, number | undefined, number, number]> = [
+      ['heartRate', data.heartRate, 0, 300],
+      ['hrv', data.hrv, 0, 1000],
+      ['stressLevel', data.stressLevel, 0, 1],
+      ['fatigueIndex', data.fatigueIndex, 0, 1],
+      ['sleepQuality', data.sleepQuality, 0, 1],
+    ];
+    for (const [field, value, min, max] of numericFields) {
+      if (value !== undefined && (!Number.isFinite(value) || value < min || value > max)) {
+        throw new Error(`GEM_HEALTH_INVALID_${String(field).toUpperCase()}`);
+      }
+    }
+    const observedAt = Date.now();
     const observedAt = Date.now();
     this._metrics = {
       ...this._metrics,
