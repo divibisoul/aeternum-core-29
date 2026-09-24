@@ -23,6 +23,9 @@ export interface DeviceStatus {
   batteryPct: number;
   temperature: number;
   runningProcesses: number;
+  metricsAvailable: boolean;
+  metricsSource: "COMPANION" | "UNOBSERVED";
+  lastObservedAt: number;
 }
 
 export interface DeviceMetrics {
@@ -73,6 +76,9 @@ export class GEMDevice {
     batteryPct: 100,
     temperature: 25,
     runningProcesses: 0,
+    metricsAvailable: false,
+    metricsSource: "UNOBSERVED",
+    lastObservedAt: 0,
   };
   private _actions: DeviceAction[] = [];
   private _optimizationCycles = 0;
@@ -204,6 +210,9 @@ export class GEMDevice {
         this._status.batteryPct = data.batteryPct ?? this._status.batteryPct;
         this._status.temperature = data.temperature ?? this._status.temperature;
         this._status.runningProcesses = data.runningProcesses ?? this._status.runningProcesses;
+        this._status.metricsAvailable = true;
+        this._status.metricsSource = "COMPANION";
+        this._status.lastObservedAt = Date.now();
         break;
 
       case 'shizuku_status':
@@ -234,14 +243,10 @@ export class GEMDevice {
       this.sendCommand({ type: 'status_request' });
     }
 
-    // Simulate device metrics when disconnected (for UI testing)
     if (!this._status.connected) {
-      this._status.cpu = 15 + Math.random() * 30;
-      this._status.ramUsedMb = 2048 + Math.random() * 2048;
-      this._status.ramTotalMb = 6144;
-      this._status.batteryPct = Math.max(10, this._status.batteryPct - Math.random() * 0.1);
-      this._status.temperature = 28 + Math.random() * 10;
-      this._status.runningProcesses = 80 + Math.floor(Math.random() * 40);
+      this._status.metricsAvailable = false;
+      this._status.metricsSource = "UNOBSERVED";
+      this._status.lastObservedAt = 0;
     }
 
     this._lastOptimization = Date.now();
