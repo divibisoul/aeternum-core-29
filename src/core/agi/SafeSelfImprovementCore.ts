@@ -85,7 +85,7 @@ export class VerificationSandbox {
       pulse.complexity !== 'advanced' || pulse.safetyScore > 0.8,
       pulse.targetModules.length <= 3,
       pulse.expectedImprovement > 0 && pulse.expectedImprovement <= 0.3,
-      Math.random() > 0.1
+      pulse.safetyScore >= 0.5
     ];
     const isValid = checks.every(c => c === true);
     this.testResults.set(pulse.id, isValid);
@@ -110,7 +110,7 @@ export class PulseSynthesizerCore {
           : 'cognitive_enhancement',
       complexity,
       targetModules: cognitiveGaps.slice(0, 2),
-      expectedImprovement: ({ minimal: 0.05, moderate: 0.1, optimal: 0.15, advanced: 0.25 }[complexity]) + Math.random() * 0.05,
+      expectedImprovement: ({ minimal: 0.05, moderate: 0.1, optimal: 0.15, advanced: 0.25 }[complexity]),
       safetyScore: Math.max(0.5, 1.0 - ({ minimal: 0, moderate: 0.1, optimal: 0.15, advanced: 0.3 }[complexity]) - cognitiveGaps.length * 0.05),
       timestamp: Date.now()
     };
@@ -127,14 +127,23 @@ export class ParadoxEngine {
     'recursive_improvement_limit', 'consciousness_emergence'
   ];
 
+  private profileIndex(length: number): number {
+    if (length <= 1) return 0;
+    const input = this.paradoxCatalogue.join('|');
+    let hash = 2166136261;
+    for (let i = 0; i < input.length; i++) { hash ^= input.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+    return (hash >>> 0) % length;
+  }
+
   generateCognitiveChallenge(): string {
-    return `Resolva: ${this.paradoxCatalogue[Math.floor(Math.random() * this.paradoxCatalogue.length)].replace(/_/g, ' ')}`;
+    const index = this.profileIndex(this.paradoxCatalogue.length);
+    return `Resolva: ${this.paradoxCatalogue[index].replace(/_/g, ' ')}`;
   }
 
   processParadox(paradox: string): { solution: string; improvement: number } {
     return {
       solution: `Aplicação de meta-cognição para ${paradox}`,
-      improvement: Math.random() * 0.1 + 0.05
+      improvement: 0.05 + Math.min(0.1, Math.max(0, paradox.length) / 2000)
     };
   }
 }
