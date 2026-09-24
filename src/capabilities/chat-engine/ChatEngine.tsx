@@ -305,7 +305,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         self_scan_coherence: conscienciaResult.metricas.coerenciaMedia,
         causal_reversal_efficiency: agiResult.godelState.modelingAccuracy,
         ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? null,
-        quantum_validation: agiResult.quantumResult.physicalBackendConfigured ? (agiResult.quantumResult.quantumCoherence > 0.9 && agiResult.latticeOutput.every(v => v > 0.1)) : null,
+        quantum_validation: agiResult.quantumResult.hybridActive ? (agiResult.quantumResult.quantumCoherence > 0.9 && agiResult.latticeOutput.every(v => v > 0.1)) : null,
         agi_subsystems_active: agi.getFullMetrics().overall.activeSubsystems,
         godel_self_awareness: agiResult.godelState.selfAwareness,
         darwin_fitness: agiResult.evolutionMetrics.avgFitness,
