@@ -22,7 +22,6 @@ export function startSoulMeshRuntime(): () => void {
       if (message.capability === 'supercompute.execute') {
         const input = message.payload as { tasks?: SuperComputeTask[] };
         if (!Array.isArray(input?.tasks)) throw new Error('SUPERCOMPUTE_TASKS_REQUIRED');
-        if (input.tasks.some((task) => task.target === 'N07')) throw new Error('N07_NOT_COMMISSIONED');
         const plan = createSuperComputePlan(input.tasks);
         const results = await executeSuperComputePlan(plan, {
           execute: async (task) => {
@@ -39,7 +38,7 @@ export function startSoulMeshRuntime(): () => void {
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
         capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
-        peers: ['N02', 'N03', 'N04', 'N05', 'N06'],
+        peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
       };
