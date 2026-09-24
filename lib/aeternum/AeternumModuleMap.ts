@@ -146,6 +146,11 @@ export function validateAeternumModuleGraph(): string[] {
     if ((item.id === "M6_IMMUNITY" || item.id === "M7_EVOLUTION" || item.id === "M8_GOVERNANCE_MEMORY")
       && item.governanceAuthority !== "SARA") {
       problems.push(item.id + ":SARA_GOVERNANCE_REQUIRED");
+    }
+    if (!item.executionOwner) problems.push(item.id + ":NO_EXECUTION_OWNER");
+    if ((item.id === "M6_IMMUNITY" || item.id === "M7_EVOLUTION" || item.id === "M8_GOVERNANCE_MEMORY")
+      && item.governanceAuthority !== "SARA") {
+      problems.push(item.id + ":SARA_GOVERNANCE_REQUIRED");
     if (!item.evidence.length) problems.push(item.id + ":NO_EVIDENCE");
     if (item.dependencies.includes(item.id)) {
       problems.push(item.id + ":SELF_DEPENDENCY");
