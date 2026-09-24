@@ -1,7 +1,7 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
 const SELF = 'N01';
-const PEERS = ['N02', 'N03', 'N04', 'N05', 'N06'];
+const PEERS = ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 const PROTOCOL = 'soul-mesh/1';
 const raw = process.env.SOUL_FUSION_PEERS || '{}';
 let configured;
@@ -33,5 +33,5 @@ for (const peer of PEERS) {
 }
 
 const reachable = results.filter((r) => r.status === 'reachable').length;
-console.log(JSON.stringify({ system: 'SOUL', nucleus: SELF, protocol: PROTOCOL, peers: results, reachable, totalPeers: PEERS.length, structuralContract: { nuclei: 6, directionalChannels: 60, transports: 5 } }, null, 2));
+console.log(JSON.stringify({ system: 'SOUL', nucleus: SELF, protocol: PROTOCOL, peers: results, reachable, totalPeers: PEERS.length, structuralContract: { nuclei: 7, directionalChannels: 84, transports: 5 } }, null, 2));
 if (process.env.SOUL_FUSION_REQUIRE_ALL === 'true' && reachable !== PEERS.length) process.exitCode = 2;
