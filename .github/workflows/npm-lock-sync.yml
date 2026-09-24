@@ -1,4 +1,5 @@
 name: Synchronize npm lockfile
+# Keeps package-lock.json reproducible for npm ci after package manifest changes.
 
 on:
   push:
