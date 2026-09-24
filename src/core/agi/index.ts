@@ -467,6 +467,29 @@ export class AeternumAGI {
    * Get comprehensive system metrics for dashboard (13 engines)
    */
   getFullMetrics() {
+    const runtimeState: Array<[string, boolean]> = [
+      ['consciousness', this.consciousness.isRunning],
+      ['darwin', this.darwinMachine.isRunning],
+      ['neuralLattice', this.neuralLattice.isRunning],
+      ['selfHealing', this.selfHealing.isRunning],
+      ['ethicalOptimizer', this.ethicalOptimizer.isRunning],
+      ['safetySystem', this.safetySystem.isRunning],
+      ['nip', this.nip.isRunning],
+      ['quantumNeural', this.quantumNeural.getInterfaceStatus().initialized],
+      ['connectivity', this.connectivity.isRunning],
+      ['saiic', this.saiic.isRunning],
+      ['resourceManager', this.resourceManager.isRunning],
+      ['gemHealth', this.gemHealth.isRunning],
+      ['gemResearch', this.gemResearch.isRunning],
+      ['gemMusic', this.gemMusic.isRunning],
+      ['gemDevice', this.gemDevice.isRunning],
+    ];
+    const activeSubsystemIds = runtimeState.filter(([, active]) => active).map(([id]) => id);
+    const initializedSubsystemIds = [
+      ...runtimeState.filter(([, active]) => active).map(([id]) => id),
+      ...(this.godelAgent ? ['godelAgent'] : []),
+      ...(this.safeCore ? ['safeCore'] : []),
+    ];
     return {
       consciousness: this.consciousness.getMetrics(),
       godel: this.godelAgent.getPerformanceMetrics(),
@@ -490,25 +513,10 @@ export class AeternumAGI {
         initialized: this._initialized,
         running: this._running,
         subsystems: 17,
-        activeSubsystems: [
-          this.consciousness.isRunning,
-          this.darwinMachine.isRunning,
-          this.neuralLattice.isRunning,
-          this.selfHealing.isRunning,
-          this.ethicalOptimizer.isRunning,
-          this.safetySystem.isRunning,
-          this.nip.isRunning,
-          this.quantumNeural.getInterfaceStatus().initialized,
-          this.connectivity.isRunning,
-          this.saiic.isRunning,
-          this.resourceManager.isRunning,
-          true, // GodelAgent
-          true, // SafeCore
-          this.gemHealth.isRunning,
-          this.gemResearch.isRunning,
-          this.gemMusic.isRunning,
-          this.gemDevice.isRunning,
-        ].filter(Boolean).length
+        activeSubsystems: activeSubsystemIds.length,
+        activeSubsystemIds,
+        initializedSubsystems: initializedSubsystemIds.length,
+        initializedSubsystemIds,
       }
     };
   }
