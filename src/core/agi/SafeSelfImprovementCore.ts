@@ -85,7 +85,7 @@ export class VerificationSandbox {
       pulse.complexity !== 'advanced' || pulse.safetyScore > 0.8,
       pulse.targetModules.length <= 3,
       pulse.expectedImprovement > 0 && pulse.expectedImprovement <= 0.3,
-      Math.random() > 0.1
+      Number.isFinite(pulse.safetyScore) && pulse.safetyScore >= 0 && pulse.safetyScore <= 1
     ];
     const isValid = checks.every(c => c === true);
     this.testResults.set(pulse.id, isValid);
@@ -110,7 +110,7 @@ export class PulseSynthesizerCore {
           : 'cognitive_enhancement',
       complexity,
       targetModules: cognitiveGaps.slice(0, 2),
-      expectedImprovement: ({ minimal: 0.05, moderate: 0.1, optimal: 0.15, advanced: 0.25 }[complexity]) + Math.random() * 0.05,
+      expectedImprovement: ({ minimal: 0.05, moderate: 0.1, optimal: 0.15, advanced: 0.25 }[complexity]),
       safetyScore: Math.max(0.5, 1.0 - ({ minimal: 0, moderate: 0.1, optimal: 0.15, advanced: 0.3 }[complexity]) - cognitiveGaps.length * 0.05),
       timestamp: Date.now()
     };
