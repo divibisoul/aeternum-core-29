@@ -1,6 +1,6 @@
 # Soul — Integration Model
 
-The six nuclei are one system because they share one canonical Mesh contract, one capability model, and one routed communication fabric. They remain modular implementations, but their capabilities are exposed through the same protocol.
+The seven nuclei are one system because they share one canonical Mesh contract, one capability model, and one routed communication fabric. They remain modular implementations, but their capabilities are exposed through the same protocol.
 
 ```text
                  SOUL SYSTEM
@@ -13,8 +13,9 @@ The six nuclei are one system because they share one canonical Mesh contract, on
           |                     |
    +------+------+------+------+------+
    |      |      |      |      |      |
-  N01    N02    N03    N04    N05    N06
-   |      |      |      |      |      |
+  N01    N02    N03    N04    N05    N06    N07
+   |      |      |      |      |      |      |
+ Android  AI    Nexus  Tools  Orchestration Cognition Neural
  Android AI     Nexus AI     Mesh   Support
 ```
 
@@ -24,7 +25,7 @@ Each nucleus has one logical Mesh identity and exposes its owned capabilities. A
 
 `A -> B` and `B -> A`.
 
-For six nuclei there are 15 bidirectional peer pairs / 30 directed links. At the interface level this is 5 IN + 5 OUT per nucleus.
+For seven nuclei there are 21 bidirectional peer pairs / 42 directed peer links. At the interface level this is 6 IN + 6 OUT per nucleus, or 84 channel endpoints.
 
 ## How they communicate
 
@@ -46,6 +47,7 @@ The nuclei are not six independent chatbots. They are six execution domains behi
 - N04: AI/chat capabilities.
 - N05: AI/tools/mesh capabilities.
 - N06: integral support for context, documents, artifacts, tools and communication.
+- N07: neural, prefrontal, orchestration and distributed-compute services.
 
 A capability must have one authoritative owner. Other nuclei call it through the Mesh instead of cloning its implementation.
 
@@ -63,4 +65,4 @@ HTTP is the first transport implementation. The protocol and routing layers rema
 
 ## Final APK
 
-The six nuclei are development modules/domains. The final APK packages their runtime components into one Android application. The APK does not turn the nuclei into six applications; it supplies one Soul runtime, one UI, one permission boundary and one Mesh fabric over the six domains.
+The six nuclei are development modules/domains. The final APK packages their runtime components into one Android application. The APK does not turn the nuclei into six applications; it supplies one Soul runtime, one UI, one permission boundary and one Mesh fabric over the seven domains.

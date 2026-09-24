@@ -7,12 +7,12 @@ export type SoulMeshEnvironmentConfig = {
   maxRetries: number;
 };
 
-const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'] as const;
+const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'] as const;
 
 /** Vite-safe public topology configuration. Secrets are deliberately excluded from browser env. */
 export function loadSoulMeshEnvironment(env: Record<string, string | undefined> = import.meta.env): SoulMeshEnvironmentConfig {
   const nucleus = env.VITE_SOUL_NUCLEUS as SoulNucleus | undefined;
-  if (!nucleus || !NUCLEI.includes(nucleus)) throw new Error('VITE_SOUL_NUCLEUS must be N01..N06');
+  if (!nucleus || !NUCLEI.includes(nucleus)) throw new Error('VITE_SOUL_NUCLEUS must be N01..N07');
 
   const peers: Partial<Record<SoulNucleus, string>> = {};
   for (const peer of NUCLEI) {

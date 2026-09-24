@@ -206,7 +206,29 @@ const server = http.createServer((req, res) => proxy(req, res).catch(error => {
   if (!res.headersSent) res.writeHead(400, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'SOUL_MESH_INGRESS_ERROR' }));
 }));
-server.listen(publicPort, host);
+
+async function waitForInternalHealth() {
+  const deadline = Date.now() + 15_000;
+  let lastError = 'UNKNOWN';
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${internalPort}/mesh/health`, { cache: 'no-store' });
+      if (response.ok) return;
+      lastError = `HTTP_${response.status}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error(`SOUL_MESH_INTERNAL_NOT_READY:${lastError}`);
+}
+
+await waitForInternalHealth();
+await new Promise((resolve, reject) => {
+  server.once('error', reject);
+  server.listen(publicPort, host, resolve);
+});
+console.log(`Soul Mesh ingress listening on http://${host}:${publicPort}; upstream=127.0.0.1:${internalPort}`);
 
 function shutdown(signal) {
   server.close(() => child.kill('SIGTERM'));

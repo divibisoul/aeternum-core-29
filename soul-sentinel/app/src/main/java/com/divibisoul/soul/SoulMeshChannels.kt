@@ -1,6 +1,6 @@
 package com.divibisoul.soul
 
-/** Complete logical 6-IN/6-OUT channel matrix for the seven-nucleus Soul Mesh. */
+/** Complete logical 6-IN/6-OUT channel matrix for each member of the seven-nucleus Soul Mesh. */
 object SoulMeshChannels {
     val nuclei = listOf("N01", "N02", "N03", "N04", "N05", "N06", "N07")
     fun out(source: String): List<String> = nuclei.filter { it != source }

@@ -2,7 +2,7 @@
 
 ## Critical distinction
 
-The six original repositories remain separate source repositories. The Mesh does NOT magically merge Git directories. It connects their **runtime components** through a shared contract and transport.
+The seven nucleus repositories remain separate source repositories. The Mesh does NOT magically merge Git directories. It connects their **runtime components** through a shared contract and transport.
 
 The final APK is the integration host: it packages the required runtime modules from N01–N06 into one application process/application boundary. The Mesh is the communication fabric inside that system.
 
@@ -19,6 +19,7 @@ N03 ── adapter/endpoint pending
 N04 ── adapter/endpoint pending
 N05 ── adapter/endpoint pending
 N06 ── adapter/endpoint pending
+N07 ── adapter/endpoint pending
 ```
 
 This is intentional: it prevents a false claim that repository-level proximity equals runtime connectivity.
@@ -36,11 +37,11 @@ This is intentional: it prevents a false claim that repository-level proximity e
        |<------ 5 bidirectional peers per nucleus ------->|
 ```
 
-Every pair is bidirectional. For six nuclei:
+Every pair is bidirectional. For seven nuclei:
 
-- 15 bidirectional peer pairs;
-- 30 directed links;
-- 5 inbound + 5 outbound logical channels per nucleus.
+- 21 bidirectional peer pairs;
+- 42 directed links;
+- 6 inbound + 6 outbound logical channels per nucleus.
 
 ## What makes the directories one system
 

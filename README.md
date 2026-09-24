@@ -20,7 +20,7 @@ The only requirement is having Node.js & npm installed.
 
 ## SOUL Mesh N01
 
-This repository contains the N01 coordination layer for the six-nucleus Soul system. Existing UI and bridge code remain intact. The executable Mesh gateway is started with:
+This repository contains the N01 coordination layer for the seven-nucleus Soul system (N01..N07). Existing UI and bridge code remain intact. The executable Mesh gateway is started with:
 
 ```sh
 npm run mesh:n01
@@ -36,17 +36,17 @@ Default listener: `0.0.0.0:8080`.
 - `POST /mesh/in`
 - `POST /mesh/out`
 
-Configure peer endpoints with `SOUL_MESH_N02_URL` through `SOUL_MESH_N06_URL`. Configure `SOUL_MESH_SECRET` to enable HMAC-SHA256 envelope authentication.
+Configure peer endpoints with `SOUL_MESH_N02_URL` through `SOUL_MESH_N07_URL`. Configure `SOUL_MESH_SECRET` to enable HMAC-SHA256 envelope authentication.
 
 N01 provides discovery, registration, delegation, retry/circuit protection and ordered `mesh.combo` workflows. Specialized capabilities remain owned by their respective nuclei; N01 orchestrates rather than replacing them.
 
-To run the N01/N06 probe:
+To run the N01/N07 probe:
 
 ```sh
-SOUL_MESH_N06_URL=http://<n06-host>:<port> npm run mesh:health
+SOUL_MESH_N07_URL=http://<n07-host>:<port> npm run mesh:health
 ```
 
-The probe only reports N01↔N06 as successful when the response identity and correlation ID are correct.
+The probe only reports N01↔N07 as successful when the response identity and correlation ID are correct.
 
 See `MESH_STATUS.md` for the acceptance criteria and current implementation boundary.
 

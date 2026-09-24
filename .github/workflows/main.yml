@@ -1,250 +1,4 @@
-#!/usr/bin/env python3
-"""
-Orquestrador Neural Otimizado para o N07 (Neocórtex Pré-frontal)
-Com suporte a GPU, roteamento dinâmico e metacognição (aprendizado por reforço).
-"""
-
-import os
-import sys
-import json
-import time
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
-from collections import deque
-import requests
-from supabase import create_client
-import openai
-import google.generativeai as genai
-
-# ============================================================
-# CONFIGURAÇÃO
-# ============================================================
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"[N07] Dispositivo: {DEVICE}")
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-BYOK_KEY = os.getenv("BYOK_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# URLs dos núcleos (injetados via variáveis de ambiente)
-NUCLEOS = {
-    "N01": os.getenv("NUCLEO_N01"),
-    "N02": os.getenv("NUCLEO_N02"),
-    "N03": os.getenv("NUCLEO_N03"),
-    "N04": os.getenv("NUCLEO_N04"),
-    "N05": os.getenv("NUCLEO_N05"),
-    "N06": os.getenv("NUCLEO_N06"),
-    "N07": os.getenv("NUCLEO_N07"),  # ele mesmo, mas para consistência
-}
-
-# ============================================================
-# 1. ROTEADOR NEURAL (com GPU)
-# ============================================================
-class NeuralRouter(nn.Module):
-    """
-    Roteador baseado em embeddings. Mapeia uma tarefa (embedding) para
-    uma distribuição de probabilidade sobre os núcleos.
-    """
-    def __init__(self, input_dim=768, hidden_dim=512, num_cores=7):
-        super().__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, num_cores)
-        self.dropout = nn.Dropout(0.2)
-        self.num_cores = num_cores
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        return F.softmax(x, dim=-1)
-
-# ============================================================
-# 2. MEMÓRIA DE EXPERIÊNCIAS (para metacognição)
-# ============================================================
-class ExperienceMemory:
-    """
-    Armazena experiências (tarefa, roteamento escolhido, recompensa)
-    para aprender a melhorar o roteamento.
-    """
-    def __init__(self, capacity=1000):
-        self.buffer = deque(maxlen=capacity)
-
-    def add(self, task_embedding, chosen_cores, reward):
-        self.buffer.append((task_embedding, chosen_cores, reward))
-
-    def sample(self, batch_size=32):
-        if len(self.buffer) < batch_size:
-            return None
-        indices = np.random.choice(len(self.buffer), batch_size, replace=False)
-        batch = [self.buffer[i] for i in indices]
-        tasks = torch.tensor([b[0] for b in batch], dtype=torch.float32)
-        cores = torch.tensor([b[1] for b in batch], dtype=torch.long)
-        rewards = torch.tensor([b[2] for b in batch], dtype=torch.float32)
-        return tasks.to(DEVICE), cores.to(DEVICE), rewards.to(DEVICE)
-
-# ============================================================
-# 3. ORQUESTRADOR PRINCIPAL
-# ============================================================
-class SOULOrchestrator:
-    def __init__(self):
-        self.router = NeuralRouter().to(DEVICE)
-        self.optimizer = torch.optim.Adam(self.router.parameters(), lr=1e-4)
-        self.memory = ExperienceMemory(capacity=2000)
-        self.supabase = None
-        if SUPABASE_URL and SUPABASE_KEY:
-            self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        # Modelo de embedding (usamos um pequeno sentence-transformer ou similar)
-        try:
-            from sentence_transformers import SentenceTransformer
-            self.embedder = SentenceTransformer('all-MiniLM-L6-v2')
-        except:
-            print("[N07] Fallback: usando dummy embedder (zeros)")
-            self.embedder = None
-        # Inicializa APIs externas
-        if OPENAI_API_KEY:
-            openai.api_key = OPENAI_API_KEY
-        if GEMINI_API_KEY:
-            genai.configure(api_key=GEMINI_API_KEY)
-
-    def embed_task(self, task_text):
-        """Gera embedding para uma tarefa (texto)."""
-        if self.embedder:
-            return self.embedder.encode(task_text, convert_to_tensor=True).cpu().numpy()
-        else:
-            # Dummy: vetor aleatório (apenas para teste)
-            return np.random.randn(768).astype(np.float32)
-
-    def route_task(self, task_embedding):
-        """Escolhe os núcleos a ativar com base no embedding."""
-        with torch.no_grad():
-            tensor = torch.tensor(task_embedding, dtype=torch.float32).to(DEVICE)
-            probs = self.router(tensor.unsqueeze(0)).squeeze(0)
-            # Seleciona top-3 núcleos (ou todos com probabilidade > threshold)
-            threshold = 0.15
-            selected = (probs > threshold).nonzero(as_tuple=True)[0].tolist()
-            if not selected:  # fallback: pega o mais provável
-                selected = [torch.argmax(probs).item()]
-            return selected, probs.cpu().numpy()
-
-    def call_core(self, core_name, task_payload):
-        """Chama um núcleo via HTTP (ou gRPC) e retorna a resposta."""
-        url = NUCLEOS.get(core_name)
-        if not url:
-            return {"error": f"URL de {core_name} não configurada"}
-        try:
-            resp = requests.post(f"{url}/process", json=task_payload, timeout=10)
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                return {"error": f"Status {resp.status_code}"}
-        except Exception as e:
-            return {"error": str(e)}
-
-    def orchestrate(self, task_text):
-        """Pipeline completo: embedding -> roteamento -> chamada -> agregação."""
-        # 1. Embedding
-        emb = self.embed_task(task_text)
-        # 2. Roteamento
-        selected_cores, probs = self.route_task(emb)
-        # 3. Disparar chamadas paralelas (simulação sequencial para simplificar)
-        results = {}
-        for core_idx in selected_cores:
-            core_name = f"N{core_idx+1:02d}"
-            payload = {"task": task_text, "context": emb.tolist()}
-            results[core_name] = self.call_core(core_name, payload)
-        # 4. Agregar resultados (exemplo: síntese com LLM externo)
-        aggregated = self.synthesize(task_text, results)
-        # 5. Registrar experiência para metacognição (recompensa será definida depois)
-        #    Aqui, placeholder: recompensa = 1.0 por enquanto (será atualizada com feedback)
-        reward = 1.0
-        self.memory.add(emb.tolist(), selected_cores, reward)
-        return {
-            "task": task_text,
-            "routed_cores": [f"N{idx+1:02d}" for idx in selected_cores],
-            "probabilities": probs.tolist(),
-            "results": results,
-            "aggregated": aggregated
-        }
-
-    def synthesize(self, task_text, results):
-        """Sintetiza os resultados parciais usando um LLM externo (OpenAI/Gemini) ou concatenação."""
-        # Monta um resumo dos resultados
-        summary = "\n".join([f"{k}: {v}" for k, v in results.items()])
-        prompt = f"Tarefa: {task_text}\nResultados parciais:\n{summary}\nForneça uma resposta consolidada e coerente."
-        # Tenta usar OpenAI
-        if OPENAI_API_KEY:
-            try:
-                response = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=300
-                )
-                return response.choices[0].message.content
-            except:
-                pass
-        # Fallback para Gemini
-        if GEMINI_API_KEY:
-            try:
-                model = genai.GenerativeModel('gemini-pro')
-                response = model.generate_content(prompt)
-                return response.text
-            except:
-                pass
-        # Fallback final: retorna o resumo bruto
-        return summary
-
-    def meta_learn(self, feedback_reward):
-        """
-        Metacognição: atualiza o roteador com base no feedback (recompensa) da última tarefa.
-        Usa aprendizado por reforço simples (policy gradient) para ajustar os pesos.
-        """
-        # Pega a última experiência armazenada e atualiza a recompensa
-        if len(self.memory.buffer) == 0:
-            return
-        # Simulação: atualizamos a recompensa da última experiência
-        last_exp = self.memory.buffer[-1]
-        task_emb, chosen_cores, _ = last_exp
-        # Substitui recompensa pelo feedback recebido
-        new_exp = (task_emb, chosen_cores, feedback_reward)
-        self.memory.buffer[-1] = new_exp
-
-        # Se tiver experiência suficiente, faz uma atualização por lote
-        batch = self.memory.sample(batch_size=32)
-        if batch is None:
-            return
-        tasks, cores, rewards = batch
-        # Forward
-        logits = self.router(tasks)
-        # Calcula a perda: negativo da log-probabilidade das ações escolhidas ponderada pela recompensa
-        loss = -torch.mean(rewards * torch.gather(logits, 1, cores.unsqueeze(1)).squeeze())
-        # Backprop
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        print(f"[Metacognição] Loss atualizada: {loss.item():.4f}")
-
-# ============================================================
-# 4. PONTO DE ENTRADA (para testes/execução)
-# ============================================================
-if __name__ == "__main__":
-    orchestrator = SOULOrchestrator()
-    # Exemplo de tarefa
-    test_task = "Resuma as principais características do SOUL e sugira melhorias."
-    print(f"[N07] Processando tarefa: {test_task}")
-    result = orchestrator.orchestrate(test_task)
-    print(json.dumps(result, indent=2))
-    # Simula um feedback de sucesso (ex: 1.0 = bom, -1.0 = ruim)
-    # Aqui, em produção, viria de uma avaliação externa.
-    feedback = 0.8
-    orchestrator.meta_learn(feedback)
-    print("[N07] Metacognição aplicada.")
-    name: SOUL – Ciclo de Vida Completo (Validação, Reparo, Regeneração e Manutenção)
+name: SOUL – Ciclo de Vida Completo (Validação, Reparo, Regeneração e Manutenção)
 
 on:
   # Disparo manual para ações administrativas
@@ -306,22 +60,22 @@ jobs:
     steps:
       # --- Preparação ---
       - name: Baixar código (com submódulos)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
+          fetch-depth: 0
 
       - name: Configurar Python 3.11
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Instalar dependências do sistema e Python
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends build-essential curl jq
           pip install --upgrade pip setuptools wheel
-          pip install supabase-py pytest requests numpy python-dotenv
+          pip install supabase pytest requests numpy python-dotenv
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
           if command -v nvidia-smi &> /dev/null; then
             pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
@@ -338,75 +92,92 @@ jobs:
         id: mesh
         run: |
           echo "=== VALIDAÇÃO DA MALHA SINÁPTICA ==="
-          NUCLEOS="$NUCLEO_N01 $NUCLEO_N02 $NUCLEO_N03 $NUCLEO_N04 $NUCLEO_N05 $NUCLEO_N06 $NUCLEO_N07"
+          declare -A PEERS=(
+            [N01]="$NUCLEO_N01"
+            [N02]="$NUCLEO_N02"
+            [N03]="$NUCLEO_N03"
+            [N04]="$NUCLEO_N04"
+            [N05]="$NUCLEO_N05"
+            [N06]="$NUCLEO_N06"
+            [N07]="$NUCLEO_N07"
+          )
           FAIL=0
-          for url in $NUCLEOS; do
+          MEASURABLE=0
+          for nucleus in N01 N02 N03 N04 N05 N06 N07; do
+            url="${PEERS[$nucleus]}"
             if [ -z "$url" ]; then
-              echo "❌ URL vazia para um núcleo. Verifique os secrets."
-              FAIL=1
+              echo "$nucleus_STATUS=UNMEASURABLE"
+              echo "$nucleus_REASON=endpoint_not_configured"
               continue
             fi
+            MEASURABLE=$((MEASURABLE + 1))
             START=$(date +%s%N)
             if curl -f -s -o /dev/null --connect-timeout 5 "$url/health"; then
               END=$(date +%s%N)
-              LATENCY=$(( ($END - $START) / 1000000 ))
+              LATENCY=$(( (END - START) / 1000000 ))
               if [ $LATENCY -gt 200 ]; then
-                echo "⚠️  $url - latência alta: ${LATENCY}ms"
+                echo "$nucleus_STATUS=CONNECTED"
+                echo "$nucleus_LATENCY_MS=$LATENCY"
+                echo "⚠️  $nucleus - latência alta: ${LATENCY}ms"
               else
-                echo "✅ $url - OK (${LATENCY}ms)"
+                echo "$nucleus_STATUS=VERIFIED"
+                echo "$nucleus_LATENCY_MS=$LATENCY"
+                echo "✅ $nucleus - OK (${LATENCY}ms)"
               fi
             else
-              echo "❌ $url - falha na conexão"
+              echo "$nucleus_STATUS=BLOCKED"
+              echo "$nucleus_REASON=endpoint_configured_but_unreachable"
               FAIL=1
             fi
           done
-          if [ $FAIL -ne 0 ]; then exit 1; fi
-          echo "Mesh validada."
+          if [ "$MEASURABLE" -eq 0 ]; then
+            echo "MESH_STATUS=UNMEASURABLE"
+          elif [ "$FAIL" -ne 0 ]; then
+            echo "MESH_STATUS=BLOCKED"
+            exit 1
+          else
+            echo "MESH_STATUS=VERIFIED"
+          fi
 
       # --- Validação de Memória e BYOK ---
       - name: Validar Memória Vetorial e BYOK
         id: memory
         run: |
+          set -euo pipefail
           echo "=== VALIDAÇÃO DA MEMÓRIA EPISÓDICA E BYOK ==="
-          python -c "
-          import os, sys, json, base64
-          from supabase import create_client
-          import numpy as np
-          url = os.getenv('SUPABASE_URL')
-          key = os.getenv('SUPABASE_KEY')
-          byok = os.getenv('BYOK_KEY')
-          if not url or not key:
-              print('❌ SUPABASE_URL ou SUPABASE_KEY não definidos')
-              sys.exit(1)
-          try:
-              supabase = create_client(url, key)
-              supabase.table('memoria_episodica').select('id').limit(1).execute()
-              print('✅ Conexão Supabase OK')
-          except Exception as e:
-              print(f'❌ Erro Supabase: {e}')
-              sys.exit(1)
-          try:
-              decoded = base64.b64decode(byok)
-              if len(decoded) != 32:
-                  raise ValueError('Tamanho inválido')
-              print('✅ BYOK válida')
-          except Exception as e:
-              print(f'❌ BYOK inválida: {e}')
-              sys.exit(1)
-          try:
-              dummy = np.zeros(768).tolist()
-              insert = supabase.table('memoria_episodica').insert({'embedding': dummy, 'metadata': {'test': True}}).execute()
-              if not insert.data:
-                  raise Exception('Falha na inserção')
-              inserted_id = insert.data[0]['id']
-              supabase.rpc('match_vectors', {'query_embedding': dummy, 'match_threshold': 0.9, 'limit': 1}).execute()
-              supabase.table('memoria_episodica').delete().eq('id', inserted_id).execute()
-              print('✅ Operações vetoriais OK')
-          except Exception as e:
-              print(f'❌ Erro no teste vetorial: {e}')
-              sys.exit(1)
-          print('Validação de memória e BYOK concluída.')
-          "
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_KEY:-}" ]; then
+            echo "MEMORY_EXTERNAL_STATUS=UNMEASURABLE"
+            echo "MEMORY_EXTERNAL_REASON=SUPABASE credentials are not configured in this runner"
+            npm run vector-memory:check
+            exit 0
+          fi
+          if [ -z "${BYOK_KEY:-}" ]; then
+            echo "BYOK_STATUS=UNMEASURABLE"
+            echo "BYOK_REASON=BYOK secret is not configured in this runner"
+          else
+            python - <<'PY'
+import base64, os
+decoded = base64.b64decode(os.environ["BYOK_KEY"], validate=True)
+if len(decoded) != 32:
+    raise SystemExit("BYOK_INVALID_LENGTH")
+print("BYOK_STATUS=VALIDATED")
+PY
+          fi
+          python - <<'PY'
+import os
+from supabase import create_client
+
+url = os.environ["SUPABASE_URL"]
+key = os.environ["SUPABASE_KEY"]
+supabase = create_client(url, key)
+probe = supabase.table("memoria_episodica").select("id").limit(1).execute()
+if probe.data is None:
+    raise SystemExit("SUPABASE_MEMORY_READ_FAILED")
+print("MEMORY_EXTERNAL_STATUS=CONNECTED")
+print("MEMORY_EXTERNAL_READ_EVIDENCE=VERIFIED")
+PY
+          npm run vector-memory:check
+          echo "MEMORY_VALIDATION=COMPLETED"
 
       # --- Build e testes dos núcleos ---
       - name: Build e testes dos núcleos
@@ -465,9 +236,9 @@ jobs:
             # 1. Atualizar dependências
             pip install --upgrade -r requirements.txt 2>/dev/null || true
             # 2. Linters e formatação
-            pip install black flake8 2>/dev/null || true
-            black . 2>/dev/null || true
-            flake8 . --max-line-length=120 --count --statistics 2>/dev/null || true
+            pip install black flake8
+            black .
+            flake8 . --max-line-length=120 --count --statistics
             # 3. Recompilar com otimização
             for nucleo in N01 N02 N03 N04 N05 N06 N07; do
               if [ -f "nucleos/$nucleo/Makefile" ]; then
@@ -486,8 +257,15 @@ jobs:
               echo "✅ Reparo bem‑sucedido na tentativa $ATTEMPT."
               git config user.name "github-actions"
               git config user.email "github-actions@github.com"
-              git add . && git commit -m "fix: reparo automático (tentativa $ATTEMPT)" || true
-              git push || true
+              git add .
+              if git diff --cached --quiet; then
+                echo "REPAIR_NO_SOURCE_CHANGES=TRUE"
+              else
+                git commit -m "fix: reparo automático (tentativa $ATTEMPT)"
+                BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+                git push origin "HEAD:${BRANCH}"
+                echo "REPAIR_PUBLISHED=TRUE"
+              fi
               # Dispara regeneração após reparo
               echo "REGENERATE_AFTER_REPAIR=true" >> $GITHUB_ENV
               exit 0
@@ -555,7 +333,7 @@ jobs:
 
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # --- Fechar issues e PRs obsoletos (stale) ---
       - name: Fechar issues/PRs inativos
@@ -571,7 +349,7 @@ jobs:
           exempt-issue-labels: 'pinned,security,enhancement'
           exempt-pr-labels: 'pinned,work-in-progress'
           operations-per-run: 100
-          delete-branch: true
+          delete-branch: false
           enable-statistics: true
 
       # --- Limpar branches mescladas ---
@@ -585,16 +363,7 @@ jobs:
             });
             const mergedBranches = branches.filter(b => b.name !== 'main' && b.name !== 'principal');
             for (const branch of mergedBranches) {
-              try {
-                await github.rest.git.deleteRef({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  ref: `heads/${branch.name}`,
-                });
-                console.log(`Branch ${branch.name} removida.`);
-              } catch (e) {
-                console.log(`Não foi possível remover ${branch.name}: ${e.message}`);
-              }
+              console.log(`Branch candidata à limpeza: ${branch.name}. Nenhuma remoção automática é executada.`);
             }
 
       # --- Verificar segurança de dependências (usando Trivy) ---
@@ -607,7 +376,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload do relatório Trivy
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
 

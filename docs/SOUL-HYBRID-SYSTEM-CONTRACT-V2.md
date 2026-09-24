@@ -5,9 +5,9 @@ Status: active architectural contract; additive, non-destructive.
 ## Invariants
 - SOUL is a GPU-like parallel cognitive fabric, not a CPU.
 - N01 is the Android/APK host, user-facing gateway and universal access point.
-- The six nuclei are N01..N06.
-- Every nucleus exposes exactly 5 logical IN channels and 5 logical OUT channels to the other five nuclei.
-- The topology therefore contains 30 directed OUT channels + 30 directed IN channels = 60 directional channels.
+- The seven nuclei are N01..N07.
+- Every nucleus exposes exactly 6 logical IN channels and 6 logical OUT channels to the other six nuclei.
+- The topology therefore contains 42 directed peer relationships, represented by 42 OUT channel endpoints + 42 IN channel endpoints = 84 directional channel endpoints.
 - Channel identity is independent of transport.
 - A channel is NOT considered functionally connected merely because a route, endpoint, adapter, or registry exists.
 
@@ -34,6 +34,7 @@ Each nucleus may contain and operate its own AI runtime/provider integration. AI
 - N04: tools, documents and artifacts
 - N05: orchestration, dispatch and execution coordination
 - N06: cognition, synthesis, audit and governance
+- N07: neural, prefrontal, orchestration and distributed compute
 
 Affinity selects preferred execution paths; it MUST NOT prohibit any of the 5x5 peer connections.
 

@@ -3,7 +3,7 @@ import { SOUL_MESH_CONTRACT_VERSION } from './SoulMeshProtocol';
 import { createSoulMeshRouter } from './createSoulMeshRouter';
 import { SoulMeshDiscoveryRegistry } from './SoulMeshDiscovery';
 
-export const R1_PEERS: Exclude<SoulNucleus, 'N01'>[] = ['N02', 'N03', 'N04', 'N05', 'N06'];
+export const R1_PEERS: Exclude<SoulNucleus, 'N01'>[] = ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 
 export function createR1Mesh(transport: SoulMeshTransport) {
   return createSoulMeshRouter('N01', transport);

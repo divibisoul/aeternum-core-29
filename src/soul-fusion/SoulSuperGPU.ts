@@ -1,4 +1,4 @@
-export type SoulNucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06';
+export type SoulNucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'N07';
 export type ComputeBackend = 'IN_PROCESS' | 'WEBASSEMBLY' | 'WEBGPU' | 'REMOTE_MESH';
 export type SuperGPUNode = { nucleus: SoulNucleusId; capabilities: readonly string[]; backends: readonly ComputeBackend[]; capacity: number; available: boolean };
 export type SuperGPUTask = { id: string; capability: string; payload: unknown; preferredNucleus?: SoulNucleusId; estimatedCost?: number; dependencies?: readonly string[] };
@@ -8,7 +8,7 @@ export type PrefrontalInput = { source: SoulNucleusId; signal: 'GOAL' | 'CONTEXT
 export type PrefrontalFeed = { generatedAt: number; source: 'SUPERGPU'; signals: readonly PrefrontalInput[]; results: readonly SuperGPUResult[] };
 
 const DEFAULT_BACKENDS: readonly ComputeBackend[] = ['IN_PROCESS', 'WEBASSEMBLY', 'WEBGPU', 'REMOTE_MESH'];
-const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 const clamp = (value: number) => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 
 export class SoulSuperGPU {

@@ -10,7 +10,7 @@ export type HomeostasisState = { compute: number; memory: number; latency: numbe
 export type MemoryRecord = { id: string; kind: MemoryKind; value: unknown; salience: number; source?: SoulNucleusId; timestamp: number; expiresAt?: number };
 export type LearnedPolicy = { attempts: number; successes: number; confidence: number; meanLatencyMs: number; lastUpdated: number };
 
-const NUCLEI: readonly SoulNucleusId[] = ['N01','N02','N03','N04','N05','N06'];
+const NUCLEI: readonly SoulNucleusId[] = ['N01','N02','N03','N04','N05','N06','N07'];
 const clamp = (v: number) => Math.max(0, Math.min(1, Number.isFinite(v) ? v : 0));
 
 export class SoulCognitiveFabric {
