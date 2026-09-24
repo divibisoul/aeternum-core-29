@@ -216,9 +216,8 @@ class ProjetoClareiraSystem {
         target = found;
       } else {
         EventBus.emit('system:error', {
-          source: 'projeto-clareira',
-          code: 'CLAREIRA_TARGET_NOT_FOUND',
-          targetNodeId,
+          error: 'CLAREIRA_TARGET_NOT_FOUND',
+          context: `ProjetoClareira targetNodeId=${targetNodeId}`,
         });
         return false;
       }
