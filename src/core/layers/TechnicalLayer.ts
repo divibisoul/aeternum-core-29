@@ -345,19 +345,19 @@ export class MaquinaFusaoCognitiva {
     coerencia: number;
     resultados: {
       reforco: Float32Array;
-      evolutivo: { accuracy: number };
+      evolutivo: { accuracy: number; available: boolean };
       transformer: { entropy: number };
     };
   } {
     // Processo de reforço
     const reforcoResult = this.aprendizadoReforco.processar(experiencia);
     
-    // Processo evolutivo (criar dados sintéticos)
-    const dadosSinteticos = Array(20).fill(null).map(() => 
-      Array(10).fill(null).map(() => Math.random())
-    );
-    const labelsSinteticos = dadosSinteticos.map(() => Math.floor(Math.random() * 3));
-    const evolutivoResult = this.supervisionado.treinar(dadosSinteticos, labelsSinteticos, 5);
+    // O treinamento supervisionado exige dados e rótulos reais fornecidos pelo chamador.
+    const evolutivoResult = {
+      accuracy: 0,
+      generations: 0,
+      available: false,
+    };
     
     // Processo transformer
     const sequencia = [experiencia, experiencia.map(x => x * 0.9), experiencia.map(x => x * 1.1)];
@@ -368,7 +368,9 @@ export class MaquinaFusaoCognitiva {
     const evolutivoScore = evolutivoResult.accuracy;
     const transformerScore = transformerResult.attentionEntropy < 2 ? 1 : 0.5;
     
-    const coerencia = (reforcoScore + evolutivoScore + transformerScore) / 3;
+    const scores = [reforcoScore, transformerScore];
+    if (evolutivoResult.available) scores.push(evolutivoResult.accuracy);
+    const coerencia = scores.reduce((sum, score) => sum + score, 0) / scores.length;
     
     console.log(`[MaquinaFusao] Coerência: ${coerencia.toFixed(4)}`);
     
@@ -376,7 +378,7 @@ export class MaquinaFusaoCognitiva {
       coerencia,
       resultados: {
         reforco: reforcoResult,
-        evolutivo: { accuracy: evolutivoResult.accuracy },
+        evolutivo: { accuracy: evolutivoResult.accuracy, available: evolutivoResult.available },
         transformer: { entropy: transformerResult.attentionEntropy },
       },
     };
