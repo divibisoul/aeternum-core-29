@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 /**
  * SARA federation adapter for the N01 Soul gateway.
  *
