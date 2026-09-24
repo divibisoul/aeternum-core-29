@@ -2,7 +2,7 @@
  * AGI ACTIVE PANEL - Módulo Ativo em Primeiro Plano Contínuo
  * 
  * Painel permanente embutido no layout principal.
- * 17 motores + 4 GEMs sempre visíveis e atualizando em tempo real.
+ * Mantém a visão dos motores e GEMs; métricas externas somente quando observadas.
  */
 
 import { useState, useEffect } from 'react';
@@ -34,8 +34,8 @@ export function AGIActivePanel() {
   const [diagnostics, setDiagnostics] = useState<any[]>([]);
   const [duvidas, setDuvidas] = useState<any[]>([]);
   const [rupturas, setRupturas] = useState<any[]>([]);
-  const [deviceIp, setDeviceIp] = useState('192.168.18.35');
-  const [devicePort, setDevicePort] = useState('40513');
+  const [deviceIp, setDeviceIp] = useState('');
+  const [devicePort, setDevicePort] = useState('');
 
   useEffect(() => {
     const agi = AeternumAGI.getInstance();
@@ -167,16 +167,16 @@ export function AGIActivePanel() {
                 <div className="text-[10px] font-medium flex items-center gap-1">
                   <Heart className="w-3 h-3 text-red-400" /> GEM-Health
                   <Badge className={cn("text-[8px] ml-auto", metrics?.gemHealth?.wearableConnected ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400")}>
-                    {metrics?.gemHealth?.wearableConnected ? 'WEARABLE' : 'SIMULADO'}
+                    {metrics?.gemHealth?.observed ? 'WEARABLE' : 'NÃO OBSERVADO'}
                   </Badge>
                 </div>
                 {metrics?.gemHealth && (
                   <div className="space-y-0.5 text-[9px]">
-                    <div className="flex justify-between"><span className="text-muted-foreground">♥ FC</span><span className="font-mono text-red-400">{metrics.gemHealth.heartRate.toFixed(0)} bpm</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">HRV</span><span className="font-mono">{metrics.gemHealth.hrv.toFixed(0)} ms</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Stress</span><span className={cn("font-mono", metrics.gemHealth.stressLevel > 0.7 ? 'text-red-400' : metrics.gemHealth.stressLevel > 0.4 ? 'text-amber-400' : 'text-emerald-400')}>{(metrics.gemHealth.stressLevel * 100).toFixed(0)}%</span></div>
-                    <Progress value={metrics.gemHealth.stressLevel * 100} className="h-1" />
-                    <div className="flex justify-between"><span className="text-muted-foreground">Fadiga</span><span className="font-mono">{(metrics.gemHealth.fatigueIndex * 100).toFixed(0)}%</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">♥ FC</span><span className="font-mono text-red-400">{metrics.gemHealth.observed ? metrics.gemHealth.heartRate.toFixed(0) + ' bpm' : 'NÃO MENSURÁVEL'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">HRV</span><span className="font-mono">{metrics.gemHealth.observed ? metrics.gemHealth.hrv.toFixed(0) + ' ms' : 'NÃO MENSURÁVEL'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Stress</span><span className={cn("font-mono", metrics.gemHealth.observed && metrics.gemHealth.stressLevel > 0.7 ? 'text-red-400' : metrics.gemHealth.observed && metrics.gemHealth.stressLevel > 0.4 ? 'text-amber-400' : 'text-emerald-400')}>{metrics.gemHealth.observed ? (metrics.gemHealth.stressLevel * 100).toFixed(0) + '%' : 'NÃO MENSURÁVEL'}</span></div>
+                    {metrics.gemHealth.observed && <Progress value={metrics.gemHealth.stressLevel * 100} className="h-1" />}
+                    <div className="flex justify-between"><span className="text-muted-foreground">Fadiga</span><span className="font-mono">{metrics.gemHealth.observed ? (metrics.gemHealth.fatigueIndex * 100).toFixed(0) + '%' : 'NÃO MENSURÁVEL'}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Alertas</span><span className="font-mono text-orange-400">{metrics.gemHealth.alertsGenerated}</span></div>
                   </div>
                 )}
