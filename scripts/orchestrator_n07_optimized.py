@@ -39,6 +39,7 @@ NUCLEOS = {
     "N07": os.getenv("NUCLEO_N07"),  # ele mesmo, mas para consistência
 }
 
+
 # ============================================================
 # 1. ROTEADOR NEURAL (com GPU)
 # ============================================================
@@ -47,6 +48,7 @@ class NeuralRouter(nn.Module):
     Roteador baseado em embeddings. Mapeia uma tarefa (embedding) para
     uma distribuição de probabilidade sobre os núcleos.
     """
+
     def __init__(self, input_dim=768, hidden_dim=512, num_cores=7):
         super().__init__()
         self.fc1 = nn.Linear(input_dim, hidden_dim)
@@ -62,6 +64,7 @@ class NeuralRouter(nn.Module):
         x = self.fc3(x)
         return F.softmax(x, dim=-1)
 
+
 # ============================================================
 # 2. MEMÓRIA DE EXPERIÊNCIAS (para metacognição)
 # ============================================================
@@ -70,6 +73,7 @@ class ExperienceMemory:
     Armazena experiências (tarefa, roteamento escolhido, recompensa)
     para aprender a melhorar o roteamento.
     """
+
     def __init__(self, capacity=1000):
         self.buffer = deque(maxlen=capacity)
 
@@ -97,19 +101,23 @@ class ExperienceMemory:
         rewards = torch.tensor([float(b[2]) for b in batch], dtype=torch.float32)
         return tasks.to(DEVICE), masks.to(DEVICE), rewards.to(DEVICE)
 
+
 # ============================================================
 # 3. ORQUESTRADOR PRINCIPAL
 # ============================================================
 class SOULOrchestrator:
     def __init__(self):
         from sentence_transformers import SentenceTransformer
+
         model_name = os.getenv("N07_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
         self.embedder = SentenceTransformer(model_name)
         embedding_dim = self.embedder.get_sentence_embedding_dimension()
         if not isinstance(embedding_dim, int) or embedding_dim <= 0:
             raise RuntimeError("EMBEDDER_INVALID_DIMENSION")
         self.embedding_dim = embedding_dim
-        self.router = NeuralRouter(input_dim=embedding_dim, num_cores=len(NUCLEOS)).to(DEVICE)
+        self.router = NeuralRouter(input_dim=embedding_dim, num_cores=len(NUCLEOS)).to(
+            DEVICE
+        )
         self.optimizer = torch.optim.Adam(self.router.parameters(), lr=1e-4)
         self.memory = ExperienceMemory(capacity=2000)
         self.supabase = None
@@ -125,11 +133,17 @@ class SOULOrchestrator:
         """Gera embedding real com o modelo carregado."""
         if not isinstance(task_text, str) or not task_text.strip():
             raise ValueError("TASK_TEXT_REQUIRED")
-        embedding = self.embedder.encode(
-            task_text,
-            convert_to_tensor=True,
-            normalize_embeddings=True,
-        ).detach().cpu().numpy().astype(np.float32)
+        embedding = (
+            self.embedder.encode(
+                task_text,
+                convert_to_tensor=True,
+                normalize_embeddings=True,
+            )
+            .detach()
+            .cpu()
+            .numpy()
+            .astype(np.float32)
+        )
         if embedding.ndim != 1 or embedding.shape[0] != self.embedding_dim:
             raise RuntimeError(
                 f"EMBEDDER_DIMENSION_MISMATCH:{embedding.shape[0]}!={self.embedding_dim}"
@@ -183,7 +197,7 @@ class SOULOrchestrator:
             "routed_cores": [f"N{idx+1:02d}" for idx in selected_cores],
             "probabilities": probs.tolist(),
             "results": results,
-            "aggregated": aggregated
+            "aggregated": aggregated,
         }
 
     def synthesize(self, task_text, results):
@@ -213,11 +227,14 @@ class SOULOrchestrator:
                 synthesis_errors.append(f"gemini:{type(exc).__name__}:{exc}")
         # Fallback final: resultado bruto observado, sem alegar síntese LLM.
         if synthesis_errors:
-            return json.dumps({
-                "status": "SYNTHESIS_FALLBACK",
-                "errors": synthesis_errors,
-                "observed_results": results,
-            }, ensure_ascii=False)
+            return json.dumps(
+                {
+                    "status": "SYNTHESIS_FALLBACK",
+                    "errors": synthesis_errors,
+                    "observed_results": results,
+                },
+                ensure_ascii=False,
+            )
         return summary
 
     def meta_learn(self, feedback_reward):
@@ -238,7 +255,9 @@ class SOULOrchestrator:
         if batch is None:
             return {
                 "status": "PENDING_BATCH",
-                "ready_experiences": sum(item[2] is not None for item in self.memory.buffer),
+                "ready_experiences": sum(
+                    item[2] is not None for item in self.memory.buffer
+                ),
             }
         tasks, masks, rewards = batch
         probabilities = self.router(tasks)
@@ -248,7 +267,13 @@ class SOULOrchestrator:
         loss.backward()
         self.optimizer.step()
         print(f"[Metacognição] Loss atualizada: {loss.item():.4f}")
-        return {"status": "UPDATED", "loss": float(loss.item()), "feedback": feedback, "batch_size": int(len(rewards))}
+        return {
+            "status": "UPDATED",
+            "loss": float(loss.item()),
+            "feedback": feedback,
+            "batch_size": int(len(rewards)),
+        }
+
 
 # ============================================================
 # 4. PONTO DE ENTRADA (para testes/execução)
@@ -266,4 +291,6 @@ if __name__ == "__main__":
         orchestrator.meta_learn(float(os.environ["N07_FEEDBACK_REWARD"]))
         print("[N07] Metacognição aplicada com feedback externo.")
     else:
-        print("[N07] Metacognição aguardando feedback externo; nenhuma recompensa foi inventada.")
+        print(
+            "[N07] Metacognição aguardando feedback externo; nenhuma recompensa foi inventada."
+        )
