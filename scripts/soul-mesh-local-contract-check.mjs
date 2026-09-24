@@ -3,10 +3,15 @@ import crypto from 'node:crypto';
 
 const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
 const baseUrl = `http://127.0.0.1:${port}`;
+let childOutput = '';
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
+child.stdout.on('data', chunk => { childOutput += chunk.toString(); });
+child.stderr.on('data', chunk => { childOutput += chunk.toString(); });
+let childExit = null;
+child.on('exit', (code, signal) => { childExit = { code, signal }; });
 
 const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
@@ -14,10 +19,12 @@ const waitForHealth = async () => {
     try {
       const response = await fetch(`${baseUrl}/api/soul-mesh/health`);
       if (response.ok) return;
-    } catch {}
+    } catch (error) {
+      if (childExit) throw new Error(`N01_LOCAL_SERVER_START_FAILED exit=${JSON.stringify(childExit)} output=${childOutput.slice(-4000)}`);
+    }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error('N01_LOCAL_SERVER_START_TIMEOUT');
+  throw new Error(`N01_LOCAL_SERVER_START_TIMEOUT exit=${JSON.stringify(childExit)} output=${childOutput.slice(-4000)}`);
 };
 
 const json = async (response) => ({ status: response.status, body: await response.json().catch(() => ({})) });
