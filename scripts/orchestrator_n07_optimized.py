@@ -15,7 +15,7 @@ import numpy as np
 from collections import deque
 import requests
 from supabase import create_client
-import openai
+from openai import OpenAI
 import google.generativeai as genai
 
 # ============================================================
@@ -119,8 +119,7 @@ class SOULOrchestrator:
             self.supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         # O embedding deve vir de um modelo real carregado acima; ausência do modelo
         # encerra a execução em vez de criar uma representação artificial.
-        if OPENAI_API_KEY:
-            openai.api_key = OPENAI_API_KEY
+        self.openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
         if GEMINI_API_KEY:
             genai.configure(api_key=GEMINI_API_KEY)
 
@@ -196,14 +195,14 @@ class SOULOrchestrator:
         prompt = f"Tarefa: {task_text}\nResultados parciais:\n{summary}\nForneça uma resposta consolidada e coerente."
         # Tenta usar OpenAI
         synthesis_errors = []
-        if OPENAI_API_KEY:
+        if self.openai_client is not None:
             try:
-                response = openai.ChatCompletion.create(
-                    model=os.getenv("OPENAI_MODEL", "gpt-4"),
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=300
+                response = self.openai_client.responses.create(
+                    model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna"),
+                    input=prompt,
+                    max_output_tokens=300,
                 )
-                return response.choices[0].message.content
+                return response.output_text
             except Exception as exc:
                 synthesis_errors.append(f"openai:{type(exc).__name__}:{exc}")
         # Fallback para Gemini
