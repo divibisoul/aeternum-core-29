@@ -71,8 +71,8 @@ export class GEMDevice {
     cpu: 0,
     ramUsedMb: 0,
     ramTotalMb: 0,
-    batteryPct: 100,
-    temperature: 25,
+    batteryPct: 0,
+    temperature: 0,
     runningProcesses: 0,
   };
   private _actions: DeviceAction[] = [];
@@ -173,7 +173,7 @@ export class GEMDevice {
     }
 
     const action: DeviceAction = {
-      id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: globalThis.crypto?.randomUUID?.() ?? `act_${Date.now()}_${this._actions.length + 1}`,
       type, target, command,
       status: 'pending',
       timestamp: Date.now(),
