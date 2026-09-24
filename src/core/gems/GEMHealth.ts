@@ -20,6 +20,9 @@ export interface HealthMetrics {
   lastAnalysis: number;
   wearableConnected: boolean;
   cyclesCompleted: number;
+  observed: boolean;
+  dataSource: "WEARABLE" | "UNOBSERVED";
+  observedAt: number;
 }
 
 interface HealthAlert {
@@ -45,6 +48,9 @@ export class GEMHealth {
     lastAnalysis: Date.now(),
     wearableConnected: false,
     cyclesCompleted: 0,
+    observed: false,
+    dataSource: "UNOBSERVED",
+    observedAt: 0,
   };
   private _alerts: HealthAlert[] = [];
   private _history: HealthMetrics[] = [];
@@ -72,24 +78,38 @@ export class GEMHealth {
    * Receive real data from companion Android app
    */
   ingestWearableData(data: Partial<HealthMetrics>): void {
-    this._metrics = { ...this._metrics, ...data, wearableConnected: true };
+    const observedAt = Date.now();
+    this._metrics = {
+      ...this._metrics,
+      ...data,
+      wearableConnected: true,
+      observed: true,
+      dataSource: "WEARABLE",
+      observedAt,
+    };
     this.analyzeAndAlert();
   }
 
-  private cycle(): void {
-    // Simulate physiological drift when no wearable connected
-    if (!this._metrics.wearableConnected) {
-      this._metrics.heartRate = 65 + Math.random() * 20;
-      this._metrics.hrv = 40 + Math.random() * 30;
-      this._metrics.stressLevel = Math.max(0, Math.min(1, this._metrics.stressLevel + (Math.random() - 0.52) * 0.05));
-      this._metrics.fatigueIndex = Math.max(0, Math.min(1, this._metrics.fatigueIndex + (Math.random() - 0.48) * 0.03));
-    }
+  disconnectWearable(): void {
+    this._metrics.wearableConnected = false;
+    this._metrics.observed = false;
+    this._metrics.dataSource = "UNOBSERVED";
+    this._metrics.observedAt = 0;
+  }
 
+  private cycle(): void {
+    // Monitoring cycles remain real, but no physiological values are synthesized.
     this._metrics.lastAnalysis = Date.now();
     this._metrics.cyclesCompleted++;
+
+    if (!this._metrics.observed) {
+      this._history.push({ ...this._metrics });
+      if (this._history.length > 100) this._history.shift();
+      return;
+    }
+
     this.analyzeAndAlert();
 
-    // Keep history bounded
     this._history.push({ ...this._metrics });
     if (this._history.length > 100) this._history.shift();
   }
