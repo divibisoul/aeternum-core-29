@@ -121,7 +121,7 @@ export function AGIDashboard() {
                         { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                         { name: 'Consciousness', status: metrics?.consciousness?.isRunning, metric: null },
                         { name: 'SafeCore', status: true, metric: null },
-                        { name: 'SelfHealing', status: metrics?.healing !== null, metric: metrics?.healing?.overallScore },
+                        { name: 'SelfHealing', status: metrics?.healing?.observedModules > 0, metric: metrics?.healing?.overallScore },
                         { name: 'EthicalOpt', status: metrics?.ethics?.isRunning, metric: metrics?.ethics?.auditMetrics?.avgScore },
                         { name: 'HyperSafety', status: metrics?.safety !== null, metric: metrics?.safety?.overallHealth },
                         { name: 'NIP', status: metrics?.nip !== undefined, metric: null, label: metrics?.nip?.saudeEpistemologica },
