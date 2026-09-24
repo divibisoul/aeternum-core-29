@@ -980,8 +980,8 @@ const ARTIFACTS = [
     "kind": "engine",
     "canonicalAffinity": "M3_LANGUAGE",
     "domain": "panel/chat-engine",
-    "preservation": "no synthetic response generation; delegate is mandatory at execution time",
-    "federation": "SOUL_MESH / AETERNUM shared contracts; runtime binding must be proven"
+    "preservation": "no synthetic response generation; default singleton is bound to canonical N05 inference, and explicit delegates remain supported",
+    "federation": "SOUL_MESH / AETERNUM shared contracts; canonical N05 inference binding is explicit"
   },
   {
     "id": "L7.AppOrchestrator",
