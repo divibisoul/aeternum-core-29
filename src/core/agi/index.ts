@@ -215,11 +215,14 @@ export class AeternumAGI {
       healthy: this.selfHealing.isRunning,
       observed: true,
     }));
-    this.saiic.registerModule('ethicalOptimizer', () => ({
-      healthy: this.ethicalOptimizer.isRunning,
-      errorRate: Math.max(0, 1 - this.ethicalOptimizer.getMetrics().auditMetrics.avgScore),
-      observed: true,
-    }));
+    this.saiic.registerModule('ethicalOptimizer', () => {
+      const audit = this.ethicalOptimizer.getMetrics().auditMetrics;
+      return {
+        healthy: this.ethicalOptimizer.isRunning,
+        errorRate: audit.avgScore === null ? undefined : Math.max(0, 1 - audit.avgScore),
+        observed: true,
+      };
+    });
     this.saiic.registerModule('safetySystem', () => ({
       healthy: this.safetySystem.isRunning,
       observed: true,
