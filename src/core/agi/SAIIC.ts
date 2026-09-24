@@ -1,24 +1,18 @@
 /**
  * SAIIC - Sistema de Auto-Integridade e Imunidade Computacional
- * 
- * Módulo de PRIMEIRO PLANO que monitora continuamente:
- * - Saúde de cada subsistema AGI
- * - Integridade de dados no barramento de mensagens
- * - Consistência lógica entre módulos
- * - Detecção de loops de inferência/aprendizado
- * - Anticorpo Digital: agente que percorre e corrige anomalias
- * 
- * Executa com prioridade MÁXIMA, scanning contínuo sem pausa.
+ *
+ * Continuous integrity monitor. Diagnostic metrics are evidence-bearing:
+ * health-only providers do not fabricate CPU/RAM/error measurements.
  */
-
 import { EventBus } from '@/core/EventBus';
 
 export interface ModuleDiagnostic {
   moduleId: string;
   healthy: boolean;
-  cpuLoad: number;
-  memoryUsage: number;
-  errorRate: number;
+  cpuLoad: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
+  metricsObserved: boolean;
   lastHeartbeat: number;
   loopDetected: boolean;
   inconsistencies: string[];
@@ -32,7 +26,7 @@ export interface IntegrityReport {
   repairedModules: string[];
   anticorpoActions: AnticorpoAction[];
   criticalAlerts: string[];
-  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number };
+  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number; measured: boolean };
 }
 
 export interface AnticorpoAction {
@@ -57,79 +51,68 @@ export interface SAIICMetrics {
   avgScanLatencyMs: number;
 }
 
-type HealthProvider = () => {
+export interface HealthSample {
   healthy: boolean;
-  cpuLoad: number;
-  memoryUsage: number;
-  errorRate: number;
-};
+  cpuLoad?: number;
+  memoryUsage?: number;
+  errorRate?: number;
+  observed?: boolean;
+}
+
+type HealthProvider = () => HealthSample;
+type RemediationProvider = () => boolean | void | Promise<boolean | void>;
 
 export class SAIIC {
   private _running = false;
   private _scanInterval: ReturnType<typeof setInterval> | null = null;
   private _anticorpoInterval: ReturnType<typeof setInterval> | null = null;
-  
   private healthProviders: Map<string, HealthProvider> = new Map();
+  private remediationProviders: Map<string, RemediationProvider> = new Map();
+  private isolationProviders: Map<string, RemediationProvider> = new Map();
   private moduleDiagnostics: Map<string, ModuleDiagnostic> = new Map();
   private anticorpoHistory: AnticorpoAction[] = [];
   private isolatedModules: Set<string> = new Set();
   private repairedModules: Set<string> = new Set();
   private lastReports: IntegrityReport[] = [];
-  
   private _scanCycles = 0;
   private _loopsDetected = 0;
   private _inconsistenciesResolved = 0;
   private _avgScanLatency = 0;
-  
-  // Pattern detection for loop identification
   private patternBuffer: Map<string, Array<{ hash: number; timestamp: number }>> = new Map();
-  
+
   get isRunning(): boolean { return this._running; }
   get scanCycles(): number { return this._scanCycles; }
 
-  /**
-   * Register a module for continuous monitoring
-   */
   registerModule(moduleId: string, provider: HealthProvider): void {
     this.healthProviders.set(moduleId, provider);
     this.moduleDiagnostics.set(moduleId, {
       moduleId,
-      healthy: true,
-      cpuLoad: 0,
-      memoryUsage: 0,
-      errorRate: 0,
-      lastHeartbeat: Date.now(),
+      healthy: false,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
+      metricsObserved: false,
+      lastHeartbeat: 0,
       loopDetected: false,
       inconsistencies: [],
     });
-    if (!this.patternBuffer.has(moduleId)) {
-      this.patternBuffer.set(moduleId, []);
-    }
+    if (!this.patternBuffer.has(moduleId)) this.patternBuffer.set(moduleId, []);
   }
 
-  /**
-   * Start FIRST-PRIORITY continuous scanning
-   * SAIIC runs at highest frequency - every 500ms for scanning, 2s for anticorpo
-   */
+  registerRemediation(moduleId: string, provider: RemediationProvider): void {
+    this.remediationProviders.set(moduleId, provider);
+  }
+
+  registerIsolationHandler(moduleId: string, provider: RemediationProvider): void {
+    this.isolationProviders.set(moduleId, provider);
+  }
+
   start(scanIntervalMs: number = 500): void {
     if (this._running) return;
     this._running = true;
-    console.log('[SAIIC] Sistema de Auto-Integridade ATIVO - Primeiro Plano');
-
-    // Primary scan loop - HIGH FREQUENCY
-    this._scanInterval = setInterval(() => {
-      this.executeScanCycle();
-    }, scanIntervalMs);
-
-    // Anticorpo Digital loop - searches and repairs
-    this._anticorpoInterval = setInterval(() => {
-      this.executeAnticorpoSweep();
-    }, 2000);
-
-    // Initial scan
+    this._scanInterval = setInterval(() => this.executeScanCycle(), scanIntervalMs);
+    this._anticorpoInterval = setInterval(() => this.executeAnticorpoSweep(), 2000);
     this.executeScanCycle();
-    
-    // Emit activation
     EventBus.emit('system:init', { timestamp: Date.now() });
   }
 
@@ -139,76 +122,67 @@ export class SAIIC {
     this._scanInterval = null;
     this._anticorpoInterval = null;
     this._running = false;
-    console.log('[SAIIC] Sistema de Auto-Integridade PARADO');
   }
 
-  /**
-   * PRIMARY SCAN CYCLE - Executes every tick
-   * Checks health, detects anomalies, validates consistency
-   */
   private executeScanCycle(): void {
     const scanStart = performance.now();
     this._scanCycles++;
-
     const criticalAlerts: string[] = [];
 
     for (const [moduleId, provider] of this.healthProviders) {
       try {
         const health = provider();
         const diag = this.moduleDiagnostics.get(moduleId)!;
-        
-        // Update diagnostics
-        diag.cpuLoad = health.cpuLoad;
-        diag.memoryUsage = health.memoryUsage;
-        diag.errorRate = health.errorRate;
+        const cpuLoad = Number.isFinite(health.cpuLoad) ? health.cpuLoad! : null;
+        const memoryUsage = Number.isFinite(health.memoryUsage) ? health.memoryUsage! : null;
+        const errorRate = Number.isFinite(health.errorRate) ? health.errorRate! : null;
+        const observed = health.observed ?? (cpuLoad !== null || memoryUsage !== null || errorRate !== null);
+
+        diag.cpuLoad = cpuLoad;
+        diag.memoryUsage = memoryUsage;
+        diag.errorRate = errorRate;
+        diag.metricsObserved = observed;
         diag.lastHeartbeat = Date.now();
-        diag.healthy = health.healthy && health.errorRate < 0.1;
+        diag.healthy = Boolean(health.healthy) && (errorRate === null || errorRate < 0.1);
 
-        // Check for loops (same output pattern repeated)
-        const stateHash = this.computeStateHash(health);
-        this.recordPattern(moduleId, stateHash);
-        diag.loopDetected = this.detectLoop(moduleId);
-        
-        if (diag.loopDetected) {
-          this._loopsDetected++;
-          criticalAlerts.push(`[SAIIC] Loop detectado em ${moduleId}`);
+        if (cpuLoad !== null && memoryUsage !== null && errorRate !== null) {
+          const stateHash = this.computeStateHash({ cpuLoad, memoryUsage, errorRate });
+          this.recordPattern(moduleId, stateHash);
+          diag.loopDetected = this.detectLoop(moduleId);
+          if (diag.loopDetected) {
+            this._loopsDetected++;
+            criticalAlerts.push(`[SAIIC] Loop detectado em ${moduleId}`);
+          }
+        } else {
+          diag.loopDetected = false;
         }
 
-        // Check for critical issues
-        if (health.errorRate > 0.2) {
-          criticalAlerts.push(`[SAIIC] ${moduleId} - Taxa de erro alta: ${(health.errorRate * 100).toFixed(1)}%`);
+        if (errorRate !== null && errorRate > 0.2) {
+          criticalAlerts.push(`[SAIIC] ${moduleId} - Taxa de erro observada alta: ${(errorRate * 100).toFixed(1)}%`);
         }
-        if (health.memoryUsage > 0.9) {
-          criticalAlerts.push(`[SAIIC] ${moduleId} - Memória crítica: ${(health.memoryUsage * 100).toFixed(0)}%`);
+        if (memoryUsage !== null && memoryUsage > 0.9) {
+          criticalAlerts.push(`[SAIIC] ${moduleId} - Memória observada crítica: ${(memoryUsage * 100).toFixed(0)}%`);
         }
 
-        // If module was isolated, check if it recovered
         if (this.isolatedModules.has(moduleId) && diag.healthy) {
           this.isolatedModules.delete(moduleId);
           this.repairedModules.add(moduleId);
         }
-
       } catch (error) {
         const diag = this.moduleDiagnostics.get(moduleId)!;
         diag.healthy = false;
         diag.errorRate = 1.0;
-        criticalAlerts.push(`[SAIIC] ${moduleId} - Falha no health check: ${error}`);
+        diag.metricsObserved = true;
+        diag.lastHeartbeat = Date.now();
+        criticalAlerts.push(`[SAIIC] ${moduleId} - Falha no health check: ${String(error)}`);
       }
     }
 
-    // Cross-module consistency check
     this.checkCrossModuleConsistency();
-
-    // Calculate overall integrity
     const diagnostics = Array.from(this.moduleDiagnostics.values());
     const healthyCount = diagnostics.filter(d => d.healthy).length;
     const overallIntegrity = diagnostics.length > 0 ? healthyCount / diagnostics.length : 1;
 
-    // Check mesh latency
-    const latencies = diagnostics.map(d => Date.now() - d.lastHeartbeat);
-    const maxLatency = Math.max(...latencies, 0);
-
-    // Store report
     const report: IntegrityReport = {
       timestamp: Date.now(),
       overallIntegrity,
@@ -217,173 +191,178 @@ export class SAIIC {
       repairedModules: Array.from(this.repairedModules),
       anticorpoActions: this.anticorpoHistory.slice(-10),
       criticalAlerts,
-      meshLatencyCheck: { allUnder10ms: maxLatency < 10, maxLatency },
+      meshLatencyCheck: { allUnder10ms: false, maxLatency: 0, measured: false },
     };
-    
+
     this.lastReports.push(report);
     if (this.lastReports.length > 50) this.lastReports = this.lastReports.slice(-25);
 
-    // Emit critical alerts
     if (criticalAlerts.length > 0) {
       EventBus.emit('audit:warning', {
         message: criticalAlerts.join('; '),
-        severity: criticalAlerts.some(a => a.includes('crítica') || a.includes('Loop')) ? 'high' : 'medium'
+        severity: criticalAlerts.some(a => a.includes('crítica') || a.includes('Loop') || a.includes('observada alta')) ? 'high' : 'medium',
       });
     }
 
-    // Update scan latency tracking
     const scanLatency = performance.now() - scanStart;
     this._avgScanLatency = this._avgScanLatency * 0.9 + scanLatency * 0.1;
   }
 
-  /**
-   * ANTICORPO DIGITAL - Sweeps through modules and repairs anomalies
-   */
   private executeAnticorpoSweep(): void {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
-      // Detect and repair weight corruption (simulated via high error rate)
-      if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'weight_corruption',
-          action: 'corrected',
-          severity: diag.errorRate,
-          details: `Corrigido errorRate de ${(diag.errorRate * 100).toFixed(1)}% para níveis saudáveis`,
-        };
-        this.anticorpoHistory.push(action);
-        
-        // Apply correction
-        diag.errorRate *= 0.5; // Reduce error rate
-        this._inconsistenciesResolved++;
+      if (diag.errorRate !== null && diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
+        const provider = this.remediationProviders.get(moduleId);
+        let corrected = false;
+        if (provider) {
+          try {
+            corrected = provider() !== false;
+          } catch {
+            corrected = false;
+          }
+        }
+        if (corrected) {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'weight_corruption',
+            action: 'corrected',
+            severity: diag.errorRate,
+            details: 'Remediação do módulo executada por handler registrado.',
+          });
+          this._inconsistenciesResolved++;
+        } else {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'weight_corruption',
+            action: 'bypassed',
+            severity: diag.errorRate,
+            details: 'Nenhum handler de remediação observável; SAIIC não fabricou uma correção de métrica.',
+          });
+        }
       }
 
-      // Detect memory leaks
-      if (diag.memoryUsage > 0.85) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'memory_leak',
-          action: 'corrected',
-          severity: diag.memoryUsage,
-          details: `Memória de ${moduleId} otimizada de ${(diag.memoryUsage * 100).toFixed(0)}%`,
-        };
-        this.anticorpoHistory.push(action);
-        diag.memoryUsage *= 0.8;
-        this._inconsistenciesResolved++;
+      if (diag.memoryUsage !== null && diag.memoryUsage > 0.85) {
+        const provider = this.remediationProviders.get(moduleId);
+        let corrected = false;
+        if (provider) {
+          try {
+            corrected = provider() !== false;
+          } catch {
+            corrected = false;
+          }
+        }
+        if (corrected) {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'memory_leak',
+            action: 'corrected',
+            severity: diag.memoryUsage,
+            details: 'Remediação de memória executada por handler registrado.',
+          });
+          this._inconsistenciesResolved++;
+        } else {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'memory_leak',
+            action: 'bypassed',
+            severity: diag.memoryUsage,
+            details: 'Ausência de remediation handler; nenhum valor de memória foi alterado artificialmente.',
+          });
+        }
       }
 
-      // Handle detected loops
       if (diag.loopDetected) {
-        const action: AnticorpoAction = {
+        this.anticorpoHistory.push({
           timestamp: Date.now(),
           targetModule: moduleId,
           anomalyType: 'loop_detected',
-          action: 'restarted',
+          action: 'corrected',
           severity: 0.8,
-          details: `Loop de inferência detectado em ${moduleId}, forçando perturbação de estado`,
-        };
-        this.anticorpoHistory.push(action);
-        // Reset pattern buffer for this module
+          details: 'Detector de padrões reinicializado após loop; o módulo não é falsamente declarado como reiniciado.',
+        });
         this.patternBuffer.set(moduleId, []);
         diag.loopDetected = false;
       }
 
-      // Isolate critically unhealthy modules
-      if (!diag.healthy && diag.errorRate > 0.5 && !this.isolatedModules.has(moduleId)) {
-        this.isolatedModules.add(moduleId);
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'state_drift',
-          action: 'isolated',
-          severity: 1.0,
-          details: `${moduleId} isolado por falha crítica. Bypass ativado.`,
-        };
-        this.anticorpoHistory.push(action);
-      }
-    }
-
-    // Bound history
-    if (this.anticorpoHistory.length > 200) {
-      this.anticorpoHistory = this.anticorpoHistory.slice(-100);
-    }
-  }
-
-  /**
-   * Cross-module consistency check
-   * Verifies that interconnected modules don't produce contradictory states
-   */
-  private checkCrossModuleConsistency(): void {
-    const diags = Array.from(this.moduleDiagnostics.values());
-    
-    // Check if any pair of modules has contradictory health states
-    // (e.g., ethics says system is unsafe but safety says all clear)
-    for (let i = 0; i < diags.length; i++) {
-      for (let j = i + 1; j < diags.length; j++) {
-        const d1 = diags[i];
-        const d2 = diags[j];
-        
-        // If one is very healthy and the other very unhealthy, flag inconsistency
-        if (Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
-          const lower = d1.errorRate > d2.errorRate ? d1 : d2;
-          if (!lower.inconsistencies.includes(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`)) {
-            lower.inconsistencies.push(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`);
+      if (!diag.healthy && diag.errorRate !== null && diag.errorRate > 0.5 && !this.isolatedModules.has(moduleId)) {
+        const isolation = this.isolationProviders.get(moduleId);
+        let isolated = false;
+        if (isolation) {
+          try {
+            isolated = isolation() !== false;
+          } catch {
+            isolated = false;
           }
+        }
+        if (isolated) {
+          this.isolatedModules.add(moduleId);
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'state_drift',
+            action: 'isolated',
+            severity: 1.0,
+            details: 'Handler de isolamento executado; módulo removido do fluxo por mecanismo registrado.',
+          });
+        } else {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'state_drift',
+            action: 'bypassed',
+            severity: 1.0,
+            details: 'Falha crítica detectada, mas sem handler de isolamento; execução externa não foi falsificada.',
+          });
         }
       }
     }
 
-    // Clean old inconsistencies
-    for (const diag of diags) {
-      if (diag.inconsistencies.length > 5) {
-        diag.inconsistencies = diag.inconsistencies.slice(-3);
+    if (this.anticorpoHistory.length > 200) this.anticorpoHistory = this.anticorpoHistory.slice(-100);
+  }
+
+  private checkCrossModuleConsistency(): void {
+    const diags = Array.from(this.moduleDiagnostics.values());
+    for (let i = 0; i < diags.length; i++) {
+      for (let j = i + 1; j < diags.length; j++) {
+        const d1 = diags[i];
+        const d2 = diags[j];
+        if (d1.errorRate !== null && d2.errorRate !== null && Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
+          const lower = d1.errorRate > d2.errorRate ? d1 : d2;
+          const other = d1.errorRate === lower.errorRate ? d2.moduleId : d1.moduleId;
+          const note = `Divergência com ${other}`;
+          if (!lower.inconsistencies.includes(note)) lower.inconsistencies.push(note);
+        }
       }
     }
+    for (const diag of diags) if (diag.inconsistencies.length > 5) diag.inconsistencies = diag.inconsistencies.slice(-3);
   }
 
-  /**
-   * Record a state pattern for loop detection
-   */
   private recordPattern(moduleId: string, hash: number): void {
-    const patterns = this.patternBuffer.get(moduleId)!;
+    const patterns = this.patternBuffer.get(moduleId) ?? [];
     patterns.push({ hash, timestamp: Date.now() });
     if (patterns.length > 20) patterns.shift();
+    this.patternBuffer.set(moduleId, patterns);
   }
 
-  /**
-   * Detect if a module is stuck in a loop
-   */
   private detectLoop(moduleId: string): boolean {
     const patterns = this.patternBuffer.get(moduleId);
     if (!patterns || patterns.length < 10) return false;
-    
-    // Check last 10 patterns for repetition
-    const last10 = patterns.slice(-10).map(p => p.hash);
-    const unique = new Set(last10);
-    // If less than 3 unique values in 10 samples, likely a loop
-    return unique.size < 3;
+    return new Set(patterns.slice(-10).map(p => p.hash)).size < 3;
   }
 
-  /**
-   * Simple state hash for pattern detection
-   */
   private computeStateHash(health: { cpuLoad: number; memoryUsage: number; errorRate: number }): number {
     return Math.round(health.cpuLoad * 100) * 10000 +
-           Math.round(health.memoryUsage * 100) * 100 +
-           Math.round(health.errorRate * 100);
+      Math.round(health.memoryUsage * 100) * 100 +
+      Math.round(health.errorRate * 100);
   }
 
-  /**
-   * Get latest integrity report
-   */
   getLatestReport(): IntegrityReport | null {
     return this.lastReports[this.lastReports.length - 1] || null;
   }
 
-  /**
-   * Get comprehensive SAIIC metrics
-   */
   getMetrics(): SAIICMetrics {
     const latestReport = this.getLatestReport();
     return {
@@ -392,7 +371,7 @@ export class SAIIC {
       totalAnticorpoActions: this.anticorpoHistory.length,
       modulesMonitored: this.healthProviders.size,
       isolatedModules: this.isolatedModules.size,
-      overallIntegrity: latestReport?.overallIntegrity ?? 1,
+      overallIntegrity: latestReport?.overallIntegrity ?? 0,
       lastScanTimestamp: latestReport?.timestamp ?? 0,
       loopsDetected: this._loopsDetected,
       inconsistenciesResolved: this._inconsistenciesResolved,
@@ -400,16 +379,10 @@ export class SAIIC {
     };
   }
 
-  /**
-   * Get anticorpo action history
-   */
   getAnticorpoHistory(): AnticorpoAction[] {
     return this.anticorpoHistory.slice(-20);
   }
 
-  /**
-   * Get all module diagnostics
-   */
   getAllDiagnostics(): ModuleDiagnostic[] {
     return Array.from(this.moduleDiagnostics.values());
   }
