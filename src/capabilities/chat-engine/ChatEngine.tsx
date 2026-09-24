@@ -290,7 +290,9 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
       const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
-      while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
+      // Deterministic padding: missing dimensions carry neutral evidence,
+      // never fabricated random signal.
+      while (experiencia.length < 10) experiencia.push(0);
       
       const conscienciaResult = ConscienciaAlgoritmicaInstance.processar(experiencia, userInput);
       console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
