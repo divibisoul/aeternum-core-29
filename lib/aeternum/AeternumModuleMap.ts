@@ -3,6 +3,8 @@ import type { AeternumModuleDescriptor } from "./AeternumTypes";
 export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   {
     id: "M1_CORE",
+    executionOwner: "N01",
+    governanceAuthority: null,
     name: "Núcleo Central",
     owner: "N01",
     state: "implemented",
@@ -18,6 +20,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M2_ORCHESTRATION",
+    executionOwner: "N01",
+    governanceAuthority: null,
     name: "Orquestração",
     owner: "N01",
     state: "implemented",
@@ -27,6 +31,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M3_LANGUAGE",
+    executionOwner: "N05",
+    governanceAuthority: null,
     name: "Córtex de Linguagem",
     owner: "N05",
     state: "federated_contract",
@@ -40,6 +46,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M4_MIND",
+    executionOwner: "N06",
+    governanceAuthority: null,
     name: "Consciência e Cognição",
     owner: "N06",
     state: "adapter",
@@ -54,6 +62,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M5_PERCEPTION",
+    executionOwner: "N03",
+    governanceAuthority: null,
     name: "Percepção e Análise",
     owner: "N03",
     state: "adapter",
@@ -67,6 +77,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M6_IMMUNITY",
+    executionOwner: "N07",
+    governanceAuthority: "SARA",
     name: "Autocorreção e Estabilidade",
     owner: "N07_SARA",
     state: "implemented",
@@ -81,6 +93,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M7_EVOLUTION",
+    executionOwner: "N07",
+    governanceAuthority: "SARA",
     name: "Evolução e Capacidades",
     owner: "N07_SARA",
     state: "implemented",
@@ -95,6 +109,8 @@ export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   },
   {
     id: "M8_GOVERNANCE_MEMORY",
+    executionOwner: "N07",
+    governanceAuthority: "SARA",
     name: "Governança e Memória",
     owner: "N07_SARA",
     state: "implemented",
@@ -126,6 +142,10 @@ export function validateAeternumModuleGraph(): string[] {
 
   for (const item of AETERNUM_8_MODULES) {
     if (!item.capabilities.length) problems.push(item.id + ":NO_CAPABILITIES");
+    if (!item.executionOwner) problems.push(item.id + ":NO_EXECUTION_OWNER");
+    if ((item.id === "M6_IMMUNITY" || item.id === "M7_EVOLUTION" || item.id === "M8_GOVERNANCE_MEMORY")
+      && item.governanceAuthority !== "SARA") {
+      problems.push(item.id + ":SARA_GOVERNANCE_REQUIRED");
     if (!item.evidence.length) problems.push(item.id + ":NO_EVIDENCE");
     if (item.dependencies.includes(item.id)) {
       problems.push(item.id + ":SELF_DEPENDENCY");
