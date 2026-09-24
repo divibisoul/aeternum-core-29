@@ -37,11 +37,11 @@ export class GEMHealth {
   private _running = false;
   private _interval: ReturnType<typeof setInterval> | null = null;
   private _metrics: HealthMetrics = {
-    heartRate: 72,
-    hrv: 55,
-    stressLevel: 0.3,
-    fatigueIndex: 0.2,
-    sleepQuality: 0.75,
+    heartRate: 0,
+    hrv: 0,
+    stressLevel: 0,
+    fatigueIndex: 0,
+    sleepQuality: 0,
     alertsGenerated: 0,
     lastAnalysis: Date.now(),
     wearableConnected: false,
