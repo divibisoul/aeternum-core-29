@@ -34,6 +34,7 @@ class ProjetoClareiraSystem {
   private _running = false;
   private startTime = 0;
   private packetsInjected = 0;
+  private stimulusSequence = 0;
 
   constructor() {
     // Criar núcleo central
@@ -214,11 +215,15 @@ class ProjetoClareiraSystem {
       if (found) {
         target = found;
       } else {
-        target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+        console.warn(`[ProjetoClareira] Nó alvo inexistente: ${targetNodeId}`);
+        return false;
       }
     } else {
-      // Selecionar aleatoriamente
-      target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+      // Roteamento determinístico para produção: round-robin sobre nós ativos.
+      const activeNodes = this.allNodes.filter((node) => node.active);
+      if (activeNodes.length === 0) return false;
+      target = activeNodes[this.stimulusSequence % activeNodes.length];
+      this.stimulusSequence = (this.stimulusSequence + 1) % activeNodes.length;
     }
 
     const success = target.receivePacket(packet);
