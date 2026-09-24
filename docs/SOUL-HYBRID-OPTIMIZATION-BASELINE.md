@@ -6,8 +6,8 @@ One Android APK hosts the native Android shell and the portable web runtimes. Th
 
 ## Nine formerly-yellow areas addressed in this baseline
 
-1. APK base: N01 Android module is the host application.
-2. Hybrid interface: local WebView asset + JavaScript bridge are part of the APK.
+1. Native app base: N01 provides a native application host/adapter.
+2. Hybrid interface: the web/PWA application remains a first-class surface; a local WebView asset + JavaScript bridge may be used by native builds.
 3. Endpoint lifecycle: endpoints are initialized from the host runtime rather than treated as repository folders.
 4. Runtime isolation: server-only Next.js code is not copied into the WebView; it remains a service boundary.
 5. External services: database/Redis/Supabase/AI services are treated as remote capabilities, never bundled as server processes inside the APK.
