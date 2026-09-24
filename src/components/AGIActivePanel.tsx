@@ -79,7 +79,7 @@ export function AGIActivePanel() {
         {/* Live Status Header */}
         <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
           <Badge className="bg-emerald-500/20 text-emerald-400 text-[9px]">
-            {metrics?.overall?.activeSubsystems ?? 0}/{metrics?.overall?.subsystems ?? 17} ONLINE
+            {metrics?.overall?.activeSubsystems ?? 0}/{metrics?.overall?.subsystems ?? 17} LOOPS ATIVOS
           </Badge>
           <span className="text-emerald-400">Ψ:{metrics?.consciousness?.isRunning ? 'ON' : 'OFF'}</span>
           <span className="text-sky-400">G:{((metrics?.godelMeta?.selfAwareness ?? 0) * 100).toFixed(0)}%</span>
@@ -104,11 +104,11 @@ export function AGIActivePanel() {
                 {[
                   { name: 'SAIIC', status: metrics?.saiic?.isRunning, metric: metrics?.saiic?.overallIntegrity, priority: true },
                   { name: 'ResourceMgr', status: metrics?.resources?.isRunning, label: `${metrics?.resources?.modulesManaged ?? 0} mods` },
-                  { name: 'GodelAgent', status: true, metric: metrics?.godelMeta?.selfAwareness },
+                  { name: 'GodelAgent', status: Boolean(metrics?.godelMeta), metric: metrics?.godelMeta?.selfAwareness },
                   { name: 'DarwinMachine', status: metrics?.darwin?.isRunning, metric: metrics?.darwin?.avgFitness },
                   { name: 'NeuralLattice', status: metrics?.lattice?.isRunning, metric: metrics?.lattice?.globalFitness },
                   { name: 'Consciousness', status: metrics?.consciousness?.isRunning },
-                  { name: 'SafeCore', status: true },
+                  { name: 'SafeCore', status: Boolean(metrics?.overall?.initialized) },
                   { name: 'SelfHealing', status: metrics?.healing?.observedModules > 0, metric: metrics?.healing?.overallScore },
                   { name: 'EthicalOpt', status: metrics?.ethics?.isRunning, metric: metrics?.ethics?.auditMetrics?.avgScore },
                   { name: 'HyperSafety', status: metrics?.safety !== null, metric: metrics?.safety?.overallHealth },
@@ -351,8 +351,8 @@ export function AGIActivePanel() {
                 </div>
                 {metrics?.saiic && (
                   <>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Integridade</span><span className={cn("font-mono", metrics.saiic.overallIntegrity > 0.9 ? 'text-emerald-400' : 'text-amber-400')}>{(metrics.saiic.overallIntegrity * 100).toFixed(1)}%</span></div>
-                    <Progress value={metrics.saiic.overallIntegrity * 100} className="h-1" />
+                    <div className="flex justify-between"><span className="text-muted-foreground">Integridade</span><span className={cn("font-mono", metrics.saiic.overallIntegrity > 0.9 ? 'text-emerald-400' : 'text-amber-400')}>{metrics.saiic.overallIntegrity === null ? 'NÃO MENSURÁVEL' : (metrics.saiic.overallIntegrity * 100).toFixed(1) + '%'}</span></div>
+                    {metrics.saiic.overallIntegrity !== null && <Progress value={metrics.saiic.overallIntegrity * 100} className="h-1" />}
                     <div className="flex justify-between"><span className="text-muted-foreground">Scans</span><span className="font-mono">{metrics.saiic.scanCycles}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Módulos</span><span className="font-mono">{metrics.saiic.modulesMonitored}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Anticorpos</span><span className="font-mono text-orange-400">{metrics.saiic.totalAnticorpoActions}</span></div>
