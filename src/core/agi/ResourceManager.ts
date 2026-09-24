@@ -24,6 +24,7 @@ export interface ResourceSnapshot {
   timestamp: number;
   totalCpuUsage: number;
   totalMemoryUsage: number;
+  measurementSource: 'EXECUTION_ESTIMATE';
   moduleProfiles: Map<string, ModuleResourceProfile>;
   rebalanceCount: number;
   quantumSliceMs: number;
@@ -36,7 +37,8 @@ export interface ResourceMetrics {
   totalMemoryUsage: number;
   rebalanceCount: number;
   avgQuantumSliceMs: number;
-  hotModules: string[]; // modules consuming most resources
+  hotModules: string[]; // modules consuming most configured allocation
+  measurementSource: 'EXECUTION_ESTIMATE';
 }
 
 export class ResourceManager {
@@ -139,13 +141,10 @@ export class ResourceManager {
     for (const profile of this.moduleProfiles.values()) {
       if (!profile.isActive) continue;
 
-      // Simulate CPU usage based on execution frequency and time
-      const cpuUsage = Math.min(1, (profile.lastExecutionMs / this._quantumSliceMs) * profile.cpuAllocation);
-      totalCpu += cpuUsage;
-
-      // Simulate memory usage with gradual fluctuation
-      const memDelta = (Math.random() - 0.5) * 0.02;
-      profile.memoryAllocation = Math.max(0.01, Math.min(0.3, profile.memoryAllocation + memDelta));
+      // CPU figure is an execution-time allocation estimate, not host CPU telemetry.
+      const cpuEstimate = Math.min(1, (profile.lastExecutionMs / Math.max(1, this._quantumSliceMs)) * profile.cpuAllocation);
+      totalCpu += cpuEstimate;
+      // Memory allocation is scheduler policy, not measured process RSS.
       totalMem += profile.memoryAllocation;
     }
 
@@ -203,6 +202,7 @@ export class ResourceManager {
       rebalanceCount: this._rebalanceCount,
       avgQuantumSliceMs: this._quantumSliceMs,
       hotModules,
+      measurementSource: 'EXECUTION_ESTIMATE',
     };
   }
 
@@ -221,6 +221,7 @@ export class ResourceManager {
       timestamp: Date.now(),
       totalCpuUsage: this.totalCpuUsage,
       totalMemoryUsage: this.totalMemoryUsage,
+      measurementSource: 'EXECUTION_ESTIMATE',
       moduleProfiles: new Map(this.moduleProfiles),
       rebalanceCount: this._rebalanceCount,
       quantumSliceMs: this._quantumSliceMs,
