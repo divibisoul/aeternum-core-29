@@ -156,6 +156,9 @@ export class GEMDevice {
     }
     this._status.connected = false;
     this._status.connectionType = 'none';
+    this._status.metricsAvailable = false;
+    this._status.metricsSource = "UNOBSERVED";
+    this._status.lastObservedAt = 0;
   }
 
   /**
@@ -170,9 +173,9 @@ export class GEMDevice {
    * Execute a device action
    */
   executeAction(type: DeviceAction['type'], target?: string, command?: string): string {
-    // Safety check
-    if (target && WHITELIST.includes(target)) {
-      console.warn(`[GEM-Device] Ação bloqueada: ${target} está na whitelist`);
+    // Safety check: operations targeting Android packages require explicit allow-list membership.
+    if (target && !WHITELIST.includes(target)) {
+      console.warn(`[GEM-Device] Ação bloqueada: ${target} não está na whitelist`);
       return '';
     }
 
@@ -216,11 +219,11 @@ export class GEMDevice {
         break;
 
       case 'shizuku_status':
-        this._status.shizukuActive = data.active ?? false;
+        this._status.shizukuActive = data.active === true;
         break;
 
       case 'adb_status':
-        this._status.adbWifiActive = data.active ?? false;
+        this._status.adbWifiActive = data.active === true;
         break;
 
       case 'action_result':
@@ -249,8 +252,10 @@ export class GEMDevice {
       this._status.lastObservedAt = 0;
     }
 
-    this._lastOptimization = Date.now();
-    this._optimizationCycles++;
+    if (this._status.connected) {
+      this._lastOptimization = Date.now();
+      this._optimizationCycles++;
+    }
   }
 
   getMetrics(): DeviceMetrics {
