@@ -17,13 +17,23 @@ export class AeternumOrchestrator {
 
   boot(): void {
     if (this.booted) return;
+
     for (const descriptor of AETERNUM_8_MODULES) {
+      this.registry.declare(descriptor);
       this.state.set("module." + descriptor.id + ".state", descriptor.state);
+
+      // Dependency direction: provider/dependency -> dependent module.
+      for (const dependency of descriptor.dependencies) {
+        this.registry.connect(dependency, descriptor.id);
+      }
     }
+
     this.state.set("system.status", "BOOTED");
     this.state.set("system.bootTime", Date.now());
     this.booted = true;
-    void this.bus.emit("system.boot.complete", { modules: AETERNUM_8_MODULES.length });
+    void this.bus.emit("system.boot.complete", {
+      modules: AETERNUM_8_MODULES.length,
+    });
   }
 
   register(
@@ -68,4 +78,13 @@ export class AeternumOrchestrator {
   listModules(): readonly AeternumModuleDescriptor[] {
     return AETERNUM_8_MODULES;
   }
+
+  listDeclaredModules(): readonly AeternumModuleDescriptor[] {
+    return this.registry.listDeclared();
+  }
+
+  listConnections(): Array<{ sourceId: string; targetId: string }> {
+    return this.registry.listConnections();
+  }
 }
+
