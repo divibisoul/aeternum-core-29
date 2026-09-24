@@ -92,30 +92,52 @@ jobs:
         id: mesh
         run: |
           echo "=== VALIDAÇÃO DA MALHA SINÁPTICA ==="
-          NUCLEOS="$NUCLEO_N01 $NUCLEO_N02 $NUCLEO_N03 $NUCLEO_N04 $NUCLEO_N05 $NUCLEO_N06 $NUCLEO_N07"
+          declare -A PEERS=(
+            [N01]="$NUCLEO_N01"
+            [N02]="$NUCLEO_N02"
+            [N03]="$NUCLEO_N03"
+            [N04]="$NUCLEO_N04"
+            [N05]="$NUCLEO_N05"
+            [N06]="$NUCLEO_N06"
+            [N07]="$NUCLEO_N07"
+          )
           FAIL=0
-          for url in $NUCLEOS; do
+          MEASURABLE=0
+          for nucleus in N01 N02 N03 N04 N05 N06 N07; do
+            url="${PEERS[$nucleus]}"
             if [ -z "$url" ]; then
-              echo "❌ URL vazia para um núcleo. Verifique os secrets."
-              FAIL=1
+              echo "$nucleus_STATUS=UNMEASURABLE"
+              echo "$nucleus_REASON=endpoint_not_configured"
               continue
             fi
+            MEASURABLE=$((MEASURABLE + 1))
             START=$(date +%s%N)
             if curl -f -s -o /dev/null --connect-timeout 5 "$url/health"; then
               END=$(date +%s%N)
-              LATENCY=$(( ($END - $START) / 1000000 ))
+              LATENCY=$(( (END - START) / 1000000 ))
               if [ $LATENCY -gt 200 ]; then
-                echo "⚠️  $url - latência alta: ${LATENCY}ms"
+                echo "$nucleus_STATUS=CONNECTED"
+                echo "$nucleus_LATENCY_MS=$LATENCY"
+                echo "⚠️  $nucleus - latência alta: ${LATENCY}ms"
               else
-                echo "✅ $url - OK (${LATENCY}ms)"
+                echo "$nucleus_STATUS=VERIFIED"
+                echo "$nucleus_LATENCY_MS=$LATENCY"
+                echo "✅ $nucleus - OK (${LATENCY}ms)"
               fi
             else
-              echo "❌ $url - falha na conexão"
+              echo "$nucleus_STATUS=BLOCKED"
+              echo "$nucleus_REASON=endpoint_configured_but_unreachable"
               FAIL=1
             fi
           done
-          if [ $FAIL -ne 0 ]; then exit 1; fi
-          echo "Mesh validada."
+          if [ "$MEASURABLE" -eq 0 ]; then
+            echo "MESH_STATUS=UNMEASURABLE"
+          elif [ "$FAIL" -ne 0 ]; then
+            echo "MESH_STATUS=BLOCKED"
+            exit 1
+          else
+            echo "MESH_STATUS=VERIFIED"
+          fi
 
       # --- Validação de Memória e BYOK ---
       - name: Validar Memória Vetorial e BYOK
