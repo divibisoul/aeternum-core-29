@@ -9,6 +9,8 @@ export type AeternumModuleId =
   | "M8_GOVERNANCE_MEMORY";
 
 export type AeternumOwner = "N01" | "N03" | "N05" | "N06" | "N07_SARA";
+export type AeternumExecutionOwner = "N01" | "N03" | "N05" | "N06" | "N07";
+export type AeternumGovernanceAuthority = "SARA" | null;
 
 export type AeternumImplementationState =
   | "implemented"
@@ -24,6 +26,10 @@ export interface AeternumModuleDescriptor {
   capabilities: string[];
   dependencies: AeternumModuleId[];
   evidence: string[];
+  /** Canonical execution authority; legacy owner remains untouched above. */
+  executionOwner?: AeternumExecutionOwner;
+  /** Governance authority is separate from runtime placement. */
+  governanceAuthority?: AeternumGovernanceAuthority;
 }
 
 export interface AeternumEvent<T = unknown> {
