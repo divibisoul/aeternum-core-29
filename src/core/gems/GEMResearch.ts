@@ -80,7 +80,7 @@ export class GEMResearch {
    */
   async processQuery(query: string): Promise<ResearchTask> {
     const task: ResearchTask = {
-      id: `res_${Date.now()}`,
+      id: globalThis.crypto?.randomUUID?.() ?? `res_${Date.now()}_${this._completed.length + 1}`,
       query,
       status: 'researching',
       sources: [],
