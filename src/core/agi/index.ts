@@ -354,7 +354,6 @@ export class AeternumAGI {
 
     console.log('[AeternumAGI] Iniciando 17 motores em PRIMEIRO PLANO CONTÍNUO...');
     
-    this.saiic.start(500);
     this.resourceManager.start(1000, 3000);
     this.consciousness.startConsciousnessLoop(3000);
     this.darwinMachine.startEvolution(8000);
@@ -392,6 +391,9 @@ export class AeternumAGI {
     this.godelAgent.executeSelfImprovementCycle().then(mods => {
       console.log(`[AeternumAGI] Gödel Agent: ${mods.length} melhorias iniciais`);
     });
+
+    // SAIIC inicia após os produtores de estado para medir o estado real.
+    this.saiic.start(500);
 
     this._running = true;
     console.log('[AeternumAGI] 17 motores de PRIMEIRO PLANO CONTÍNUO ativos ✓');
