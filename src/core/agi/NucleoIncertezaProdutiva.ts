@@ -108,7 +108,7 @@ export class NucleoIncertezaProdutiva {
       this.registrarCrenca(
         inputHash,
         userInput.substring(0, 200),
-        0.5 + Math.random() * 0.3,
+        0.5 + this.deterministicUnit(inputHash),
         'interacao-usuario'
       );
     }
@@ -175,7 +175,7 @@ export class NucleoIncertezaProdutiva {
       }
 
       // Reduce belief certainty
-      const reducao = this.taxaIncertezaBase * (1 + Math.random() * 0.5);
+      const reducao = this.taxaIncertezaBase * (1 + this.deterministicUnit(crencaMaisForte.id) * 0.5);
       crencaMaisForte.certeza = Math.max(0.1, crencaMaisForte.certeza * (1 - reducao));
 
       this.historicoRupturas.push({
@@ -252,7 +252,18 @@ export class NucleoIncertezaProdutiva {
       `Viés de confirmação pode estar inflando a certeza de "${crenca.texto.substring(0, 80)}".`,
       `Dados adversariais poderiam desafiar esta premissa de forma produtiva.`
     ];
-    return estrategias[Math.floor(Math.random() * estrategias.length)];
+    const index = Math.floor(this.deterministicUnit(crenca.id) * estrategias.length) % estrategias.length;
+    return estrategias[index];
+  }
+
+  private deterministicUnit(input: string): number {
+    const digest = this.hashInput(input);
+    let hash = 2166136261;
+    for (let i = 0; i < digest.length; i++) {
+      hash ^= digest.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0) / 0xffffffff;
   }
 
   private hashInput(input: string): string {
