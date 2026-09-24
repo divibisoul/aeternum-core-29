@@ -5,6 +5,7 @@ import { N01AgentRegistry } from './N01AgentRegistry';
 import type { SoulMeshMessage } from './SoulMeshProtocol';
 import { executeSuperComputePlan, createSuperComputePlan, summarizeSuperCompute, type SuperComputeTask } from './SoulSuperCompute';
 import { sendTo } from '../soul-mesh/peerClient';
+import { ProjetoClareira } from '../neural/ProjetoClareira';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -15,7 +16,7 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'neural.clareira.status', 'neural.clareira.stimulus', 'neural.clareira.decision'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
 
@@ -38,7 +39,7 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'neural.clareira.status', 'neural.clareira.stimulus', 'neural.clareira.decision'],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
