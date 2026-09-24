@@ -2,7 +2,7 @@
  * CAMADA TÉCNICA - Core Executável Real
  * 
  * Adaptação de camada_tecnico.py para TypeScript
- * Implementa redes neurais simuladas, aprendizado por reforço e otimizações
+ * Implementa modelos neurais em-processo, aprendizado por reforço simplificado e otimizações
  */
 
 import { EventBus } from '../EventBus';
