@@ -19,6 +19,8 @@ export class InformationChannel {
   private _active = true;
   private bandwidth = 1.0;
   private latency = 0;
+  private latencySource: 'MODEL_ESTIMATE' | 'OBSERVED_PROCESSING' = 'MODEL_ESTIMATE';
+  private lastMeasuredAt = 0;
   private packetsTransmitted = 0;
   private errorCount = 0;
   private packetQueue: InformationPacket[] = [];
@@ -56,8 +58,10 @@ export class InformationChannel {
       return false;
     }
 
-    // Simular latência baseada em bandwidth
+    // This is an internal scheduling estimate, not a network measurement.
     this.latency = Math.round((1 / this.bandwidth) * 10);
+    this.latencySource = 'MODEL_ESTIMATE';
+    this.lastMeasuredAt = Date.now();
 
     // Verificar capacidade da fila
     if (this.packetQueue.length >= this.maxQueueSize) {
@@ -122,6 +126,8 @@ export class InformationChannel {
     active: boolean;
     bandwidth: number;
     latency: number;
+    latencySource: 'MODEL_ESTIMATE' | 'OBSERVED_PROCESSING';
+    lastMeasuredAt: number;
     packetsTransmitted: number;
     errorCount: number;
     queueSize: number;
@@ -131,6 +137,8 @@ export class InformationChannel {
       active: this._active,
       bandwidth: this.bandwidth,
       latency: this.latency,
+      latencySource: this.latencySource,
+      lastMeasuredAt: this.lastMeasuredAt,
       packetsTransmitted: this.packetsTransmitted,
       errorCount: this.errorCount,
       queueSize: this.packetQueue.length,
