@@ -139,13 +139,11 @@ export class ResourceManager {
     for (const profile of this.moduleProfiles.values()) {
       if (!profile.isActive) continue;
 
-      // Simulate CPU usage based on execution frequency and time
+      // Derive execution load from recorded runtime measurements
       const cpuUsage = Math.min(1, (profile.lastExecutionMs / this._quantumSliceMs) * profile.cpuAllocation);
       totalCpu += cpuUsage;
 
-      // Simulate memory usage with gradual fluctuation
-      const memDelta = (Math.random() - 0.5) * 0.02;
-      profile.memoryAllocation = Math.max(0.01, Math.min(0.3, profile.memoryAllocation + memDelta));
+      // memoryAllocation is a managed allocation, not a fabricated usage reading.
       totalMem += profile.memoryAllocation;
     }
 
@@ -191,7 +189,7 @@ export class ResourceManager {
     const profiles = Array.from(this.moduleProfiles.values());
     const activeProfiles = profiles.filter(p => p.isActive);
     
-    // Find hot modules (highest CPU allocation)
+    // Find modules receiving the highest real scheduler allocation
     const sorted = [...activeProfiles].sort((a, b) => b.cpuAllocation - a.cpuAllocation);
     const hotModules = sorted.slice(0, 3).map(p => p.moduleId);
 

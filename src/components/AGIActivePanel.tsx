@@ -167,10 +167,10 @@ export function AGIActivePanel() {
                 <div className="text-[10px] font-medium flex items-center gap-1">
                   <Heart className="w-3 h-3 text-red-400" /> GEM-Health
                   <Badge className={cn("text-[8px] ml-auto", metrics?.gemHealth?.wearableConnected ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400")}>
-                    {metrics?.gemHealth?.wearableConnected ? 'WEARABLE' : 'SIMULADO'}
+                    {metrics?.gemHealth?.dataAvailable ? 'WEARABLE' : 'SEM DADOS'}
                   </Badge>
                 </div>
-                {metrics?.gemHealth && (
+                {metrics?.gemHealth && metrics.gemHealth.dataAvailable && (
                   <div className="space-y-0.5 text-[9px]">
                     <div className="flex justify-between"><span className="text-muted-foreground">♥ FC</span><span className="font-mono text-red-400">{metrics.gemHealth.heartRate.toFixed(0)} bpm</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">HRV</span><span className="font-mono">{metrics.gemHealth.hrv.toFixed(0)} ms</span></div>
@@ -249,6 +249,10 @@ export function AGIActivePanel() {
                     <div className="flex justify-between"><span className="text-muted-foreground">Processos</span><span className="font-mono">{metrics.deviceStatus.runningProcesses}</span></div>
                   </div>
                 )}
+                {!metrics?.deviceStatus?.connected && (
+                  <div className="text-[9px] text-muted-foreground mt-1">Nenhuma telemetria Android observada. Conecte o companion para habilitar métricas reais.</div>
+                )}
+
                 {!metrics?.deviceStatus?.connected && (
                   <div className="space-y-1 mt-1">
                     <div className="flex gap-1">

@@ -3,7 +3,7 @@ import { SoulMeshRouter } from './SoulMeshRouter';
 import { SoulMeshSupabaseTransport } from './SoulMeshSupabaseTransport';
 import { N01AgentRegistry } from './N01AgentRegistry';
 import type { SoulMeshMessage } from './SoulMeshProtocol';
-import { executeSuperComputePlan, createSuperComputePlan, summarizeSuperCompute, type SuperComputeTask } from './SoulSuperCompute';
+import type { SuperComputeTask } from './SoulSuperCompute';
 import { sendTo } from '../soul-mesh/peerClient';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
@@ -15,31 +15,46 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'sara.hortacore.assess'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
 
       if (message.capability === 'supercompute.execute') {
-        const input = message.payload as { tasks?: SuperComputeTask[] };
-        if (!Array.isArray(input?.tasks)) throw new Error('SUPERCOMPUTE_TASKS_REQUIRED');
-        if (input.tasks.some((task) => task.target === 'N07')) throw new Error('N07_NOT_COMMISSIONED');
-        const plan = createSuperComputePlan(input.tasks);
-        const results = await executeSuperComputePlan(plan, {
-          execute: async (task) => {
-            if (task.target === 'N01') throw new Error('SUPERCOMPUTE_LOCAL_TASK_NOT_ROUTED');
-            const response = await sendTo(task.target, task.capability, task.input);
-            return response.payload;
+        const input = message.payload as { tasks?: SuperComputeTask[]; device?: string; operation?: string };
+        if (!Array.isArray(input?.tasks) || input.tasks.length === 0) throw new Error('SUPERCOMPUTE_TASKS_REQUIRED');
+
+        const tasks = input.tasks.map((task, index) => ({
+          id: task.id,
+          capability: task.capability,
+          payload: {
+            target: task.target,
+            input: task.input,
+            dependsOn: task.dependsOn ?? [],
+            ...(input.operation ? { operation: input.operation } : {}),
           },
+          required: true,
+        }));
+
+        const response = await sendTo('N07', 'supergpu.parallel', {
+          tasks,
+          ...(input.device ? { device: input.device } : {}),
         });
-        return { planId: plan.id, results, summary: summarizeSuperCompute(results) };
+        return {
+          planId: message.correlationId,
+          delegatedTo: 'N07',
+          capability: 'supergpu.parallel',
+          parentCorrelationId: message.correlationId,
+          results: response.payload,
+          compatibility: { sourceCapability: 'supercompute.execute', owner: 'N07' },
+        };
       }
 
       return {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
-        peers: ['N02', 'N03', 'N04', 'N05', 'N06'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'sara.hortacore.assess'],
+        peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
       };

@@ -32,7 +32,7 @@ export interface IntegrityReport {
   repairedModules: string[];
   anticorpoActions: AnticorpoAction[];
   criticalAlerts: string[];
-  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number };
+  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number; measured: boolean };
 }
 
 export interface AnticorpoAction {
@@ -75,6 +75,8 @@ export class SAIIC {
   private isolatedModules: Set<string> = new Set();
   private repairedModules: Set<string> = new Set();
   private lastReports: IntegrityReport[] = [];
+  private remediationHandlers: Map<string, (diagnostic: ModuleDiagnostic) => Promise<{ action: AnticorpoAction['action']; details: string }> | { action: AnticorpoAction['action']; details: string }> = new Map();
+  private meshLatencyProvider: (() => number | null) | null = null;
   
   private _scanCycles = 0;
   private _loopsDetected = 0;
@@ -86,6 +88,14 @@ export class SAIIC {
   
   get isRunning(): boolean { return this._running; }
   get scanCycles(): number { return this._scanCycles; }
+
+  registerRemediationHandler(moduleId: string, handler: (diagnostic: ModuleDiagnostic) => Promise<{ action: AnticorpoAction['action']; details: string }> | { action: AnticorpoAction['action']; details: string }): void {
+    this.remediationHandlers.set(moduleId, handler);
+  }
+
+  setMeshLatencyProvider(provider: (() => number | null) | null): void {
+    this.meshLatencyProvider = provider;
+  }
 
   /**
    * Register a module for continuous monitoring
@@ -123,7 +133,7 @@ export class SAIIC {
 
     // Anticorpo Digital loop - searches and repairs
     this._anticorpoInterval = setInterval(() => {
-      this.executeAnticorpoSweep();
+      void this.executeAnticorpoSweep();
     }, 2000);
 
     // Initial scan
@@ -204,9 +214,8 @@ export class SAIIC {
     const healthyCount = diagnostics.filter(d => d.healthy).length;
     const overallIntegrity = diagnostics.length > 0 ? healthyCount / diagnostics.length : 1;
 
-    // Check mesh latency
-    const latencies = diagnostics.map(d => Date.now() - d.lastHeartbeat);
-    const maxLatency = Math.max(...latencies, 0);
+    const measuredLatency = this.meshLatencyProvider ? this.meshLatencyProvider() : null;
+    const maxLatency = measuredLatency === null || !Number.isFinite(measuredLatency) ? 0 : Math.max(0, measuredLatency);
 
     // Store report
     const report: IntegrityReport = {
@@ -217,7 +226,7 @@ export class SAIIC {
       repairedModules: Array.from(this.repairedModules),
       anticorpoActions: this.anticorpoHistory.slice(-10),
       criticalAlerts,
-      meshLatencyCheck: { allUnder10ms: maxLatency < 10, maxLatency },
+      meshLatencyCheck: { allUnder10ms: measuredLatency !== null && maxLatency < 10, maxLatency, measured: measuredLatency !== null },
     };
     
     this.lastReports.push(report);
@@ -239,54 +248,89 @@ export class SAIIC {
   /**
    * ANTICORPO DIGITAL - Sweeps through modules and repairs anomalies
    */
-  private executeAnticorpoSweep(): void {
+  private async executeAnticorpoSweep(): Promise<void> {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
-      // Detect and repair weight corruption (simulated via high error rate)
+      const remediation = this.remediationHandlers.get(moduleId);
+
       if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'weight_corruption',
-          action: 'corrected',
-          severity: diag.errorRate,
-          details: `Corrigido errorRate de ${(diag.errorRate * 100).toFixed(1)}% para níveis saudáveis`,
-        };
-        this.anticorpoHistory.push(action);
-        
-        // Apply correction
-        diag.errorRate *= 0.5; // Reduce error rate
-        this._inconsistenciesResolved++;
+        if (remediation) {
+          try {
+            const result = await Promise.resolve(remediation(diag));
+            this.anticorpoHistory.push({
+              timestamp: Date.now(),
+              targetModule: moduleId,
+              anomalyType: 'weight_corruption',
+              action: result.action,
+              severity: diag.errorRate,
+              details: result.details,
+            });
+            this._inconsistenciesResolved++;
+          } catch (error) {
+            this.anticorpoHistory.push({
+              timestamp: Date.now(),
+              targetModule: moduleId,
+              anomalyType: 'weight_corruption',
+              action: 'isolated',
+              severity: 1,
+              details: 'Remediação falhou: ' + (error instanceof Error ? error.message : String(error)),
+            });
+            this.isolatedModules.add(moduleId);
+          }
+        }
       }
 
-      // Detect memory leaks
-      if (diag.memoryUsage > 0.85) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'memory_leak',
-          action: 'corrected',
-          severity: diag.memoryUsage,
-          details: `Memória de ${moduleId} otimizada de ${(diag.memoryUsage * 100).toFixed(0)}%`,
-        };
-        this.anticorpoHistory.push(action);
-        diag.memoryUsage *= 0.8;
-        this._inconsistenciesResolved++;
+      if (diag.memoryUsage > 0.85 && remediation) {
+        try {
+          const result = await Promise.resolve(remediation(diag));
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'memory_leak',
+            action: result.action,
+            severity: diag.memoryUsage,
+            details: result.details,
+          });
+          this._inconsistenciesResolved++;
+        } catch (error) {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'memory_leak',
+            action: 'isolated',
+            severity: 1,
+            details: 'Remediação falhou: ' + (error instanceof Error ? error.message : String(error)),
+          });
+          this.isolatedModules.add(moduleId);
+        }
       }
 
-      // Handle detected loops
       if (diag.loopDetected) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'loop_detected',
-          action: 'restarted',
-          severity: 0.8,
-          details: `Loop de inferência detectado em ${moduleId}, forçando perturbação de estado`,
-        };
-        this.anticorpoHistory.push(action);
-        // Reset pattern buffer for this module
-        this.patternBuffer.set(moduleId, []);
-        diag.loopDetected = false;
+        if (remediation) {
+          try {
+            const result = await Promise.resolve(remediation(diag));
+            this.anticorpoHistory.push({
+              timestamp: Date.now(),
+              targetModule: moduleId,
+              anomalyType: 'loop_detected',
+              action: result.action,
+              severity: 0.8,
+              details: result.details,
+            });
+            this.patternBuffer.set(moduleId, []);
+            diag.loopDetected = false;
+            this._inconsistenciesResolved++;
+          } catch (error) {
+            this.anticorpoHistory.push({
+              timestamp: Date.now(),
+              targetModule: moduleId,
+              anomalyType: 'loop_detected',
+              action: 'isolated',
+              severity: 1,
+              details: 'Remediação de loop falhou: ' + (error instanceof Error ? error.message : String(error)),
+            });
+            this.isolatedModules.add(moduleId);
+          }
+        }
       }
 
       // Isolate critically unhealthy modules

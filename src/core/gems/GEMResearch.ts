@@ -18,6 +18,8 @@ export interface ResearchTask {
   sources: string[];
   confidence: number;
   timestamp: number;
+  error?: string;
+  provenance?: 'research-adapter';
 }
 
 export interface ResearchMetrics {
@@ -30,14 +32,19 @@ export interface ResearchMetrics {
   lastResearch: number;
 }
 
+export type ResearchExecutor = (query: string) => Promise<{ result: string; sources: string[]; confidence: number }>;
+
 export class GEMResearch {
   private _running = false;
+  private _executor: ResearchExecutor | null = null;
   private _interval: ReturnType<typeof setInterval> | null = null;
   private _queue: ResearchTask[] = [];
   private _completed: ResearchTask[] = [];
   private _cyclesCompleted = 0;
 
   get isRunning() { return this._running; }
+
+  setExecutor(executor: ResearchExecutor | null): void { this._executor = executor; }
 
   start(intervalMs = 10000): void {
     if (this._running) return;
@@ -57,7 +64,7 @@ export class GEMResearch {
    */
   enqueue(query: string): string {
     const task: ResearchTask = {
-      id: `res_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: globalThis.crypto?.randomUUID?.() ?? `res_${Date.now()}_${this._queue.length + 1}`,
       query,
       status: 'queued',
       sources: [],
@@ -73,7 +80,7 @@ export class GEMResearch {
    */
   async processQuery(query: string): Promise<ResearchTask> {
     const task: ResearchTask = {
-      id: `res_${Date.now()}`,
+      id: globalThis.crypto?.randomUUID?.() ?? `res_${Date.now()}_${this._completed.length + 1}`,
       query,
       status: 'researching',
       sources: [],
@@ -82,13 +89,25 @@ export class GEMResearch {
     };
 
     try {
-      // This will be called via edge function from ChatEngine
+      if (!this._executor) {
+        task.status = 'failed';
+        task.error = 'RESEARCH_BACKEND_NOT_CONFIGURED';
+        this._completed.push(task);
+        return task;
+      }
+      const evidence = await this._executor(query);
+      if (!evidence || typeof evidence.result !== 'string' || !Array.isArray(evidence.sources) || !Number.isFinite(evidence.confidence) || evidence.confidence < 0 || evidence.confidence > 1) {
+        throw new Error('INVALID_RESEARCH_ADAPTER_RESULT');
+      }
       task.status = 'verifying';
-      task.confidence = 0.7 + Math.random() * 0.25;
-      task.sources = ['internal-knowledge', 'ai-analysis'];
+      task.result = evidence.result;
+      task.sources = evidence.sources.map(String).filter(Boolean);
+      task.confidence = evidence.confidence;
+      task.provenance = 'research-adapter';
       task.status = 'complete';
-    } catch {
+    } catch (error) {
       task.status = 'failed';
+      task.error = error instanceof Error ? error.message : String(error);
     }
 
     this._completed.push(task);

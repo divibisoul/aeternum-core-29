@@ -65,10 +65,11 @@ export class AprendizadoReforcoContinuo {
   /**
    * Processa experiência através da rede neural
    */
-  processar(experiencia: number[] | Float32Array): Float32Array {
-    const input = experiencia instanceof Float32Array 
-      ? experiencia 
+  processar(experiencia: number[] | Float32Array, reward?: number): Float32Array {
+    const input = experiencia instanceof Float32Array
+      ? experiencia
       : new Float32Array(experiencia);
+    if (input.length !== 10) throw new Error('AprendizadoReforcoContinuo requer experiência de dimensão 10');
     
     // Forward pass
     const hidden = this.matmul(input, this.weights1, this.bias1, 10, 32);
@@ -78,22 +79,19 @@ export class AprendizadoReforcoContinuo {
     
     const output = this.matmul(hidden, this.weights2, this.bias2, 32, 5);
     
-    // Calcular reward e loss
-    const rewardSim = output.reduce((a, b) => a + b, 0);
-    const loss = -rewardSim;
-    this.lossHistory.push(loss);
-    
-    // Backpropagation simplificada (gradient descent)
-    this.updateWeights(input, hidden, output);
-    
-    console.log(`[AprendizadoReforco] Loss: ${loss.toFixed(4)}, Convergência: ${this.isConverged()}`);
+    if (reward !== undefined) {
+      if (!Number.isFinite(reward)) throw new Error('REWARD_MUST_BE_FINITE');
+      const loss = -reward;
+      this.lossHistory.push(loss);
+      this.updateWeights(input, hidden, output, reward);
+      console.log(`[AprendizadoReforco] Reward: ${reward.toFixed(4)}, Loss: ${loss.toFixed(4)}, Convergência: ${this.isConverged()}`);
+    }
     
     return output;
   }
 
-  private updateWeights(input: Float32Array, hidden: Float32Array, output: Float32Array): void {
-    // Simplified gradient update
-    const gradient = -1; // d(loss)/d(sum) = -1
+  private updateWeights(_input: Float32Array, hidden: Float32Array, _output: Float32Array, reward: number): void {
+    const gradient = -Math.sign(reward);
     
     // Update weights2
     for (let i = 0; i < 32; i++) {
@@ -255,6 +253,18 @@ export class TransformerExistencial {
     return weights;
   }
 
+  private project(input: number[], weights: Float32Array): Float32Array {
+    const output = new Float32Array(this.embeddingDim);
+    for (let j = 0; j < this.embeddingDim; j++) {
+      let sum = 0;
+      for (let i = 0; i < Math.min(input.length, this.embeddingDim); i++) {
+        sum += (input[i] || 0) * weights[i * this.embeddingDim + j];
+      }
+      output[j] = sum;
+    }
+    return output;
+  }
+
   processar(sequencia: number[][]): { output: number[][]; attentionEntropy: number } {
     const seqLen = sequencia.length;
     
@@ -264,10 +274,10 @@ export class TransformerExistencial {
     // Compute attention scores
     for (let i = 0; i < seqLen; i++) {
       for (let j = 0; j < seqLen; j++) {
+        const query = this.project(sequencia[i], this.queryWeights);
+        const key = this.project(sequencia[j], this.keyWeights);
         let score = 0;
-        for (let k = 0; k < Math.min(sequencia[i].length, this.embeddingDim); k++) {
-          score += (sequencia[i][k] || 0) * (sequencia[j][k] || 0);
-        }
+        for (let k = 0; k < this.embeddingDim; k++) score += query[k] * key[k];
         attentionScores[i * seqLen + j] = score / Math.sqrt(this.headDim);
       }
     }
@@ -302,7 +312,8 @@ export class TransformerExistencial {
       for (let k = 0; k < this.embeddingDim; k++) {
         let sum = 0;
         for (let j = 0; j < seqLen; j++) {
-          sum += probs[j] * (sequencia[j][k] || 0);
+          const value = this.project(sequencia[j], this.valueWeights);
+          sum += probs[j] * value[k];
         }
         outputRow.push(sum);
       }
@@ -345,19 +356,19 @@ export class MaquinaFusaoCognitiva {
     coerencia: number;
     resultados: {
       reforco: Float32Array;
-      evolutivo: { accuracy: number };
+      evolutivo: { accuracy: number; available: boolean };
       transformer: { entropy: number };
     };
   } {
     // Processo de reforço
     const reforcoResult = this.aprendizadoReforco.processar(experiencia);
     
-    // Processo evolutivo (criar dados sintéticos)
-    const dadosSinteticos = Array(20).fill(null).map(() => 
-      Array(10).fill(null).map(() => Math.random())
-    );
-    const labelsSinteticos = dadosSinteticos.map(() => Math.floor(Math.random() * 3));
-    const evolutivoResult = this.supervisionado.treinar(dadosSinteticos, labelsSinteticos, 5);
+    // O treinamento supervisionado exige dados e rótulos reais fornecidos pelo chamador.
+    const evolutivoResult = {
+      accuracy: 0,
+      generations: 0,
+      available: false,
+    };
     
     // Processo transformer
     const sequencia = [experiencia, experiencia.map(x => x * 0.9), experiencia.map(x => x * 1.1)];
@@ -368,7 +379,9 @@ export class MaquinaFusaoCognitiva {
     const evolutivoScore = evolutivoResult.accuracy;
     const transformerScore = transformerResult.attentionEntropy < 2 ? 1 : 0.5;
     
-    const coerencia = (reforcoScore + evolutivoScore + transformerScore) / 3;
+    const scores = [reforcoScore, transformerScore];
+    if (evolutivoResult.available) scores.push(evolutivoResult.accuracy);
+    const coerencia = scores.reduce((sum, score) => sum + score, 0) / scores.length;
     
     console.log(`[MaquinaFusao] Coerência: ${coerencia.toFixed(4)}`);
     
@@ -376,7 +389,7 @@ export class MaquinaFusaoCognitiva {
       coerencia,
       resultados: {
         reforco: reforcoResult,
-        evolutivo: { accuracy: evolutivoResult.accuracy },
+        evolutivo: { accuracy: evolutivoResult.accuracy, available: evolutivoResult.available },
         transformer: { entropy: transformerResult.attentionEntropy },
       },
     };

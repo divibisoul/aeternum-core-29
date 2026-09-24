@@ -17,8 +17,8 @@ export interface MeshNode {
 export interface ConnectivityMetrics {
   meshNodes: number;
   avgLatency: number;
-  bandwidth: number; // Mbps simulated
-  reliability: number; // 0-1
+  bandwidth: number; // Mbps observed; 0 means unavailable
+  reliability: number; // 0-1 observed from registered nodes
   iotDevices: number;
   quantumEncrypted: boolean;
 }
@@ -28,8 +28,9 @@ export class ConnectivityManager {
   private _initialized = false;
   private _running = false;
   private _tickInterval: ReturnType<typeof setInterval> | null = null;
-  private _bandwidth = 1000; // Mbps
-  private _reliability = 0.999;
+  private _bandwidth = 0; // Mbps; no measurement is claimed until provided
+  private _reliability = 0;
+  private _quantumEncrypted = false;
 
   get initialized(): boolean { return this._initialized; }
   get isRunning(): boolean { return this._running; }
@@ -49,7 +50,7 @@ export class ConnectivityManager {
         id,
         type: 'agi-subsystem',
         status: 'connected',
-        latency: Math.random() * 2, // < 2ms
+        latency: 0,
         lastSeen: Date.now()
       });
     });
@@ -75,28 +76,19 @@ export class ConnectivityManager {
   }
 
   private tick(): void {
-    for (const [, node] of this.meshNetwork) {
-      // Simulate latency fluctuation
-      node.latency = Math.max(0.1, node.latency + (Math.random() - 0.5) * 0.3);
-      node.lastSeen = Date.now();
-      
-      // Very rare disconnection simulation
-      if (Math.random() < 0.001) {
-        node.status = 'syncing';
-        setTimeout(() => { node.status = 'connected'; }, 2000);
-      }
+    for (const node of this.meshNetwork.values()) {
+      if (node.status === 'connected') node.lastSeen = Date.now();
     }
-
-    // Bandwidth/reliability fluctuation
-    this._bandwidth = Math.max(500, Math.min(2000, this._bandwidth + (Math.random() - 0.5) * 50));
-    this._reliability = Math.max(0.99, Math.min(1, this._reliability + (Math.random() - 0.5) * 0.001));
+    const total = this.meshNetwork.size;
+    const connected = Array.from(this.meshNetwork.values()).filter(node => node.status === 'connected').length;
+    this._reliability = total > 0 ? connected / total : 0;
   }
 
   registerNode(id: string, type: string): void {
     this.meshNetwork.set(id, {
       id, type,
       status: 'connected',
-      latency: Math.random() * 5,
+      latency: 0,
       lastSeen: Date.now()
     });
   }
@@ -113,11 +105,25 @@ export class ConnectivityManager {
       bandwidth: this._bandwidth,
       reliability: this._reliability,
       iotDevices: 0, // No real IoT in browser
-      quantumEncrypted: true
+      quantumEncrypted: this._quantumEncrypted
     };
   }
 
   getNodes(): MeshNode[] {
     return Array.from(this.meshNetwork.values());
+  }
+
+/** Record a real transport measurement supplied by the active adapter. */
+  recordTransportMetrics(metrics: { bandwidthMbps?: number; reliability?: number }): void {
+    if (metrics.bandwidthMbps !== undefined && Number.isFinite(metrics.bandwidthMbps) && metrics.bandwidthMbps >= 0) {
+      this._bandwidth = metrics.bandwidthMbps;
+    }
+    if (metrics.reliability !== undefined && Number.isFinite(metrics.reliability) && metrics.reliability >= 0 && metrics.reliability <= 1) {
+      this._reliability = metrics.reliability;
+    }
+  }
+
+  setQuantumEncryptionStatus(enabled: boolean): void {
+    this._quantumEncrypted = Boolean(enabled);
   }
 }

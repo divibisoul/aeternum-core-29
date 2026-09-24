@@ -13,6 +13,7 @@ const OPERATION_ROUTES = Object.freeze({
   'sara.cycle': { method: 'POST', path: '/v1/cycle' },
   'sara.audit': { method: 'POST', path: '/v1/audit' },
   'sara.regenerate': { method: 'POST', path: '/v1/regenerate' },
+  'sara.hortacore.assess': { method: 'POST', path: '/v1/hortacore/assess' },
   'sara.trace': { method: 'GET', path: '/v1/trace/{cycle_id}' },
 });
 
@@ -88,6 +89,11 @@ function correlationFrom(payload, fallback) {
   return fallback;
 }
 
+function normalizeFederatedContext(context, defaultClient) {
+  if (!isRecord(context)) return { client: defaultClient };
+  return { ...context, client: typeof context.client === 'string' && context.client.trim() ? context.client.trim() : defaultClient };
+}
+
 function buildBody(capability, payload, correlationId) {
   if (capability === 'sara.cycle') {
     if (!isRecord(payload) || typeof payload.input !== 'string' || !payload.input.trim()) {
@@ -98,6 +104,7 @@ function buildBody(capability, payload, correlationId) {
       cycle_id: typeof payload.cycle_id === 'string' && payload.cycle_id.trim()
         ? payload.cycle_id.trim()
         : correlationId,
+      context: normalizeFederatedContext(payload.context, 'n01'),
     };
   }
 
@@ -105,7 +112,14 @@ function buildBody(capability, payload, correlationId) {
     if (!isRecord(payload) || typeof payload.input !== 'string' || !payload.input.trim()) {
       throw new Error('SARA_INPUT_REQUIRED');
     }
-    return { ...payload };
+    return { ...payload, context: normalizeFederatedContext(payload.context, 'n01') };
+  }
+
+  if (capability === 'sara.hortacore.assess') {
+    if (!isRecord(payload) || !isRecord(payload.proposal) || typeof payload.proposal.description !== 'string' || !payload.proposal.description.trim()) {
+      throw new Error('SARA_HORTACORE_PROPOSAL_REQUIRED');
+    }
+    return { ...payload, proposal: { ...payload.proposal } };
   }
 
   return undefined;

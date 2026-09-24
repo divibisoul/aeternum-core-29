@@ -16,7 +16,6 @@ import {
   TURBO_DURATION_SECONDS,
   TURBO_PROCESSING_MULTIPLIER,
   RECOVERY_STRESS_THRESHOLD,
-  RECOVERY_CHANCE_PER_CHECK,
   HOMEOSTASIS_CHECK_INTERVAL,
 } from './types';
 
@@ -129,11 +128,8 @@ export class HomeostasisManager {
       totalStress += loadStress + thermalStress;
     }
 
-    // Adicionar stress por nós inativos (mas não no início)
     const inactiveNodes = this.allNodes.filter(node => !node.active).length;
-    if (this.nodeStates.size > 0) {
-      totalStress += inactiveNodes * 2.0; // Reduzido de 5.0 para 2.0
-    }
+    if (this.nodeStates.size > 0) totalStress += inactiveNodes * 2.0;
 
     this.globalStress = totalStress;
     this.stressHistory.push(totalStress);
@@ -148,7 +144,7 @@ export class HomeostasisManager {
       latencyMs: 0,
       tokensPerSecond: 0,
       activeModules: this.allNodes.filter(n => n.active).length,
-      memoryUsage: this.globalStress,
+      memoryUsage: 0,
       uptime: Date.now(),
     });
   }
@@ -195,7 +191,7 @@ export class HomeostasisManager {
     // ======= RECUPERAÇÃO DE NÓS =======
     if (this.globalStress < RECOVERY_STRESS_THRESHOLD) {
       for (const node of this.allNodes) {
-        if (!node.active && Math.random() < RECOVERY_CHANCE_PER_CHECK) {
+        if (!node.active) {
           console.log(`[HomeostasisManager] Reativando nó ${node.id}`);
           node.setActive(true);
           this.nodesRecovered++;

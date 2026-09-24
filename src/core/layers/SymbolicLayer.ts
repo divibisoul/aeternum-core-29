@@ -7,6 +7,17 @@
 
 import { EventBus } from '../EventBus';
 
+function deterministicWeight(value: unknown): number {
+  const text = typeof value === 'string' ? value : JSON.stringify(value) ?? '';
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 0xffffffff;
+}
+
+
 /**
  * CampoMorfogenetico - Campo de influência que molda padrões emergentes
  * 
@@ -132,7 +143,7 @@ export class BarramentoQuantico {
   }
 
   /**
-   * Emite evento com superposição quântica
+   * Emite evento para a fila simbólica determinística
    */
   emitir(evento: string, dados: unknown, origem: string): void {
     this.emissionCount++;
@@ -155,7 +166,7 @@ export class BarramentoQuantico {
       evento,
       dados,
       timestamp: Date.now(),
-      probabilidade: Math.random(), // Probabilidade quântica simulada
+      probabilidade: deterministicWeight(`${evento}:${JSON.stringify(dados)}:${origem}`),
     };
     
     this.eventosSupepostos.push(eventoSuperposto);
@@ -208,7 +219,7 @@ export class BarramentoQuantico {
 /**
  * TunelamentoCognitivo - Permite "saltos" instantâneos entre estados cognitivos
  * 
- * Simula o tunelamento quântico para transições cognitivas não-lineares
+ * Modelo simbólico determinístico para transições cognitivas não-lineares
  */
 export class TunelamentoCognitivo {
   private estados: Map<string, unknown> = new Map();
@@ -262,10 +273,21 @@ export class TunelamentoCognitivo {
     };
   }
 
+
+  private similarity(de: string, para: string): number {
+    const a = new Set(de.toLowerCase());
+    const b = new Set(para.toLowerCase());
+    const union = new Set([...a, ...b]);
+    if (union.size === 0) return 1;
+    let intersection = 0;
+    for (const char of a) if (b.has(char)) intersection++;
+    return intersection / union.size;
+  }
   private calcularProbabilidade(de: string, para: string): number {
     // Simula decaimento exponencial da barreira
     const barreiraCognitiva = Math.abs(de.length - para.length) * 0.1 + 0.5;
-    return Math.exp(-barreiraCognitiva) * (0.5 + Math.random() * 0.5);
+    const overlap = new Set(de.toLowerCase()).size + new Set(para.toLowerCase()).size === 0 ? 0 : this.similarity(de, para);
+    return Math.exp(-barreiraCognitiva) * overlap;
   }
 
   getMetrics(): { tunelamentos: number; estadosRegistrados: number } {
@@ -279,7 +301,7 @@ export class TunelamentoCognitivo {
 /**
  * EntrelacamentoSistemico - Conecta componentes distantes do sistema
  * 
- * Simula entrelamento quântico para sincronização instantânea
+ * Modelo simbólico determinístico de pareamento e sincronização
  */
 export class EntrelacamentoSistemico {
   private pares: Map<string, { parceiro: string; estado: 'up' | 'down' }> = new Map();
@@ -296,7 +318,7 @@ export class EntrelacamentoSistemico {
    * Cria entrelamento entre dois componentes
    */
   entrelacar(componente1: string, componente2: string): void {
-    const estadoInicial = Math.random() > 0.5 ? 'up' : 'down';
+    const estadoInicial = deterministicWeight(`${componente1}:${componente2}`) >= 0.5 ? 'up' : 'down';
     const estadoOposto = estadoInicial === 'up' ? 'down' : 'up';
     
     this.pares.set(componente1, { parceiro: componente2, estado: estadoInicial });
