@@ -82,9 +82,9 @@ export function AGIActivePanel() {
             {metrics?.overall?.activeSubsystems ?? 0}/{metrics?.overall?.subsystems ?? 17} LOOPS ATIVOS
           </Badge>
           <span className="text-emerald-400">Ψ:{metrics?.consciousness?.isRunning ? 'ON' : 'OFF'}</span>
-          <span className="text-sky-400">G:{((metrics?.godelMeta?.selfAwareness ?? 0) * 100).toFixed(0)}%</span>
+          <span className="text-sky-400">G:{metrics?.godelMeta?.selfAwareness == null ? '—' : (metrics.godelMeta.selfAwareness * 100).toFixed(0) + '%'}</span>
           <span className="text-orange-400">NIP:{metrics?.nip?.saudeEpistemologica ?? '?'}</span>
-          <span className="text-red-400">SAIIC:{((metrics?.saiic?.overallIntegrity ?? 0) * 100).toFixed(0)}%</span>
+          <span className="text-red-400">SAIIC:{metrics?.saiic?.overallIntegrity == null ? '—' : (metrics.saiic.overallIntegrity * 100).toFixed(0) + '%'}</span>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -196,7 +196,7 @@ export function AGIActivePanel() {
                   <div className="space-y-0.5 text-[9px]">
                     <div className="flex justify-between"><span className="text-muted-foreground">Completas</span><span className="font-mono">{metrics.gemResearch.tasksCompleted}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Na Fila</span><span className="font-mono">{metrics.gemResearch.tasksQueued}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Confiança</span><span className="font-mono text-blue-400">{(metrics.gemResearch.avgConfidence * 100).toFixed(0)}%</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Confiança</span><span className="font-mono text-blue-400">{metrics.gemResearch.avgConfidence == null ? 'NÃO MENSURÁVEL' : (metrics.gemResearch.avgConfidence * 100).toFixed(0) + '%'}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Fontes</span><span className="font-mono">{metrics.gemResearch.totalSources}</span></div>
                   </div>
                 )}
@@ -473,8 +473,8 @@ export function AGIActivePanel() {
                     <Network className="w-3 h-3 text-cyan-400" /> Full-Mesh
                   </div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Nodes</span><span className="font-mono">{metrics.connectivity.meshNodes}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Latência</span><span className="font-mono">{metrics.connectivity.avgLatency.toFixed(1)}ms</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Confiabilidade</span><span className="font-mono text-emerald-400">{(metrics.connectivity.reliability * 100).toFixed(2)}%</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Latência</span><span className="font-mono">{metrics.connectivity.meshNodes > 0 && metrics.connectivity.observed ? metrics.connectivity.avgLatency.toFixed(1) + 'ms' : 'NÃO MENSURÁVEL'}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Confiabilidade</span><span className="font-mono text-emerald-400">{metrics.connectivity.reliabilitySource === 'OBSERVED' ? (metrics.connectivity.reliability * 100).toFixed(2) + '%' : 'NÃO MENSURÁVEL'}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Mensagens</span><span className="font-mono">{metrics.connectivity.totalMessages}</span></div>
                 </CardContent>
               </Card>
@@ -486,9 +486,9 @@ export function AGIActivePanel() {
                   <div className="text-[10px] font-medium flex items-center gap-1">
                     <Cpu className="w-3 h-3 text-primary" /> Resources
                   </div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">CPU</span><span className="font-mono">{(metrics.resources.totalCpuUsage * 100).toFixed(0)}%</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">CPU</span><span className="font-mono">{(metrics.resources.totalCpuUsage * 100).toFixed(0)}% est.</span></div>
                   <Progress value={metrics.resources.totalCpuUsage * 100} className="h-1" />
-                  <div className="flex justify-between"><span className="text-muted-foreground">Memória</span><span className="font-mono">{(metrics.resources.totalMemoryUsage * 100).toFixed(0)}%</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Memória</span><span className="font-mono">{(metrics.resources.totalMemoryUsage * 100).toFixed(0)}% est.</span></div>
                   <Progress value={metrics.resources.totalMemoryUsage * 100} className="h-1" />
                   <div className="flex justify-between"><span className="text-muted-foreground">Módulos</span><span className="font-mono">{metrics.resources.modulesManaged}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Rebalances</span><span className="font-mono">{metrics.resources.rebalanceCount}</span></div>
