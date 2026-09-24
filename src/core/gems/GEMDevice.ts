@@ -35,6 +35,7 @@ export interface DeviceMetrics {
   actionsExecuted: number;
   lastOptimization: number;
   cyclesCompleted: number;
+  dataFresh: boolean;
 }
 
 export interface DeviceAction {
@@ -81,6 +82,7 @@ export class GEMDevice {
   private _actionsExecuted = 0;
   private _cyclesCompleted = 0;
   private _lastOptimization = 0;
+  private _dataFresh = false;
 
   get isRunning() { return this._running; }
   get status() { return { ...this._status }; }
@@ -204,6 +206,7 @@ export class GEMDevice {
         this._status.batteryPct = data.batteryPct ?? this._status.batteryPct;
         this._status.temperature = data.temperature ?? this._status.temperature;
         this._status.runningProcesses = data.runningProcesses ?? this._status.runningProcesses;
+        this._dataFresh = true;
         break;
 
       case 'shizuku_status':
@@ -221,6 +224,10 @@ export class GEMDevice {
           action.result = data.result;
           if (data.ramFreedMb) this._ramFreedMb += data.ramFreedMb;
           if (data.cpuReductionPct) this._cpuReductionPct += data.cpuReductionPct;
+          if (data.success) {
+            this._lastOptimization = Date.now();
+            this._optimizationCycles++;
+          }
         }
         break;
     }
@@ -228,24 +235,7 @@ export class GEMDevice {
 
   private cycle(): void {
     this._cyclesCompleted++;
-
-    // Request status update from companion
-    if (this._status.connected) {
-      this.sendCommand({ type: 'status_request' });
-    }
-
-    // Simulate device metrics when disconnected (for UI testing)
-    if (!this._status.connected) {
-      this._status.cpu = 15 + Math.random() * 30;
-      this._status.ramUsedMb = 2048 + Math.random() * 2048;
-      this._status.ramTotalMb = 6144;
-      this._status.batteryPct = Math.max(10, this._status.batteryPct - Math.random() * 0.1);
-      this._status.temperature = 28 + Math.random() * 10;
-      this._status.runningProcesses = 80 + Math.floor(Math.random() * 40);
-    }
-
-    this._lastOptimization = Date.now();
-    this._optimizationCycles++;
+    if (this._status.connected) this.sendCommand({ type: 'status_request' });
   }
 
   getMetrics(): DeviceMetrics {
@@ -259,6 +249,7 @@ export class GEMDevice {
       actionsExecuted: this._actionsExecuted,
       lastOptimization: this._lastOptimization,
       cyclesCompleted: this._cyclesCompleted,
+      dataFresh: this._dataFresh,
     };
   }
 
