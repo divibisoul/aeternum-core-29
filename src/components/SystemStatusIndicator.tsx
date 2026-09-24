@@ -51,15 +51,15 @@ export function SystemStatusIndicator() {
         {
           name: 'Arquitetura Quadrangular',
           icon: Activity,
-          active: true,
+          active: false,
           processing: false,
-          metric: '4 lados ativos',
+          metric: 'NÃO MENSURÁVEL',
           color: 'blue',
         },
       ];
 
       setSystems(updatedSystems);
-      setAllSystemsReady(updatedSystems.every(s => s.active));
+      setAllSystemsReady(updatedSystems.length > 0 && updatedSystems.every(s => s.active));
     };
 
     updateSystems();
