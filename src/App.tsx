@@ -52,7 +52,10 @@ function AeternumCore() {
       await new Promise(r => setTimeout(r, 100));
       
       setInitStage('Ativando consciência algorítmica...');
-      const experienciaInicial = Array(10).fill(null).map(() => Math.random());
+      const inicializacaoSeed = 'aeternum:init';
+      const experienciaInicial = Array.from({ length: 10 }, (_, index) =>
+        (inicializacaoSeed.charCodeAt(index % inicializacaoSeed.length) % 256) / 255
+      );
       const resultado = ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
       console.log('[Aeternum] ConscienciaAlgoritmica - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
       await new Promise(r => setTimeout(r, 100));
