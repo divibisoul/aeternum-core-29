@@ -220,6 +220,7 @@ export class HomeostasisManager {
     return {
       globalStress: this.globalStress,
       turboActive: this.turboActive,
+      stressSource: 'INTERNAL_NODE_MODEL',
       nodeStates: new Map(this.nodeStates),
       inactiveNodes: this.allNodes.filter(n => !n.active).length,
       timestamp: Date.now(),
@@ -232,11 +233,13 @@ export class HomeostasisManager {
   getMetrics(): {
     globalStress: number;
     turboActive: boolean;
+    stressSource: 'INTERNAL_NODE_MODEL';
     turboActivations: number;
     nodesRecovered: number;
     activeNodes: number;
     totalNodes: number;
     avgStress: number;
+    stressSource: 'INTERNAL_NODE_MODEL';
   } {
     const avgStress = this.stressHistory.length > 0
       ? this.stressHistory.reduce((a, b) => a + b, 0) / this.stressHistory.length
@@ -250,6 +253,7 @@ export class HomeostasisManager {
       activeNodes: this.allNodes.filter(n => n.active).length,
       totalNodes: this.allNodes.length,
       avgStress,
+      stressSource: 'INTERNAL_NODE_MODEL',
     };
   }
 
