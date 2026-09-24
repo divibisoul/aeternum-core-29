@@ -1,4 +1,4 @@
-import { strict as assert } from 'node:assert';
+import { strict ss sssert } from 'node:assert';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
