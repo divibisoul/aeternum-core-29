@@ -44,7 +44,7 @@ function AeternumCore() {
 
   const initializeSystems = useCallback(async () => {
     try {
-      console.log('[Aeternum] Inicializando 17 motores de primeiro plano...');
+      console.log('[Aeternum] Inicializando AeternumAGI e subsistemas de primeiro plano...');
       
       setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) ProjetoClareira.initialize();
@@ -80,19 +80,28 @@ function AeternumCore() {
       const agiMetrics = agi.getFullMetrics();
       const saiicMetrics = agi.saiic.getMetrics();
       
+      const activeLabel = `${agiMetrics.overall.activeSubsystems}/${agiMetrics.overall.subsystems} loops ativos`;
+      const saiicLabel = saiicMetrics.overallIntegrity === null
+        ? 'SAIIC: NÃO MENSURÁVEL'
+        : `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}%`;
       if (testResult.sucesso) {
         toast.success(
-          `17 motores online | Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
-          `AGI: ${agiMetrics.overall.activeSubsystems}/${agiMetrics.overall.subsystems} | ` +
-          `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}% | ` +
-          `GEMs: 4/4`
+          `${activeLabel} | Coerência observada: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
+          `${saiicLabel} | GEMs: ${[
+            agi.gemHealth.isRunning,
+            agi.gemResearch.isRunning,
+            agi.gemMusic.isRunning,
+            agi.gemDevice.isRunning,
+          ].filter(Boolean).length}/4 loops ativos`
         );
       } else {
-        toast.warning('Sistemas parcialmente ativos');
+        toast.warning(
+          `${activeLabel} | ${saiicLabel} | validação transversal incompleta`
+        );
       }
-      
+
       setSystemReady(true);
-      console.log('[Aeternum] Todos os 17 sistemas de primeiro plano prontos');
+      console.log('[Aeternum] Inicialização concluída; estado de runtime determinado por telemetria observável.');
       
     } catch (error) {
       console.error('[Aeternum] Erro na inicialização:', error);
