@@ -13,6 +13,7 @@ const OPERATION_ROUTES = Object.freeze({
   'sara.cycle': { method: 'POST', path: '/v1/cycle' },
   'sara.audit': { method: 'POST', path: '/v1/audit' },
   'sara.regenerate': { method: 'POST', path: '/v1/regenerate' },
+  'sara.hortacore.assess': { method: 'POST', path: '/v1/hortacore/assess' },
   'sara.trace': { method: 'GET', path: '/v1/trace/{cycle_id}' },
 });
 
@@ -112,6 +113,13 @@ function buildBody(capability, payload, correlationId) {
       throw new Error('SARA_INPUT_REQUIRED');
     }
     return { ...payload, context: normalizeFederatedContext(payload.context, 'n01') };
+  }
+
+  if (capability === 'sara.hortacore.assess') {
+    if (!isRecord(payload) || !isRecord(payload.proposal) || typeof payload.proposal.description !== 'string' || !payload.proposal.description.trim()) {
+      throw new Error('SARA_HORTACORE_PROPOSAL_REQUIRED');
+    }
+    return { ...payload, proposal: { ...payload.proposal } };
   }
 
   return undefined;
