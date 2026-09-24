@@ -164,9 +164,11 @@ export class GEMHealth {
     return {
       metrics: this._metrics,
       alerts: this._alerts.slice(-10),
-      trend: this._history.length > 1 ? {
-        stressTrend: this._history[this._history.length - 1].stressLevel - this._history[Math.max(0, this._history.length - 10)].stressLevel,
-        fatigueTrend: this._history[this._history.length - 1].fatigueIndex - this._history[Math.max(0, this._history.length - 10)].fatigueIndex,
+      trend: this._metrics.observed && this._history.filter(item => item.observed).length > 1 ? {
+        stressTrend: this._history.filter(item => item.observed).at(-1)!.stressLevel -
+          this._history.filter(item => item.observed).at(Math.max(0, this._history.filter(item => item.observed).length - 10))!.stressLevel,
+        fatigueTrend: this._history.filter(item => item.observed).at(-1)!.fatigueIndex -
+          this._history.filter(item => item.observed).at(Math.max(0, this._history.filter(item => item.observed).length - 10))!.fatigueIndex,
       } : null,
     };
   }
