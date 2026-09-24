@@ -217,7 +217,7 @@ export class SAIIC {
       repairedModules: Array.from(this.repairedModules),
       anticorpoActions: this.anticorpoHistory.slice(-10),
       criticalAlerts,
-      meshLatencyCheck: { allUnder10ms: maxLatency < 10, maxLatency },
+      meshLatencyCheck: { allUnder10ms: false, maxLatency: 0, measured: false },
     };
     
     this.lastReports.push(report);
@@ -241,36 +241,33 @@ export class SAIIC {
    */
   private executeAnticorpoSweep(): void {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
-      // Detect and repair weight corruption (simulated via high error rate)
+      // A diagnostic layer cannot repair another module by mutating its own
+      // copy of the telemetry. Record the anomaly and isolate/bypass only.
       if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
         const action: AnticorpoAction = {
           timestamp: Date.now(),
           targetModule: moduleId,
           anomalyType: 'weight_corruption',
-          action: 'corrected',
+          action: 'isolated',
           severity: diag.errorRate,
-          details: `Corrigido errorRate de ${(diag.errorRate * 100).toFixed(1)}% para níveis saudáveis`,
+          details: `Anomalia observada: errorRate ${(diag.errorRate * 100).toFixed(1)}%; nenhuma correção fictícia foi aplicada`,
         };
         this.anticorpoHistory.push(action);
-        
-        // Apply correction
-        diag.errorRate *= 0.5; // Reduce error rate
-        this._inconsistenciesResolved++;
+        this.isolatedModules.add(moduleId);
       }
 
-      // Detect memory leaks
+      // Detect memory pressure without pretending to free memory.
       if (diag.memoryUsage > 0.85) {
         const action: AnticorpoAction = {
           timestamp: Date.now(),
           targetModule: moduleId,
           anomalyType: 'memory_leak',
-          action: 'corrected',
+          action: 'isolated',
           severity: diag.memoryUsage,
-          details: `Memória de ${moduleId} otimizada de ${(diag.memoryUsage * 100).toFixed(0)}%`,
+          details: `Pressão de memória observada em ${moduleId}: ${(diag.memoryUsage * 100).toFixed(0)}%; correção exige ação no módulo proprietário`,
         };
         this.anticorpoHistory.push(action);
-        diag.memoryUsage *= 0.8;
-        this._inconsistenciesResolved++;
+        this.isolatedModules.add(moduleId);
       }
 
       // Handle detected loops
