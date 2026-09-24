@@ -1,10 +1,10 @@
 /**
- * Quantum Neural Interface - AGI Advanced Interface System
- * Origem: aeternum-core-self
- * 
- * Sistema de interface neural e comunicação quântica para AGI.
- * Processa sinais neurais, mantém estado quântico e gerencia
- * entrelaçamento entre subsistemas.
+ * Quantum Neural Interface - boundary for optional physical quantum/neural
+ * integrations.
+ *
+ * The project does not claim physical quantum hardware. Without a registered
+ * physical backend, all quantum capabilities remain explicitly unavailable.
+ * Existing method names are preserved for compatibility.
  */
 
 export interface NeuralSignal {
@@ -13,6 +13,7 @@ export interface NeuralSignal {
   frequency: number;
   timestamp: number;
   processed: boolean;
+  source?: 'EXTERNAL_SENSOR' | 'DERIVED_FROM_TEXT';
 }
 
 export interface QuantumState {
@@ -20,35 +21,37 @@ export interface QuantumState {
   coherence: number;
   fidelity: number;
   errorRate: number;
+  physicalBackendConfigured: boolean;
+  stateSource: 'PHYSICAL_BACKEND' | 'UNAVAILABLE';
+  observedAt: number;
 }
 
 export class NeuralCommunication {
-  private isActive: boolean = false;
+  private isActive = false;
   private signals: NeuralSignal[] = [];
-  private thoughtRecognitionAccuracy: number = 0.87;
+  private thoughtRecognitionAccuracy: number | null = null;
 
   enableEEGMonitoring(): void {
     this.isActive = true;
   }
 
   setupThoughtRecognition(): void {
-    this.thoughtRecognitionAccuracy = 0.92;
+    this.thoughtRecognitionAccuracy = null;
   }
 
   processNeuralSignal(signal: Omit<NeuralSignal, 'timestamp' | 'processed'>): NeuralSignal {
     const processedSignal: NeuralSignal = {
       ...signal,
       timestamp: Date.now(),
-      processed: true
+      processed: true,
     };
     this.signals.push(processedSignal);
-    // Keep bounded
     if (this.signals.length > 500) this.signals = this.signals.slice(-250);
     return processedSignal;
   }
 
-  getRecentSignals(count: number = 10): NeuralSignal[] {
-    return this.signals.slice(-count);
+  getRecentSignals(count = 10): NeuralSignal[] {
+    return this.signals.slice(-Math.max(0, count));
   }
 
   getNeuralMetrics() {
@@ -59,70 +62,96 @@ export class NeuralCommunication {
       thoughtAccuracy: this.thoughtRecognitionAccuracy,
       averageStrength: recent.length > 0
         ? recent.reduce((sum, s) => sum + s.strength, 0) / recent.length
-        : 0,
+        : null,
       averageFrequency: recent.length > 0
         ? recent.reduce((sum, s) => sum + s.frequency, 0) / recent.length
-        : 0
+        : null,
     };
   }
 }
 
 export class QuantumNetworking {
-  private quantumState: QuantumState;
-  private entangledNodes: Set<string> = new Set();
+  private quantumState: QuantumState = {
+    entangled: false,
+    coherence: 0,
+    fidelity: 0,
+    errorRate: 1,
+    physicalBackendConfigured: false,
+    stateSource: 'UNAVAILABLE',
+    observedAt: 0,
+  };
 
-  constructor() {
-    this.quantumState = {
-      entangled: false,
-      coherence: 0.95,
-      fidelity: 0.98,
-      errorRate: 0.001
-    };
+  setupPhysicalBackend(status: {
+    configured: boolean;
+    coherence?: number;
+    fidelity?: number;
+    errorRate?: number;
+    observedAt?: number;
+  }): void {
+    if (!status.configured) {
+      this.quantumState.physicalBackendConfigured = false;
+      this.quantumState.stateSource = 'UNAVAILABLE';
+      this.quantumState.entangled = false;
+      this.quantumState.observedAt = 0;
+      return;
+    }
+
+    this.quantumState.physicalBackendConfigured = true;
+    this.quantumState.stateSource = 'PHYSICAL_BACKEND';
+    this.updateObservedState(status);
+  }
+
+  private updateObservedState(status: {
+    configured: boolean;
+    coherence?: number;
+    fidelity?: number;
+    errorRate?: number;
+    observedAt?: number;
+  }): void {
+    if (!status.configured) return;
+    const coherence = status.coherence;
+    const fidelity = status.fidelity;
+    const errorRate = status.errorRate;
+
+    if (Number.isFinite(coherence) && Number.isFinite(fidelity) && Number.isFinite(errorRate)) {
+      this.quantumState.coherence = Math.max(0, Math.min(1, coherence!));
+      this.quantumState.fidelity = Math.max(0, Math.min(1, fidelity!));
+      this.quantumState.errorRate = Math.max(0, Math.min(1, errorRate!));
+      this.quantumState.observedAt = status.observedAt ?? Date.now();
+    }
   }
 
   setupQuantumKeyDistribution(): void {
-    this.quantumState.fidelity = 0.999;
+    // Capability request retained; no physical operation is claimed.
   }
 
   enableQuantumTeleportation(): void {
-    this.quantumState.entangled = true;
+    // Capability request retained; entanglement stays false without backend evidence.
   }
 
   implementQuantumErrorCorrection(): void {
-    this.quantumState.errorRate = 0.0001;
+    // Capability request retained; no physical state is fabricated.
   }
 
   prepareForQuantumInternet(): void {
-    this.quantumState.coherence = 0.999;
+    // Capability request retained; no physical network is fabricated.
   }
 
-  establishQuantumEntanglement(nodeId: string): boolean {
-    this.entangledNodes.add(nodeId);
+  establishQuantumEntanglement(_nodeId: string): boolean {
+    if (!this.quantumState.physicalBackendConfigured) return false;
     this.quantumState.entangled = true;
+    this.quantumState.observedAt = Date.now();
     return true;
   }
 
-  /**
-   * Simulate quantum decoherence and correction over time
-   */
   tick(): void {
-    // Natural decoherence
-    this.quantumState.coherence *= (0.999 + Math.random() * 0.001);
-    this.quantumState.fidelity *= (0.9995 + Math.random() * 0.0005);
-    
-    // Error correction brings it back
-    if (this.quantumState.coherence < 0.95) {
-      this.quantumState.coherence = Math.min(1, this.quantumState.coherence * 1.01);
-    }
-    if (this.quantumState.fidelity < 0.97) {
-      this.quantumState.fidelity = Math.min(1, this.quantumState.fidelity * 1.005);
-    }
+    // No synthetic decoherence/correction. A physical adapter must push observations.
   }
 
   getQuantumMetrics() {
     return {
       ...this.quantumState,
-      entangledNodes: this.entangledNodes.size,
+      entangledNodes: this.quantumState.entangled ? 1 : 0,
     };
   }
 }
@@ -130,9 +159,9 @@ export class QuantumNetworking {
 export class QuantumNeuralInterface {
   public neural: NeuralCommunication;
   public quantum: QuantumNetworking;
-  
-  private isInitialized: boolean = false;
-  private hybridMode: boolean = false;
+
+  private isInitialized = false;
+  private hybridMode = false;
   private _tickInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
@@ -151,15 +180,13 @@ export class QuantumNeuralInterface {
     this.quantum.implementQuantumErrorCorrection();
     this.quantum.prepareForQuantumInternet();
 
-    this.hybridMode = true;
+    this.hybridMode = this.quantum.getQuantumMetrics().physicalBackendConfigured;
     this.isInitialized = true;
   }
 
-  startContinuousTick(intervalMs: number = 5000): void {
+  startContinuousTick(intervalMs = 5000): void {
     if (this._tickInterval) return;
-    this._tickInterval = setInterval(() => {
-      this.quantum.tick();
-    }, intervalMs);
+    this._tickInterval = setInterval(() => this.quantum.tick(), Math.max(250, intervalMs));
   }
 
   stopContinuousTick(): void {
@@ -169,34 +196,28 @@ export class QuantumNeuralInterface {
     }
   }
 
-  /**
-   * Process a user message through the quantum-neural pipeline
-   */
   processMessage(message: string): {
     neuralSignal: NeuralSignal;
     quantumCoherence: number;
     quantumFidelity: number;
     hybridActive: boolean;
   } {
-    // Generate neural signal from message semantics
-    const strength = Math.min(1, message.length / 200);
-    const frequency = (message.split(' ').length / 20) * 40; // Hz-like
+    const strength = Math.min(1, Math.max(0, message.length / 200));
+    const frequency = (message.split(/\s+/).filter(Boolean).length / 20) * 40;
 
     const signal = this.neural.processNeuralSignal({
       type: 'thought',
       strength,
-      frequency
+      frequency,
+      source: 'DERIVED_FROM_TEXT',
     });
-
-    // Quantum state is affected by processing
-    this.quantum.tick();
 
     const qm = this.quantum.getQuantumMetrics();
     return {
       neuralSignal: signal,
       quantumCoherence: qm.coherence,
       quantumFidelity: qm.fidelity,
-      hybridActive: this.hybridMode
+      hybridActive: this.hybridMode,
     };
   }
 
