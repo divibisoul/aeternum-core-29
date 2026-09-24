@@ -20,7 +20,7 @@ export interface ModuleDiagnostic {
 
 export interface IntegrityReport {
   timestamp: number;
-  overallIntegrity: number;
+  overallIntegrity: number | null;
   moduleDiagnostics: Map<string, ModuleDiagnostic>;
   isolatedModules: string[];
   repairedModules: string[];
@@ -44,7 +44,7 @@ export interface SAIICMetrics {
   totalAnticorpoActions: number;
   modulesMonitored: number;
   isolatedModules: number;
-  overallIntegrity: number;
+  overallIntegrity: number | null;
   lastScanTimestamp: number;
   loopsDetected: number;
   inconsistenciesResolved: number;
@@ -371,7 +371,7 @@ export class SAIIC {
       totalAnticorpoActions: this.anticorpoHistory.length,
       modulesMonitored: this.healthProviders.size,
       isolatedModules: this.isolatedModules.size,
-      overallIntegrity: latestReport?.overallIntegrity ?? 0,
+      overallIntegrity: latestReport?.overallIntegrity ?? null,
       lastScanTimestamp: latestReport?.timestamp ?? 0,
       loopsDetected: this._loopsDetected,
       inconsistenciesResolved: this._inconsistenciesResolved,
