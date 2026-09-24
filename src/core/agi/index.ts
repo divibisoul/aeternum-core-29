@@ -214,56 +214,16 @@ export class AeternumAGI {
 
     // Register all motors in SAIIC from observed module/resource state.
 
-    this.saiic.registerModule('consciousness', () => ({
-      healthy: this.consciousness.isRunning,
-      cpuLoad: 0.1 + Math.random() * 0.1,
-      memoryUsage: 0.05 + Math.random() * 0.05,
-      errorRate: this.consciousness.isRunning ? Math.random() * 0.02 : 0.5,
-    }));
-    this.saiic.registerModule('godelAgent', () => ({
-      healthy: true,
-      cpuLoad: 0.08 + Math.random() * 0.12,
-      memoryUsage: 0.04 + Math.random() * 0.04,
-      errorRate: Math.random() * 0.01,
-    }));
-    this.saiic.registerModule('darwinMachine', () => ({
-      healthy: this.darwinMachine.isRunning,
-      cpuLoad: 0.15 + Math.random() * 0.1,
-      memoryUsage: 0.08 + Math.random() * 0.06,
-      errorRate: this.darwinMachine.isRunning ? Math.random() * 0.02 : 0.3,
-    }));
-    this.saiic.registerModule('neuralLattice', () => ({
-      healthy: this.neuralLattice.isRunning,
-      cpuLoad: 0.12 + Math.random() * 0.1,
-      memoryUsage: 0.06 + Math.random() * 0.05,
-      errorRate: this.neuralLattice.isRunning ? Math.random() * 0.02 : 0.3,
-    }));
-    this.saiic.registerModule('selfHealing', () => ({
-      healthy: this.selfHealing.isRunning,
-      cpuLoad: 0.05 + Math.random() * 0.05,
-      memoryUsage: 0.03 + Math.random() * 0.03,
-      errorRate: Math.random() * 0.01,
-    }));
-    this.saiic.registerModule('ethicalOptimizer', () => ({
-      healthy: this.ethicalOptimizer.isRunning,
-      cpuLoad: 0.04 + Math.random() * 0.04,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: Math.random() * 0.005,
-    }));
-    this.saiic.registerModule('safetySystem', () => ({
-      healthy: this.safetySystem.isRunning,
-      cpuLoad: 0.06 + Math.random() * 0.05,
-      memoryUsage: 0.03 + Math.random() * 0.03,
-      errorRate: Math.random() * 0.01,
-    }));
+    this.saiic.registerModule('consciousness', () => observedHealth('consciousness', this.consciousness.isRunning));
+    this.saiic.registerModule('godelAgent', () => observedHealth('godelAgent', this._godelContinuousInterval !== null));
+    this.saiic.registerModule('darwinMachine', () => observedHealth('darwinMachine', this.darwinMachine.isRunning));
+    this.saiic.registerModule('neuralLattice', () => observedHealth('neuralLattice', this.neuralLattice.isRunning));
+    this.saiic.registerModule('selfHealing', () => observedHealth('selfHealing', this.selfHealing.isRunning));
+    this.saiic.registerModule('ethicalOptimizer', () => observedHealth('ethicalOptimizer', this.ethicalOptimizer.isRunning));
+    this.saiic.registerModule('safetySystem', () => observedHealth('safetySystem', this.safetySystem.isRunning));
     this.saiic.registerModule('nip', () => observedHealth('nip', this.nip.isRunning));
     this.saiic.registerModule('quantumNeural', () => observedHealth('quantumNeural', this.quantumNeural.getInterfaceStatus().initialized));
-    this.saiic.registerModule('connectivity', () => ({
-      healthy: this.connectivity.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.01 + Math.random() * 0.02,
-      errorRate: this.connectivity.isRunning ? Math.random() * 0.005 : 0.2,
-    }));
+    this.saiic.registerModule('connectivity', () => observedHealth('connectivity', this.connectivity.isRunning));
 
     this.saiic.registerModule('safeCore', () =>
       observedHealth('safeCore', !this.safeCore.emergency_stop.isActive())
@@ -276,30 +236,10 @@ export class AeternumAGI {
     );
 
     // Register GEM modules in SAIIC
-    this.saiic.registerModule('gemHealth', () => ({
-      healthy: this.gemHealth.isRunning,
-      cpuLoad: 0.03 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemHealth.isRunning ? Math.random() * 0.01 : 0.2,
-    }));
-    this.saiic.registerModule('gemResearch', () => ({
-      healthy: this.gemResearch.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemResearch.isRunning ? Math.random() * 0.01 : 0.2,
-    }));
-    this.saiic.registerModule('gemMusic', () => ({
-      healthy: this.gemMusic.isRunning,
-      cpuLoad: 0.01 + Math.random() * 0.02,
-      memoryUsage: 0.01 + Math.random() * 0.01,
-      errorRate: Math.random() * 0.005,
-    }));
-    this.saiic.registerModule('gemDevice', () => ({
-      healthy: this.gemDevice.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemDevice.isRunning ? Math.random() * 0.01 : 0.15,
-    }));
+    this.saiic.registerModule('gemHealth', () => observedHealth('gemHealth', this.gemHealth.isRunning));
+    this.saiic.registerModule('gemResearch', () => observedHealth('gemResearch', this.gemResearch.isRunning));
+    this.saiic.registerModule('gemMusic', () => observedHealth('gemMusic', this.gemMusic.isRunning));
+    this.saiic.registerModule('gemDevice', () => observedHealth('gemDevice', this.gemDevice.isRunning));
 
     // Register GEM connectivity nodes
     ['gemHealth', 'gemResearch', 'gemMusic', 'gemDevice'].forEach(id => {
