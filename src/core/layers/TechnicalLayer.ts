@@ -65,10 +65,11 @@ export class AprendizadoReforcoContinuo {
   /**
    * Processa experiência através da rede neural
    */
-  processar(experiencia: number[] | Float32Array): Float32Array {
-    const input = experiencia instanceof Float32Array 
-      ? experiencia 
+  processar(experiencia: number[] | Float32Array, reward?: number): Float32Array {
+    const input = experiencia instanceof Float32Array
+      ? experiencia
       : new Float32Array(experiencia);
+    if (input.length !== 10) throw new Error('AprendizadoReforcoContinuo requer experiência de dimensão 10');
     
     // Forward pass
     const hidden = this.matmul(input, this.weights1, this.bias1, 10, 32);
@@ -78,22 +79,19 @@ export class AprendizadoReforcoContinuo {
     
     const output = this.matmul(hidden, this.weights2, this.bias2, 32, 5);
     
-    // Calcular reward e loss
-    const rewardSim = output.reduce((a, b) => a + b, 0);
-    const loss = -rewardSim;
-    this.lossHistory.push(loss);
-    
-    // Backpropagation simplificada (gradient descent)
-    this.updateWeights(input, hidden, output);
-    
-    console.log(`[AprendizadoReforco] Loss: ${loss.toFixed(4)}, Convergência: ${this.isConverged()}`);
+    if (reward !== undefined) {
+      if (!Number.isFinite(reward)) throw new Error('REWARD_MUST_BE_FINITE');
+      const loss = -reward;
+      this.lossHistory.push(loss);
+      this.updateWeights(input, hidden, output, reward);
+      console.log(`[AprendizadoReforco] Reward: ${reward.toFixed(4)}, Loss: ${loss.toFixed(4)}, Convergência: ${this.isConverged()}`);
+    }
     
     return output;
   }
 
-  private updateWeights(input: Float32Array, hidden: Float32Array, output: Float32Array): void {
-    // Simplified gradient update
-    const gradient = -1; // d(loss)/d(sum) = -1
+  private updateWeights(_input: Float32Array, hidden: Float32Array, _output: Float32Array, reward: number): void {
+    const gradient = -Math.sign(reward);
     
     // Update weights2
     for (let i = 0; i < 32; i++) {
