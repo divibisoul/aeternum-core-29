@@ -5,9 +5,7 @@ Com suporte a GPU, roteamento dinâmico e metacognição (aprendizado por refor�
 """
 
 import os
-import sys
 import json
-import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
