@@ -53,13 +53,13 @@ interface Message {
     cognitive_cycle_time_ms: number;
     self_scan_coherence: number;
     causal_reversal_efficiency: number;
-    ethical_conformance_score: number;
-    quantum_validation: boolean;
+    ethical_conformance_score: number | null;
+    quantum_validation: boolean | null;
     agi_subsystems_active: number;
     godel_self_awareness: number;
     darwin_fitness: number;
     lattice_coherence: number;
-    saiic_integrity: number;
+    saiic_integrity: number | null;
     resource_cpu: number;
     gem_health_stress: number;
     gem_device_connected: boolean;
@@ -290,7 +290,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
       const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
-      while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
+      // Missing dimensions carry neutral evidence; never fabricate random signal.
+      while (experiencia.length < 10) experiencia.push(0);
       
       const conscienciaResult = ConscienciaAlgoritmicaInstance.processar(experiencia, userInput);
       console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
@@ -303,8 +304,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         cognitive_cycle_time_ms: conscienciaResult.metricas.tempoProcessamento,
         self_scan_coherence: conscienciaResult.metricas.coerenciaMedia,
         causal_reversal_efficiency: agiResult.godelState.modelingAccuracy,
-        ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? 0.95,
-        quantum_validation: agiResult.quantumResult.quantumCoherence > 0.9 && agiResult.latticeOutput.every(v => v > 0.1),
+        ethical_conformance_score: agiResult.safetyReport?.overallHealth ?? null,
+        quantum_validation: agiResult.quantumResult.physicalBackendConfigured ? (agiResult.quantumResult.quantumCoherence > 0.9 && agiResult.latticeOutput.every(v => v > 0.1)) : null,
         agi_subsystems_active: agi.getFullMetrics().overall.activeSubsystems,
         godel_self_awareness: agiResult.godelState.selfAwareness,
         darwin_fitness: agiResult.evolutionMetrics.avgFitness,
@@ -435,7 +436,8 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
           // === INTEGRAÇÃO: Feedback para ConscienciaAlgoritmica ===
           // Processar resposta para aprendizado contínuo
           const respostaExperiencia = fullContent.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
-          while (respostaExperiencia.length < 10) respostaExperiencia.push(Math.random() * 0.3);
+          // Missing dimensions carry neutral evidence; never fabricate random signal.
+          while (respostaExperiencia.length < 10) respostaExperiencia.push(0);
           ConscienciaAlgoritmicaInstance.processar(respostaExperiencia, 'resposta-sucesso');
 
           // Store assistant response in memory
