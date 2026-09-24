@@ -248,7 +248,9 @@ class ProjetoClareiraSystem {
   }
 
   /**
-   * Executa simulação por duração especificada
+   * Legacy test harness. This method is retained for compatibility and is
+   * NOT part of the production execution path or production telemetry.
+   * @deprecated Use the live runtime and getMetrics/getStatus for production.
    */
   async runSimulation(durationMs: number = 5000): Promise<SystemMetrics> {
     if (!this._running) {
