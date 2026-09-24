@@ -7,4 +7,9 @@ describe('R1 Soul Mesh peer matrix', () => {
     expect(R1_PEER_ROUTES.filter((r) => r.direction === 'out')).toHaveLength(6);
     expect(R1_PEER_ROUTES.every((r) => r.enabled)).toBe(true);
   });
+
+  it('distinguishes peer links from IN/OUT channel endpoints', () => {
+    expect(SOUL_MESH_DIRECTIONAL_CHANNEL_COUNT).toBe(42);
+    expect(SOUL_MESH_CHANNEL_ENDPOINT_COUNT).toBe(84);
+  });
 });
