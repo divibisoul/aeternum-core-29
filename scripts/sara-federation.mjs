@@ -14,6 +14,9 @@ const OPERATION_ROUTES = Object.freeze({
   'sara.audit': { method: 'POST', path: '/v1/audit' },
   'sara.regenerate': { method: 'POST', path: '/v1/regenerate' },
   'sara.trace': { method: 'GET', path: '/v1/trace/{cycle_id}' },
+  'sara.octacore': { method: 'GET', path: '/v1/octacore' },
+  'sara.mesh.status': { method: 'GET', path: '/v1/mesh/status' },
+  'sara.mesh.probe': { method: 'POST', path: '/v1/mesh/probe' },
 });
 
 function normalize(value) {
@@ -99,6 +102,12 @@ function buildBody(capability, payload, correlationId) {
         ? payload.cycle_id.trim()
         : correlationId,
     };
+  }
+
+  if (capability === 'sara.mesh.probe') {
+    if (payload === undefined || payload === null) return { mediator: 'N01' };
+    if (!isRecord(payload)) throw new Error('SARA_MESH_PROBE_PAYLOAD_INVALID');
+    return { mediator: typeof payload.mediator === 'string' && payload.mediator.trim() ? payload.mediator.trim() : 'N01' };
   }
 
   if (capability === 'sara.audit' || capability === 'sara.regenerate') {

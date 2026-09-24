@@ -10,11 +10,12 @@ Each capability has one owning provider. Other nuclei consume it through the Sou
 | Provider | Role | Confirmed capabilities |
 |---|---|---|
 | N01 / Android Sentinel | Native Android capability layer | android.device_info, android.battery, android.memory, android.network, android.events, shizuku.bridge, brightness, Wi-Fi panel/state, Bluetooth request/state, airplane settings, background-process request |
-| N03 / Eternium | Specialized knowledge/context and existing domain tools | inventory pending final six-nucleus audit |
+| N03 / nexus-aeternum-fusion | Specialized knowledge/context and existing domain tools | inventory pending final seven-nucleus audit |
 | N04 / nextjs-ai-chatbots | AI/tool/document/context/streaming layer | tool execution, artifacts, documents, context orchestration, streaming, mesh communication, AI Pilot boundary |
 | N05 / nextjs-ai-chatbot-2000 | AI/tool/artifact/chat infrastructure | AI Pilot boundary, tool execution, artifacts, documents, context orchestration, streaming, mesh communication; existing request_suggestions and document/weather tools |
 | N02 | Pending repository audit | Do not duplicate until audited |
 | N06 | Pending repository audit | Do not duplicate until audited |
+| N07 / Orquestrador- | Neural/prefrontal/orchestration/compute federation | neural.forward@1.0.0, neural.learn@1.0.0; detailed implementation remains owned by N07 |
 
 ## N01 native capability contract
 
@@ -49,6 +50,7 @@ Global Capability Router
       +--> N02 (pending)
       |
       +--> N06 (pending)
+      +--> N07 neural/prefrontal federation
 ```
 
 ## Anti-duplication rule
@@ -62,15 +64,16 @@ Before adding a new capability to any nucleus:
 
 ## Connection contract
 
-Each nucleus is intended to expose five inbound and five outbound peer routes. Logical route declarations are not treated as proof of live E2E connectivity. Live connectivity requires transport, endpoint availability, correlation, acknowledgement/response validation and health checks.
+Each nucleus is intended to expose six inbound and six outbound peer routes. Logical route declarations are not treated as proof of live E2E connectivity. Live connectivity requires transport, endpoint availability, correlation, acknowledgement/response validation and health checks.
 
 ## Current verified status
 
 - N01 native capabilities: implemented in Android code.
 - N04 capability/process/mesh layers: implemented; E2E contract exists.
 - N05 capability/process/tool/mesh layers: implemented; E2E contract exists.
-- N03: existing project audited; integration map remains subject to final six-nucleus inventory.
+- N03: existing project audited; integration map remains subject to final seven-nucleus inventory.
 - N02/N06: not yet inventoried in this document.
+- N07: owner confirmed from its canonical handoff and source repository; live commissioning remains separately evidenced.
 
 ## Important architectural decision
 

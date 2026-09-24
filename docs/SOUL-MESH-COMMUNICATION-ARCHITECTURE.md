@@ -2,7 +2,7 @@
 
 ## One sentence
 
-The six repositories are source modules; the **Soul runtime** loads their runtime components, gives each one a Mesh identity/endpoint, and connects them through a common router + transport + protocol. They communicate by structured messages, not by sharing directories.
+The seven nucleus repositories are source modules; the **Soul runtime** loads their runtime components, gives each one a Mesh identity/endpoint, and connects them through a common router + transport + protocol. They communicate by structured messages, not by sharing directories.
 
 ## Concrete path
 
@@ -51,7 +51,7 @@ Nucleus runtime
   + Transport adapter
 ```
 
-N01 currently contains the first concrete Android transport implementation. N02–N06 still require compatible runtime adapters/endpoints before their links can be proven.
+N01 currently contains the first concrete Android transport implementation. N02–N07 still require compatible runtime adapters/endpoints before their links can be proven.
 
 ## Why the nuclei can understand each other
 

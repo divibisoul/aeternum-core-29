@@ -4,6 +4,8 @@ import { createNeoCortex } from './soul-neocortex.mjs';
 const topology = JSON.parse(await readFile(new URL('../config/soul-neocortex-topology.json', import.meta.url), 'utf8'));
 const owners = {
   'conversation.chat': 'N02',
+  'neural.forward': 'N07',
+  'neural.learn': 'N07',
   'audio.transcribe': 'N03',
   'document.analyze': 'N04',
   'orchestration.plan': 'N05',
@@ -20,10 +22,10 @@ cortex.addGoal({ id: 'bootstrap', description: 'validate distributed executive t
 const decision = cortex.decide('bootstrap');
 const snapshot = cortex.describe();
 
-if (topology.branches.length !== 6) throw new Error('NEOCORTEX_REQUIRES_SIX_NUCLEI');
+if (topology.branches.length !== 7) throw new Error('NEOCORTEX_REQUIRES_SEVEN_NUCLEI');
 if (topology.executiveFunctions.length < 8) throw new Error('NEOCORTEX_EXECUTIVE_FUNCTIONS_INCOMPLETE');
 if (topology.individualNucleiPreserved !== true) throw new Error('NUCLEUS_INDEPENDENCE_MUST_BE_PRESERVED');
-if (snapshot.nuclei.length !== 6) throw new Error('NEOCORTEX_NODE_REGISTRATION_INCOMPLETE');
+if (snapshot.nuclei.length !== 7) throw new Error('NEOCORTEX_NODE_REGISTRATION_INCOMPLETE');
 if (decision.inhibited || decision.selectedNucleus !== 'N06') throw new Error('NEOCORTEX_CAPABILITY_ROUTING_FAILED');
 
 console.log(JSON.stringify({ ok: true, topology, decision, snapshot }, null, 2));
