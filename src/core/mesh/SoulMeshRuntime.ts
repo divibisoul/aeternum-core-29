@@ -43,7 +43,7 @@ export function startSoulMeshRuntime(): () => void {
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
         capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
-        peers: ['N02', 'N03', 'N04', 'N05', 'N06'],
+        peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
       };
