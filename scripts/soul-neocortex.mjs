@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { createSuperGPU } from './soul-supergpu.mjs';
 
-const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 const SIGNALS = ['GOAL', 'CONTEXT', 'CAPABILITY', 'RESULT', 'ERROR', 'FEEDBACK'];
 
 function clamp(value, min = 0, max = 1) { return Math.max(min, Math.min(max, Number(value) || 0)); }
