@@ -1,4 +1,4 @@
-export type SoulNucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06';
+export type SoulNucleusId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'N07';
 export type ComputeBackend = 'IN_PROCESS' | 'WEBASSEMBLY' | 'WEBGPU' | 'REMOTE_MESH';
 export type SuperGPUNode = { nucleus: SoulNucleusId; capabilities: readonly string[]; backends: readonly ComputeBackend[]; capacity: number; available: boolean };
 export type SuperGPUTask = { id: string; capability: string; payload: unknown; preferredNucleus?: SoulNucleusId; estimatedCost?: number; dependencies?: readonly string[] };
