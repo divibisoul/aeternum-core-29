@@ -20,7 +20,7 @@ cortex.addGoal({ id: 'bootstrap', description: 'validate distributed executive t
 const decision = cortex.decide('bootstrap');
 const snapshot = cortex.describe();
 
-if (topology.branches.length !== 6) throw new Error('NEOCORTEX_REQUIRES_SIX_NUCLEI');
+if (topology.branches.length !== 7) throw new Error('NEOCORTEX_REQUIRES_SEVEN_NUCLEI');
 if (topology.executiveFunctions.length < 8) throw new Error('NEOCORTEX_EXECUTIVE_FUNCTIONS_INCOMPLETE');
 if (topology.individualNucleiPreserved !== true) throw new Error('NUCLEUS_INDEPENDENCE_MUST_BE_PRESERVED');
 if (snapshot.nuclei.length !== 6) throw new Error('NEOCORTEX_NODE_REGISTRATION_INCOMPLETE');
