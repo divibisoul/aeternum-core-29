@@ -5,6 +5,10 @@ import { N01AgentRegistry } from './N01AgentRegistry';
 import type { SoulMeshMessage } from './SoulMeshProtocol';
 import { executeSuperComputePlan, createSuperComputePlan, summarizeSuperCompute, type SuperComputeTask } from './SoulSuperCompute';
 import { sendTo } from '../soul-mesh/peerClient';
+import { createFusionEnvelope } from '../fusion/FusionEnvelope';
+import { N01AgentProcessor } from '../fusion/N01AgentProcessor';
+import { ProcessorHealthRegistry } from '../fusion/ProcessorHealthRegistry';
+import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -46,7 +50,29 @@ export function startSoulMeshRuntime(): () => void {
     },
   });
 
-  const meshAgentHandler = (message: SoulMeshMessage) => agents.execute(message);
+  // Commission the existing native N01 agent through the additive fusion
+  // infrastructure. No capability implementation is copied or replaced.
+  const processor = new N01AgentProcessor(agents, 'N01-mesh-agent');
+  const healthRegistry = new ProcessorHealthRegistry();
+  const processorRuntime = new ProcessorRuntime(processor, { healthRegistry });
+  const runtimeReady = processorRuntime.start();
+
+  const meshAgentHandler = async (message: SoulMeshMessage) => {
+    await runtimeReady;
+    if (!message.capability) throw new Error('N01_MESH_CAPABILITY_REQUIRED');
+    const envelope = createFusionEnvelope({
+      source: message.source,
+      target: 'N01',
+      capability: message.capability,
+      payload: message.payload,
+      kind: 'request',
+      correlationId: message.correlationId,
+      causationId: message.id,
+      traceId: message.meta?.traceId ?? message.correlationId,
+      now: message.timestamp,
+    });
+    return processorRuntime.execute(envelope);
+  };
   const registrations = [
     router.onRequest('mesh.handshake', meshAgentHandler),
     router.onRequest('mesh.health', meshAgentHandler),
@@ -69,5 +95,6 @@ export function startSoulMeshRuntime(): () => void {
     unsubscribe();
     router.close();
     void transport.close();
+    void runtimeReady.then(() => processorRuntime.stop());
   };
 }
