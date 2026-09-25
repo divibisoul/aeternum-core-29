@@ -23,7 +23,7 @@ const snapshot = cortex.describe();
 if (topology.branches.length !== 7) throw new Error('NEOCORTEX_REQUIRES_SEVEN_NUCLEI');
 if (topology.executiveFunctions.length < 8) throw new Error('NEOCORTEX_EXECUTIVE_FUNCTIONS_INCOMPLETE');
 if (topology.individualNucleiPreserved !== true) throw new Error('NUCLEUS_INDEPENDENCE_MUST_BE_PRESERVED');
-if (snapshot.nuclei.length !== 6) throw new Error('NEOCORTEX_NODE_REGISTRATION_INCOMPLETE');
+if (snapshot.nuclei.length !== 7) throw new Error('NEOCORTEX_NODE_REGISTRATION_INCOMPLETE');
 if (decision.inhibited || decision.selectedNucleus !== 'N06') throw new Error('NEOCORTEX_CAPABILITY_ROUTING_FAILED');
 
 console.log(JSON.stringify({ ok: true, topology, decision, snapshot }, null, 2));
