@@ -30,7 +30,7 @@ export type NeuralRoute = {
 
 type LearnedEdge = { weight: number; attempts: number; successes: number; updatedAt: number };
 
-const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
+const NUCLEI: readonly SoulNucleusId[] = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 
 export class SoulNeuralGraph {
