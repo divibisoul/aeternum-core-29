@@ -1,4 +1,4 @@
-export type NucleusId = 'N01'|'N02'|'N03'|'N04'|'N05'|'N06';
+export type NucleusId = 'N01'|'N02'|'N03'|'N04'|'N05'|'N06'|'N07';
 export type CapabilityPolicy = { owner: NucleusId; fallback: NucleusId[]; consumers: NucleusId[] };
 export const SOUL_CAPABILITY_OWNERSHIP: Record<string, CapabilityPolicy> = {
   'android.': { owner:'N01', fallback:['N06'], consumers:['N02','N03','N04','N05','N06'] },
