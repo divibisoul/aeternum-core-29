@@ -29,6 +29,19 @@ export const SOUL_MESH_CORE_CAPABILITIES: Record<SoulNucleus, SoulMeshCapability
   N04: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N04', execution: 'observability' }],
   N05: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N05', execution: 'observability' }],
   N06: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N06', execution: 'observability' }],
+  N07: [
+    { id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N07', execution: 'observability' },
+    { id: 'mesh.health', version: '1.1', description: 'N07 orchestration runtime health', request: true, response: true, events: true, owner: 'N07', execution: 'observability' },
+    { id: 'mesh.capabilities', version: '1.1', description: 'Advertise executable N07 orchestration capabilities', request: true, response: true, events: true, owner: 'N07', execution: 'observability' },
+    { id: 'neural.forward', version: '1.0.0', description: 'N07 neural forward execution', request: true, response: true, events: false, owner: 'N07', execution: 'cognitive' },
+    { id: 'neural.learn', version: '1.0.0', description: 'N07 neural learning execution', request: true, response: true, events: false, owner: 'N07', execution: 'cognitive' },
+    { id: 'compute.execute', version: '1.0.0', description: 'N07 compute execution', request: true, response: true, events: false, owner: 'N07', execution: 'native' },
+    { id: 'cognitive.execute', version: '1.0.0', description: 'N07 cognitive execution pipeline', request: true, response: true, events: false, owner: 'N07', execution: 'cognitive' },
+    { id: 'supergpu.describe', version: '1.0.0', description: 'Describe N07 SuperGPU compute resources', request: true, response: true, events: false, owner: 'N07', execution: 'orchestration' },
+    { id: 'supergpu.execute', version: '1.0.0', description: 'Execute a SuperGPU task through N07', request: true, response: true, events: false, owner: 'N07', execution: 'orchestration' },
+    { id: 'supergpu.parallel', version: '1.0.0', description: 'Execute a parallel SuperGPU batch through N07', request: true, response: true, events: false, owner: 'N07', execution: 'orchestration' },
+    { id: 'supergpu.memory', version: '1.0.0', description: 'Read N07 SuperGPU memory statistics', request: true, response: true, events: false, owner: 'N07', execution: 'observability' },
+  ],
 };
 
 export class SoulMeshCapabilityRegistry {
