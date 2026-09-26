@@ -4,13 +4,13 @@ import { ProjetoClareira } from './ProjetoClareira';
 import { isClareiraPacket, type ClareiraMetrics, type ClareiraPacket } from '../../../shared/clareira-contract';
 import type { InformationPacket } from './types';
 let installed=false, startedAt=Date.now(), ingested=0, processed=0, dropped=0, errored=0, inFlight=0, lastLatency=0;
-const latencySamples:number[]=[]; const subscriptions:Array<()=>void>=[];
+const latencySamples:number[]=[]; const subscriptions:Array<()=>void>=[]; const inFlightIds=new Set<string>();
 const sampleLatency=(v:number)=>{lastLatency=Math.max(0,v);latencySamples.push(lastLatency);if(latencySamples.length>256)latencySamples.shift();};
 export const ClareiraBridge={
   install(){if(installed)return; startedAt=Date.now(); subscriptions.push(
-    EventBus.on('clareira.packet.ingested',()=>{ingested++;inFlight++;}),
-    EventBus.on('clareira.packet.processed',({latencyMs})=>{processed++;inFlight=Math.max(0,inFlight-1);sampleLatency(latencyMs);}),
-    EventBus.on('clareira.packet.dropped',()=>{dropped++;inFlight=Math.max(0,inFlight-1);}),
+    EventBus.on('clareira.packet.ingested',({correlationId})=>{ingested++;inFlight++;inFlightIds.add(correlationId);}),
+    EventBus.on('clareira.packet.processed',({correlationId,latencyMs})=>{if(!inFlightIds.has(correlationId))return;inFlightIds.delete(correlationId);processed++;inFlight=Math.max(0,inFlight-1);sampleLatency(latencyMs);}),
+    EventBus.on('clareira.packet.dropped',({correlationId})=>{if(!inFlightIds.has(correlationId))return;inFlightIds.delete(correlationId);dropped++;inFlight=Math.max(0,inFlight-1);}),
     EventBus.on('system:error',()=>{errored++;}),
   ); installed=true; void EventBus.emit('clareira.started',{at:startedAt});},
   uninstall(){while(subscriptions.length)subscriptions.pop()!();installed=false;},
