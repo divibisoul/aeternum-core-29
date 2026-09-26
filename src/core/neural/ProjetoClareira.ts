@@ -256,8 +256,6 @@ class ProjetoClareiraSystem {
     if (success) {
       this.packetsInjected++;
       void EventBus.emit('clareira.packet.ingested', { correlationId, sourceId: packet.sourceId });
-    } else {
-      void EventBus.emit('clareira.packet.dropped', { correlationId, reason: 'TARGET_QUEUE_REJECTED' });
     }
     return success;
   }
