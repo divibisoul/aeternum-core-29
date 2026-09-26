@@ -18,3 +18,5 @@ export { HomeostasisManager, homeostasisManager } from './HomeostasisManager';
 export { InformationChannel } from './InformationChannel';
 
 export * from './types';
+
+export { ClareiraBridge } from './ClareiraBridge';
