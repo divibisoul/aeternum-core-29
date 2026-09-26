@@ -180,6 +180,7 @@ class ProjetoClareiraSystem {
 
     this._running = false;
 
+    void EventBus.emit('clareira.stopped', { at: Date.now() });
     console.log('[ProjetoClareira] Sistema parado');
   }
 
