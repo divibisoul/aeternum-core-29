@@ -186,51 +186,23 @@ class ProjetoClareiraSystem {
   /**
    * Injeta estímulo externo no sistema
    */
-  injectStimulus(
-    data: string,
-    criticality: number = 0.5,
-    targetNodeId?: string
-  ): boolean {
-    if (!this._running) {
-      console.warn('[ProjetoClareira] Sistema não está em execução');
-      return false;
-    }
-
-    const packet = createInformationPacket(
-      data,
-      10.0,
-      criticality,
-      'Data',
-      'EXTERNAL',
-      targetNodeId,
-      { injectedAt: Date.now() }
-    );
-
-    // Selecionar nó alvo
-    let target: ProcessingNode;
-    
-    if (targetNodeId) {
-      const found = this.allNodes.find(n => n.id === targetNodeId);
-      if (found) {
-        target = found;
-      } else {
-        target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
-      }
-    } else {
-      // Selecionar aleatoriamente
-      target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
-    }
-
-    const success = target.receivePacket(packet);
-    
-    if (success) {
-      this.packetsInjected++;
-      console.log(`[ProjetoClareira] Estímulo injetado em ${target.id}`);
-    }
-
-    return success;
+  injectStimulus(data: string, criticality: number = 0.5, targetNodeId?: string): boolean {
+    const packet = createInformationPacket(data,10.0,criticality,'Data','EXTERNAL',targetNodeId,{injectedAt:Date.now()});
+    return this.injectPacket(packet);
   }
 
+  /** Recebe pacote federado preservando id e correlationId. */
+  injectPacket(packet: InformationPacket): boolean {
+    if (!this._running) { console.warn('[ProjetoClareira] Sistema não está em execução'); return false; }
+    let target: ProcessingNode | undefined = packet.destinationHint ? this.allNodes.find(n=>n.id===packet.destinationHint) : undefined;
+    if (!target) target=this.allNodes[Math.floor(Math.random()*this.allNodes.length)];
+    if (!target) return false;
+    const correlationId=String(packet.metadata?.correlationId??packet.id);
+    const success=target.receivePacket(packet);
+    if(success){ this.packetsInjected++; void EventBus.emit('clareira.packet.ingested',{correlationId,sourceId:packet.sourceId}); }
+    else void EventBus.emit('clareira.packet.dropped',{correlationId,reason:'TARGET_QUEUE_REJECTED'});
+    return success;
+  }
   /**
    * Solicita decisão ao núcleo central
    */
