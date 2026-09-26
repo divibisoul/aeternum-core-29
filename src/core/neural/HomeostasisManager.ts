@@ -205,6 +205,7 @@ export class HomeostasisManager {
 
     // ======= THROTTLING DE EMERGÊNCIA =======
     if (this.globalStress > TURBO_MAX_STRESS * 2) {
+      void EventBus.emit('clareira.degraded', { reason: 'GLOBAL_STRESS_CRITICAL' });
       console.warn('[HomeostasisManager] ⚠️ STRESS CRÍTICO - Throttling ativo');
       
       for (const node of this.allNodes) {

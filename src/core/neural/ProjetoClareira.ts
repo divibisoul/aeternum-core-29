@@ -180,6 +180,7 @@ class ProjetoClareiraSystem {
 
     this._running = false;
 
+    void EventBus.emit('clareira.stopped', { at: Date.now() });
     console.log('[ProjetoClareira] Sistema parado');
   }
 
@@ -228,6 +229,34 @@ class ProjetoClareiraSystem {
       console.log(`[ProjetoClareira] Estímulo injetado em ${target.id}`);
     }
 
+    return success;
+  }
+
+  /**
+   * Recebe um InformationPacket criado por uma fronteira federada.
+   * O pacote existente é preservado; nenhuma nova identidade é gerada.
+   */
+  injectPacket(packet: InformationPacket): boolean {
+    if (!this._running) {
+      console.warn('[ProjetoClareira] Sistema não está em execução');
+      return false;
+    }
+
+    let target: ProcessingNode | undefined;
+    if (packet.destinationHint) {
+      target = this.allNodes.find(n => n.id === packet.destinationHint);
+    }
+    if (!target) {
+      target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+    }
+    if (!target) return false;
+
+    const correlationId = String(packet.metadata?.correlationId ?? packet.id);
+    const success = target.receivePacket(packet);
+    if (success) {
+      this.packetsInjected++;
+      void EventBus.emit('clareira.packet.ingested', { correlationId, sourceId: packet.sourceId });
+    }
     return success;
   }
 
