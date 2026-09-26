@@ -149,6 +149,7 @@ export class ProcessingNode {
         this.inputQueue.push(packet);
         return true;
       }
+      void EventBus.emit('clareira.packet.dropped', { correlationId: String(packet.metadata?.correlationId ?? packet.id), reason: 'QUEUE_FULL_LOWER_CRITICALITY' });
       return false;
     }
     
@@ -309,6 +310,10 @@ export class ProcessingNode {
 
     this.packetsProcessed++;
     this.lastProcessingTime = Date.now() - startTime;
+    void EventBus.emit('clareira.packet.processed', {
+      correlationId: String(packet.metadata?.correlationId ?? packet.id),
+      latencyMs: this.lastProcessingTime,
+    });
   }
 
   /**
