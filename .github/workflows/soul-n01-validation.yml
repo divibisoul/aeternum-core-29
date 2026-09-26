@@ -44,6 +44,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Build
         run: npm run build
+      - name: Core unit test
+        run: node scripts/core-test.mjs
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
