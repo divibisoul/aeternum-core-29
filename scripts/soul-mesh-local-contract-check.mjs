@@ -73,9 +73,28 @@ try {
     source: body.source === 'N01', target: body.target === 'N02', correlationId: body.correlationId === correlationId,
     kind: body.kind === 'response', capability: body.capability === 'mesh.ping',
   };
+  const superGpuGuardResponse = await fetch(baseUrl + '/api/soul-mesh', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
+      correlationId: crypto.randomUUID(), source: 'N02', target: 'N01', kind: 'request',
+      capability: 'mesh.supergpu.execute',
+      payload: { task: { id: 'local-unsupported-capability-check', capability: 'clareira.ingest', payload: { probe: 'no-echo' } } },
+      timestamp: Date.now(),
+    }),
+  });
+  const superGpuGuardBody = await superGpuGuardResponse.json();
+  if (superGpuGuardResponse.status !== 502 ||
+      superGpuGuardBody.kind !== 'error' ||
+      superGpuGuardBody.payload?.code !== 'SUPERGPU_EXECUTION_ERROR' ||
+      !String(superGpuGuardBody.payload?.detail || '').includes('IN_PROCESS_EXECUTOR_UNAVAILABLE:clareira.ingest')) {
+    throw new Error('SUPERGPU_LOCAL_EXECUTOR_GUARD_FAILED:' + JSON.stringify(superGpuGuardBody));
+  }
+
   for (const [name, ok] of Object.entries(checks)) if (!ok) throw new Error(`N01_LOCAL_CONTRACT_${name.toUpperCase()}_FAILED:${JSON.stringify(body)}`);
 
-  console.log(JSON.stringify({ stage: 'N01_LOCAL_RUNTIME_CONTRACT', ok: true, health: true, discovery: true, registration: true, n07ResponseRoute: true, message: checks, correlationId, n07CorrelationId }, null, 2));
+  console.log(JSON.stringify({ stage: 'N01_LOCAL_RUNTIME_CONTRACT', ok: true, health: true, discovery: true, registration: true, n07ResponseRoute: true, superGpuLocalExecutorGuard: true, message: checks, correlationId, n07CorrelationId }, null, 2));
 } finally {
   child.kill('SIGTERM');
   setTimeout(() => child.kill('SIGKILL'), 2_000).unref();
