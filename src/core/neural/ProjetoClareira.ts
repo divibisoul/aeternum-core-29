@@ -245,9 +245,23 @@ class ProjetoClareiraSystem {
     let target: ProcessingNode | undefined;
     if (packet.destinationHint) {
       target = this.allNodes.find(n => n.id === packet.destinationHint);
-    }
-    if (!target) {
-      target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
+      if (!target) {
+        const correlationId = String(packet.metadata?.correlationId ?? packet.id);
+        void EventBus.emit('clareira.packet.dropped', {
+          correlationId,
+          reason: `DESTINATION_NOT_FOUND:${packet.destinationHint}`,
+        });
+        return false;
+      }
+    } else {
+      let hash = 0;
+      const packetId = String(packet.id);
+      for (let i = 0; i < packetId.length; i++) {
+        hash = ((hash << 5) - hash) + packetId.charCodeAt(i);
+        hash |= 0;
+      }
+      const targetIndex = Math.abs(hash) % this.allNodes.length;
+      target = this.allNodes[targetIndex];
     }
     if (!target) return false;
 
