@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,78 +6,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+async function n07Available(): Promise<boolean> {
+  const baseUrl = String(Deno.env.get('N07_BACKEND_URL') ?? Deno.env.get('SOUL_N07_URL') ?? '').trim().replace(/\/$/, '');
+  const token = String(Deno.env.get('N07_APP_TOKEN') ?? '').trim();
+  if (!baseUrl || !token) return false;
+  try {
+    const response = await fetch(`${baseUrl}/v1/models`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = String(Deno.env.get('SUPABASE_URL') ?? '').trim();
+    const serviceKey = String(Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '').trim();
+    const supabase = supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey) : null;
+    const authHeader = req.headers.get('Authorization') ?? '';
 
-    // Get user from auth header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      // Check if LOVABLE_API_KEY exists (system-level key)
-      const hasLovableKey = !!Deno.env.get('LOVABLE_API_KEY');
-      console.log('[check-api-key] No auth header, checking system key:', hasLovableKey);
-      
-      return new Response(
-        JSON.stringify({ hasKey: hasLovableKey, keys: hasLovableKey ? ['lovable'] : [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    const userProviders: string[] = [];
+    if (supabase && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice('Bearer '.length).trim();
+      if (token) {
+        const { data: { user } } = await supabase.auth.getUser(token);
+        if (user) {
+          const { data: keys } = await supabase
+            .from('api_keys')
+            .select('provider')
+            .eq('user_id', user.id)
+            .eq('is_active', true);
+          for (const item of keys ?? []) {
+            if (typeof item.provider === 'string' && item.provider.trim()) userProviders.push(item.provider.trim());
+          }
+        }
+      }
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      // Even without valid auth, we have the Lovable API key
-      const hasLovableKey = !!Deno.env.get('LOVABLE_API_KEY');
-      console.log('[check-api-key] Invalid auth, using system key:', hasLovableKey);
-      
-      return new Response(
-        JSON.stringify({ hasKey: hasLovableKey, keys: hasLovableKey ? ['lovable'] : [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check user's API keys
-    const { data: keys, error } = await supabase
-      .from('api_keys')
-      .select('provider, is_active')
-      .eq('user_id', user.id)
-      .eq('is_active', true);
-
-    if (error) {
-      console.error('[check-api-key] DB error:', error);
-    }
-
-    const userKeys = keys?.map(k => k.provider) || [];
-    
-    // Always include lovable if the system key exists
-    const hasLovableKey = !!Deno.env.get('LOVABLE_API_KEY');
-    if (hasLovableKey && !userKeys.includes('lovable')) {
-      userKeys.push('lovable');
-    }
-
-    console.log('[check-api-key] User', user.id, 'has keys:', userKeys);
-
-    return new Response(
-      JSON.stringify({ hasKey: userKeys.length > 0, keys: userKeys }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const providers = [...new Set(userProviders)];
+    if (await n07Available()) providers.unshift('n07');
+    const uniqueProviders = [...new Set(providers)];
+    return new Response(JSON.stringify({
+      hasKey: uniqueProviders.length > 0,
+      keys: uniqueProviders,
+      unifiedBackend: uniqueProviders.includes('n07'),
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('[check-api-key] Error:', error);
-    
-    // Fallback: check if Lovable key exists
-    const hasLovableKey = !!Deno.env.get('LOVABLE_API_KEY');
-    
-    return new Response(
-      JSON.stringify({ hasKey: hasLovableKey, keys: hasLovableKey ? ['lovable'] : [] }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ hasKey: false, keys: [], unifiedBackend: false }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
