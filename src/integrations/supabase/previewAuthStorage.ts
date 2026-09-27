@@ -51,9 +51,9 @@ export function brokeredPreviewStorage() {
       window.addEventListener('message', onMessage);
       const msg: Record<string, unknown> = { type, requestId, projectId, key };
       if (value !== undefined) msg['value'] = value;
+      const timer = setTimeout(() => finish(null), TIMEOUT);
       // targetOrigin per trusted editor origin, so a session token never reaches an arbitrary embedder.
       for (const origin of editorOrigins) window.parent.postMessage(msg, origin);
-      timer = setTimeout(() => finish(null), TIMEOUT);
     });
 
   // The editor may not be listening yet at the first getItem, so retry once.
