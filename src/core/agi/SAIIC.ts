@@ -16,9 +16,9 @@ import { EventBus } from '@/core/EventBus';
 export interface ModuleDiagnostic {
   moduleId: string;
   healthy: boolean;
-  cpuLoad: number;
-  memoryUsage: number;
-  errorRate: number;
+  cpuLoad: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
   lastHeartbeat: number;
   loopDetected: boolean;
   inconsistencies: string[];
@@ -32,7 +32,7 @@ export interface IntegrityReport {
   repairedModules: string[];
   anticorpoActions: AnticorpoAction[];
   criticalAlerts: string[];
-  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number };
+  meshLatencyCheck: { allUnder10ms: boolean; maxLatency: number; measured: boolean; reason: string };
 }
 
 export interface AnticorpoAction {
@@ -59,9 +59,9 @@ export interface SAIICMetrics {
 
 type HealthProvider = () => {
   healthy: boolean;
-  cpuLoad: number;
-  memoryUsage: number;
-  errorRate: number;
+  cpuLoad: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
 };
 
 export class SAIIC {
@@ -95,9 +95,9 @@ export class SAIIC {
     this.moduleDiagnostics.set(moduleId, {
       moduleId,
       healthy: true,
-      cpuLoad: 0,
-      memoryUsage: 0,
-      errorRate: 0,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
       lastHeartbeat: Date.now(),
       loopDetected: false,
       inconsistencies: [],
@@ -162,12 +162,23 @@ export class SAIIC {
         diag.memoryUsage = health.memoryUsage;
         diag.errorRate = health.errorRate;
         diag.lastHeartbeat = Date.now();
-        diag.healthy = health.healthy && health.errorRate < 0.1;
+        diag.healthy = health.healthy &&
+          (health.errorRate === null || health.errorRate < 0.1);
 
-        // Check for loops (same output pattern repeated)
-        const stateHash = this.computeStateHash(health);
-        this.recordPattern(moduleId, stateHash);
-        diag.loopDetected = this.detectLoop(moduleId);
+        // Check for loops only when the provider exposes at least one
+        // measurable signal. Constant "unmeasured" values are not a loop.
+        const hasMeasuredSignal =
+          health.cpuLoad !== null ||
+          health.memoryUsage !== null ||
+          health.errorRate !== null;
+        if (hasMeasuredSignal) {
+          const stateHash = this.computeStateHash(health);
+          this.recordPattern(moduleId, stateHash);
+          diag.loopDetected = this.detectLoop(moduleId);
+        } else {
+          this.patternBuffer.set(moduleId, []);
+          diag.loopDetected = false;
+        }
         
         if (diag.loopDetected) {
           this._loopsDetected++;
@@ -175,11 +186,11 @@ export class SAIIC {
         }
 
         // Check for critical issues
-        if (health.errorRate > 0.2) {
-          criticalAlerts.push(`[SAIIC] ${moduleId} - Taxa de erro alta: ${(health.errorRate * 100).toFixed(1)}%`);
+        if (health.errorRate !== null && health.errorRate > 0.2) {
+          criticalAlerts.push(`[SAIIC] ${moduleId} - Taxa de erro observada alta: ${(health.errorRate * 100).toFixed(1)}%`);
         }
-        if (health.memoryUsage > 0.9) {
-          criticalAlerts.push(`[SAIIC] ${moduleId} - Memória crítica: ${(health.memoryUsage * 100).toFixed(0)}%`);
+        if (health.memoryUsage !== null && health.memoryUsage > 0.9) {
+          criticalAlerts.push(`[SAIIC] ${moduleId} - Memória medida crítica: ${(health.memoryUsage * 100).toFixed(0)}%`);
         }
 
         // If module was isolated, check if it recovered
@@ -205,8 +216,7 @@ export class SAIIC {
     const overallIntegrity = diagnostics.length > 0 ? healthyCount / diagnostics.length : 1;
 
     // Check mesh latency
-    const latencies = diagnostics.map(d => Date.now() - d.lastHeartbeat);
-    const maxLatency = Math.max(...latencies, 0);
+    const maxLatency = 0;
 
     // Store report
     const report: IntegrityReport = {
@@ -217,7 +227,12 @@ export class SAIIC {
       repairedModules: Array.from(this.repairedModules),
       anticorpoActions: this.anticorpoHistory.slice(-10),
       criticalAlerts,
-      meshLatencyCheck: { allUnder10ms: maxLatency < 10, maxLatency },
+      meshLatencyCheck: {
+        allUnder10ms: false,
+        maxLatency,
+        measured: false,
+        reason: 'SAIIC não possui amostragem de RTT do Mesh; lastHeartbeat é timestamp do scan e não latência de rede.',
+      },
     };
     
     this.lastReports.push(report);
@@ -241,36 +256,40 @@ export class SAIIC {
    */
   private executeAnticorpoSweep(): void {
     for (const [moduleId, diag] of this.moduleDiagnostics) {
-      // Detect and repair weight corruption (simulated via high error rate)
-      if (diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'weight_corruption',
-          action: 'corrected',
-          severity: diag.errorRate,
-          details: `Corrigido errorRate de ${(diag.errorRate * 100).toFixed(1)}% para níveis saudáveis`,
-        };
-        this.anticorpoHistory.push(action);
-        
-        // Apply correction
-        diag.errorRate *= 0.5; // Reduce error rate
-        this._inconsistenciesResolved++;
+      // High observed error rate is evidence for protection, not a
+      // synthetic weight correction. Preserve the diagnostic unchanged.
+      if (diag.errorRate !== null && diag.errorRate > 0.15 && !this.isolatedModules.has(moduleId)) {
+        const recent = this.anticorpoHistory.slice(-20).some(
+          action => action.targetModule === moduleId && action.anomalyType === 'state_drift'
+        );
+        if (!recent) {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'state_drift',
+            action: 'bypassed',
+            severity: diag.errorRate,
+            details: `Taxa de erro observada ${(diag.errorRate * 100).toFixed(1)}%; nenhuma redução sintética foi aplicada. Módulo permanece sob observação.`,
+          });
+        }
       }
 
-      // Detect memory leaks
-      if (diag.memoryUsage > 0.85) {
-        const action: AnticorpoAction = {
-          timestamp: Date.now(),
-          targetModule: moduleId,
-          anomalyType: 'memory_leak',
-          action: 'corrected',
-          severity: diag.memoryUsage,
-          details: `Memória de ${moduleId} otimizada de ${(diag.memoryUsage * 100).toFixed(0)}%`,
-        };
-        this.anticorpoHistory.push(action);
-        diag.memoryUsage *= 0.8;
-        this._inconsistenciesResolved++;
+      // High measured memory is evidence for protection, not a synthetic
+      // memory rewrite. Preserve the measured value unchanged.
+      if (diag.memoryUsage !== null && diag.memoryUsage > 0.85) {
+        const recent = this.anticorpoHistory.slice(-20).some(
+          action => action.targetModule === moduleId && action.anomalyType === 'memory_leak'
+        );
+        if (!recent) {
+          this.anticorpoHistory.push({
+            timestamp: Date.now(),
+            targetModule: moduleId,
+            anomalyType: 'memory_leak',
+            action: 'bypassed',
+            severity: diag.memoryUsage,
+            details: `Memória medida de ${(diag.memoryUsage * 100).toFixed(0)}%; não existe reparo de memória verificado neste módulo.`,
+          });
+        }
       }
 
       // Handle detected loops
@@ -325,7 +344,7 @@ export class SAIIC {
         const d2 = diags[j];
         
         // If one is very healthy and the other very unhealthy, flag inconsistency
-        if (Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
+        if (d1.errorRate !== null && d2.errorRate !== null && Math.abs(d1.errorRate - d2.errorRate) > 0.5) {
           const lower = d1.errorRate > d2.errorRate ? d1 : d2;
           if (!lower.inconsistencies.includes(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`)) {
             lower.inconsistencies.push(`Divergência com ${d1.moduleId === lower.moduleId ? d2.moduleId : d1.moduleId}`);
@@ -368,10 +387,11 @@ export class SAIIC {
   /**
    * Simple state hash for pattern detection
    */
-  private computeStateHash(health: { cpuLoad: number; memoryUsage: number; errorRate: number }): number {
-    return Math.round(health.cpuLoad * 100) * 10000 +
-           Math.round(health.memoryUsage * 100) * 100 +
-           Math.round(health.errorRate * 100);
+  private computeStateHash(health: { cpuLoad: number | null; memoryUsage: number | null; errorRate: number | null }): number {
+    const cpu = health.cpuLoad === null ? -1 : Math.round(health.cpuLoad * 100);
+    const memory = health.memoryUsage === null ? -1 : Math.round(health.memoryUsage * 100);
+    const error = health.errorRate === null ? -1 : Math.round(health.errorRate * 100);
+    return cpu * 10000 + memory * 100 + error;
   }
 
   /**

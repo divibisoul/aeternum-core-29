@@ -315,7 +315,7 @@ function SAIICDashboard({ metrics, agi }: { metrics: any; agi: any }) {
                   {d.moduleId}
                 </span>
                 <span className="font-mono text-muted-foreground">
-                  CPU:{(d.cpuLoad * 100).toFixed(0)}% MEM:{(d.memoryUsage * 100).toFixed(0)}% ERR:{(d.errorRate * 100).toFixed(1)}%
+                  CPU:{d.cpuLoad === null ? 'N/D' : `${(d.cpuLoad * 100).toFixed(0)}%`} MEM:{d.memoryUsage === null ? 'N/D' : `${(d.memoryUsage * 100).toFixed(0)}%`} ERR:{d.errorRate === null ? 'N/D' : `${(d.errorRate * 100).toFixed(1)}%`}
                 </span>
               </div>
             ))}

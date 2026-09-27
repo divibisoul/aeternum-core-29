@@ -51,9 +51,11 @@ export function SystemStatusIndicator() {
         {
           name: 'Arquitetura Quadrangular',
           icon: Activity,
-          active: true,
+          // No runtime implementation/health provider is currently exposed for
+          // this label, so it must not be shown as operational.
+          active: false,
           processing: false,
-          metric: '4 lados ativos',
+          metric: 'NÃO VERIFICADA',
           color: 'blue',
         },
       ];
