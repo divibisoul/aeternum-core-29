@@ -3,10 +3,14 @@ import crypto from 'node:crypto';
 
 const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
 const baseUrl = `http://127.0.0.1:${port}`;
+let childOutput = '';
+let childError = '';
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
+child.stdout.on('data', chunk => { childOutput += String(chunk); });
+child.stderr.on('data', chunk => { childError += String(chunk); });
 
 const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
@@ -17,7 +21,8 @@ const waitForHealth = async () => {
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error('N01_LOCAL_SERVER_START_TIMEOUT');
+  const detail = [childOutput.trim(), childError.trim()].filter(Boolean).join('\n').slice(-6000);
+  throw new Error('N01_LOCAL_SERVER_START_TIMEOUT' + (detail ? ':' + detail : ''));
 };
 
 const json = async (response) => ({ status: response.status, body: await response.json().catch(() => ({})) });
