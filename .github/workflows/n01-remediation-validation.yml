@@ -1,0 +1,56 @@
+name: N01 Remediation Validation
+
+on:
+  push:
+    branches:
+      - fix/n01-validation-remediation-2026-09-27
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web-mesh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install exact lock
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Local Mesh contract
+        run: |
+          set -o pipefail
+          node scripts/soul-mesh-local-contract-check.mjs 2>&1 | tee "$RUNNER_TEMP/n01-mesh.log"
+      - name: Preserve local Mesh log
+        if: always()
+        run: cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
+
+  mesh-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install exact lock
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Chat edge ingress contract
+        run: node scripts/n01-chat-edge-contract-check.mjs
+      - name: Mesh contract
+        run: npm run mesh:contract:check
+      - name: Fusion contract
+        run: npm run fusion:check
+      - name: SuperGPU contract
+        run: npm run supergpu:check
+      - name: BYOK/vector checks
+        run: npm run byok:check && npm run vector-memory:check
+      - name: SARA federation check
+        run: npm run sara:federation:check

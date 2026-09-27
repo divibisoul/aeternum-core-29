@@ -215,6 +215,11 @@ function shutdown(signal) {
 }
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+child.on('error', error => {
+  console.error('Soul Mesh internal child spawn error:', error);
+});
+
 child.on('exit', (code, signal) => {
+  console.error(`Soul Mesh internal child exited (code=${code ?? 'null'}, signal=${signal ?? 'null'})`);
   if (code !== 0 && signal === null) process.exit(code ?? 1);
 });

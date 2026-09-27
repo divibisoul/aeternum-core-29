@@ -51,10 +51,13 @@ export function ApiKeySetup() {
         const { data } = await supabase.functions.invoke('check-api-key', {
           body: { provider: 'gemini' }
         });
-        if (data?.hasKey) {
+        if (data?.unifiedBackend === true && Array.isArray(data.keys) && data.keys.includes('n07')) {
           setHasEnvKey(true);
-          setConfigured(prev => [...prev, { id: 'gemini', name: 'Google Gemini (Pre-configured)', key: '***' }]);
-          addApiKey({ provider: 'gemini', configured: true, lastValidated: Date.now() });
+          setConfigured(prev => [
+            ...prev.filter(provider => provider.id !== 'n07'),
+            { id: 'n07', name: 'SOUL N07 (Gemini/Ollama behind N07)', key: '***' },
+          ]);
+          addApiKey({ provider: 'n07', configured: true, lastValidated: Date.now() });
         }
       } catch {
         // Edge function might not exist yet, that's ok
@@ -170,7 +173,7 @@ export function ApiKeySetup() {
             <div className="mb-6 flex items-start gap-3 rounded-lg bg-primary/10 p-3 border border-primary/20">
               <Check className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
               <div className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Gemini API pre-configured!</span> You can start using Aeternum immediately or add additional providers.
+                <span className="font-medium text-foreground">SOUL N07 backend configured!</span> Gemini/Ollama providers remain behind the unified N07 ingress.
               </div>
             </div>
           )}

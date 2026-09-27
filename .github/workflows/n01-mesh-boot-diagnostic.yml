@@ -1,0 +1,43 @@
+name: N01 Mesh Boot Diagnostic
+
+on:
+  push:
+    branches:
+      - fix/n01-validation-remediation-2026-09-27
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Start Mesh wrapper
+        run: |
+          set -u
+          SOUL_MESH_N01_PORT=18080 SOUL_MESH_N01_HOST=127.0.0.1 node --trace-uncaught scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-boot.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/n01-boot.pid"
+          sleep 3
+          echo '--- processes ---'
+          ps -ef | grep -E 'soul-mesh-server|soul-mesh-server-entry' | grep -v grep || true
+          echo '--- listening sockets ---'
+          ss -ltnp | grep -E '18080|18081' || true
+          echo '--- wrapper health ---'
+          curl -sv --max-time 3 http://127.0.0.1:18080/api/soul-mesh/health || true
+          echo '--- internal health ---'
+          curl -sv --max-time 3 http://127.0.0.1:18081/mesh/health || true
+          echo '--- boot log ---'
+          cat "$RUNNER_TEMP/n01-boot.log" || true
+      - name: Stop Mesh
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/n01-boot.pid"; then kill "$(cat "$RUNNER_TEMP/n01-boot.pid")" 2>/dev/null || true; fi
+          pkill -f 'scripts/soul-mesh-server.mjs' 2>/dev/null || true

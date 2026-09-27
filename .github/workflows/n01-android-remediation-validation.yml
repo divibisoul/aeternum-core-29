@@ -1,34 +1,18 @@
-name: Soul N01 Full Build
+name: N01 Android Remediation Validation
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - fix/n01-validation-remediation-2026-09-27
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  web:
-    name: Web TypeScript / Vite validation
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Install web dependencies
-        run: bun install --no-save
-      - name: Lint
-        run: bun run lint
-      - name: Production build
-        run: bun run build
-
   android:
-    name: Android APK + Mesh instrumentation
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -41,7 +25,7 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools'
-      - name: Install Android SDK 36
+      - name: Install Android SDK components
         run: sdkmanager "platforms;android-36" "build-tools;35.0.0" "platform-tools"
       - name: Build debug APK
         working-directory: soul-sentinel
@@ -53,7 +37,7 @@ jobs:
         run: |
           test -s soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
           test -s soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
-      - name: Run Mesh instrumentation tests
+      - name: Instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -61,11 +45,3 @@ jobs:
           arch: x86_64
           working-directory: soul-sentinel
           script: gradle :app:connectedDebugAndroidTest --stacktrace
-      - name: Upload APKs
-        uses: actions/upload-artifact@v4
-        with:
-          name: soul-apks
-          path: |
-            soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
-            soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
-          if-no-files-found: error

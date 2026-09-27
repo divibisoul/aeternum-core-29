@@ -1,0 +1,26 @@
+name: N01 Deno Edge Validation
+
+on:
+  push:
+    branches:
+      - fix/n01-validation-remediation-2026-09-27
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deno:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Typecheck chat edge
+        run: deno check supabase/functions/chat/index.ts
+      - name: Typecheck API key edge
+        run: deno check supabase/functions/check-api-key/index.ts
+      - name: Enforce unified N07 chat boundary
+        run: node scripts/n01-chat-edge-contract-check.mjs
