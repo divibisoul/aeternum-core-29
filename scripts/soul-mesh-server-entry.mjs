@@ -206,6 +206,17 @@ const server = http.createServer((req, res) => proxy(req, res).catch(error => {
   if (!res.headersSent) res.writeHead(400, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'SOUL_MESH_INGRESS_ERROR' }));
 }));
+server.on('listening', () => {
+  const address = server.address();
+  console.log(JSON.stringify({ event: 'SOUL_MESH_INGRESS_LISTENING', host, port: typeof address === 'object' && address ? address.port : publicPort }));
+});
+server.on('error', error => {
+  console.error(JSON.stringify({ event: 'SOUL_MESH_INGRESS_ERROR', error: error instanceof Error ? error.message : String(error) }));
+});
+child.on('error', error => {
+  console.error(JSON.stringify({ event: 'SOUL_MESH_INTERNAL_CHILD_ERROR', error: error instanceof Error ? error.message : String(error) }));
+});
+
 server.listen(publicPort, host);
 
 function shutdown(signal) {
@@ -216,5 +227,6 @@ function shutdown(signal) {
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 child.on('exit', (code, signal) => {
+  console.log(JSON.stringify({ event: 'SOUL_MESH_INTERNAL_CHILD_EXIT', code, signal }));
   if (code !== 0 && signal === null) process.exit(code ?? 1);
 });
