@@ -60,4 +60,4 @@ bootstrapPeers();
 const server=http.createServer((req,res)=>handle(req,res).catch(error=>json(res,500,{ok:false,error:error instanceof Error?error.message:'INTERNAL_ERROR'})));
 server.listen(PORT,HOST,()=>console.log(`SOUL N01 Mesh/Fusion ${FUSION_VERSION} listening on ${HOST}:${PORT}`));
 process.on('SIGTERM',()=>server.close()); process.on('SIGINT',()=>server.close());
-}
+// End of standalone N01 Mesh server module.
