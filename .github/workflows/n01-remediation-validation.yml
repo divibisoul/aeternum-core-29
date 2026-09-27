@@ -42,6 +42,8 @@ jobs:
           node-version: 22
       - name: Install exact lock
         run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Chat edge ingress contract
+        run: node scripts/n01-chat-edge-contract-check.mjs
       - name: Mesh contract
         run: npm run mesh:contract:check
       - name: Fusion contract
