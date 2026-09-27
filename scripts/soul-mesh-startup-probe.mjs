@@ -1,7 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-// Deterministic startup probe: lockfile repair gate retriggered after dependency graph change.
-// Deterministic startup probe: imports every N01 runtime dependency and verifies internal HTTP health.\nconst modules = [
+const modules = [
   'scripts/soul-supergpu.mjs',
   'scripts/supabase-vector-memory.mjs',
   'scripts/n01-cognitive-delegation.mjs',
@@ -14,9 +13,17 @@ for (const [index, modulePath] of modules.entries()) {
   const port = String(18181 + index);
   const code = [
     `import('./${modulePath}')`,
-    `.then(() => setTimeout(() => process.exit(0), 300))`,
+    `.then(async () => {`,
+    `  if ('${modulePath}' === 'scripts/soul-mesh-server.mjs') {`,
+    `    await new Promise(resolve => setTimeout(resolve, 750));`,
+    `    const response = await fetch('http://127.0.0.1:${port}/mesh/health');`,
+    `    if (!response.ok) throw new Error('SOUL_MESH_STARTUP_HEALTH_HTTP_' + response.status);`,
+    `    console.log('SOUL N01 internal HTTP health ok on ${port}');`,
+    `  }`,
+    `  process.exit(0);`,
+    `})`,
     `.catch((error) => { console.error(error?.stack || error); process.exit(1); });`,
-  ].join('');
+  ].join('\\n');
   const result = spawnSync(process.execPath, ['--input-type=module', '--eval', code], {
     cwd: process.cwd(),
     env: { ...process.env, SOUL_MESH_N01_PORT: port, SOUL_MESH_N01_HOST: '127.0.0.1' },
