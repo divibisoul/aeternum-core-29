@@ -5,7 +5,7 @@ const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
 const baseUrl = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
-  stdio: ['ignore', 'pipe', 'pipe'],
+  stdio: ['ignore', 'inherit', 'inherit'],
 });
 
 const waitForHealth = async () => {
