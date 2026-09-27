@@ -206,7 +206,10 @@ const server = http.createServer((req, res) => proxy(req, res).catch(error => {
   if (!res.headersSent) res.writeHead(400, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'SOUL_MESH_INGRESS_ERROR' }));
 }));
-server.listen(publicPort, host);
+server.on('error', error => console.error('SOUL N01 public ingress error: ' + error.message));
+server.listen(publicPort, host, () => console.log(
+  'SOUL N01 public ingress listening on ' + host + ':' + publicPort + ', internal=' + internalPort
+));
 
 function shutdown(signal) {
   server.close(() => child.kill('SIGTERM'));
@@ -215,6 +218,7 @@ function shutdown(signal) {
 }
 process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+child.on('error', error => console.error('SOUL N01 internal Mesh process error: ' + error.message));
 child.on('exit', (code, signal) => {
   if (code !== 0 && signal === null) process.exit(code ?? 1);
 });
