@@ -1,4 +1,4 @@
-const fs = require('node:fs');
+import fs from 'node:fs';
 const path = 'supabase/functions/chat/index.ts';
 const source = fs.readFileSync(path, 'utf8');
 const required = [
