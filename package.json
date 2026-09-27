@@ -18,7 +18,8 @@
     "supergpu:check": "node scripts/soul-supergpu-check.mjs",
     "byok:check": "node scripts/test-n01-byok.mjs",
     "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs",
-    "sara:federation:check": "node scripts/sara-federation.test.mjs"
+    "sara:federation:check": "node scripts/sara-federation.test.mjs",
+    "aeternum:core:check": "node --experimental-strip-types scripts/aeternum-core-contract-check.ts"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
