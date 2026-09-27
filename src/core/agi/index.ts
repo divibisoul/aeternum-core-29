@@ -194,98 +194,100 @@ export class AeternumAGI {
       this.resourceManager.registerModule(id, priority);
     });
 
-    // Register ALL modules in SAIIC for continuous health monitoring
+    // Register ALL modules in SAIIC for continuous health monitoring.
+    // CPU/memory/error are null where the runtime has no verified per-module
+    // measurement. No synthetic values are injected into health telemetry.
     this.saiic.registerModule('consciousness', () => ({
       healthy: this.consciousness.isRunning,
-      cpuLoad: 0.1 + Math.random() * 0.1,
-      memoryUsage: 0.05 + Math.random() * 0.05,
-      errorRate: this.consciousness.isRunning ? Math.random() * 0.02 : 0.5,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('godelAgent', () => ({
-      healthy: true,
-      cpuLoad: 0.08 + Math.random() * 0.12,
-      memoryUsage: 0.04 + Math.random() * 0.04,
-      errorRate: Math.random() * 0.01,
+      healthy: this._godelContinuousInterval !== null,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('darwinMachine', () => ({
       healthy: this.darwinMachine.isRunning,
-      cpuLoad: 0.15 + Math.random() * 0.1,
-      memoryUsage: 0.08 + Math.random() * 0.06,
-      errorRate: this.darwinMachine.isRunning ? Math.random() * 0.02 : 0.3,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('neuralLattice', () => ({
       healthy: this.neuralLattice.isRunning,
-      cpuLoad: 0.12 + Math.random() * 0.1,
-      memoryUsage: 0.06 + Math.random() * 0.05,
-      errorRate: this.neuralLattice.isRunning ? Math.random() * 0.02 : 0.3,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('selfHealing', () => ({
       healthy: this.selfHealing.isRunning,
-      cpuLoad: 0.05 + Math.random() * 0.05,
-      memoryUsage: 0.03 + Math.random() * 0.03,
-      errorRate: Math.random() * 0.01,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('ethicalOptimizer', () => ({
       healthy: this.ethicalOptimizer.isRunning,
-      cpuLoad: 0.04 + Math.random() * 0.04,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: Math.random() * 0.005,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('safetySystem', () => ({
       healthy: this.safetySystem.isRunning,
-      cpuLoad: 0.06 + Math.random() * 0.05,
-      memoryUsage: 0.03 + Math.random() * 0.03,
-      errorRate: Math.random() * 0.01,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('nip', () => {
       const report = this.nip.getRelatorio();
       return {
-        healthy: this.nip.isRunning,
-        cpuLoad: 0.03 + Math.random() * 0.04,
-        memoryUsage: 0.02 + Math.random() * 0.02,
-        errorRate: report.saudeEpistemologica === 'paralisada' ? 0.3 : Math.random() * 0.02,
+        healthy: this.nip.isRunning && report.saudeEpistemologica !== 'paralisada',
+        cpuLoad: null,
+        memoryUsage: null,
+        errorRate: null,
       };
     });
     this.saiic.registerModule('quantumNeural', () => {
       const status = this.quantumNeural.getInterfaceStatus();
       return {
         healthy: status.initialized,
-        cpuLoad: 0.05 + Math.random() * 0.05,
-        memoryUsage: 0.04 + Math.random() * 0.03,
-        errorRate: status.quantum.errorRate,
+        cpuLoad: null,
+        memoryUsage: null,
+        errorRate: Number.isFinite(status.quantum.errorRate) ? status.quantum.errorRate : null,
       };
     });
     this.saiic.registerModule('connectivity', () => ({
       healthy: this.connectivity.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.01 + Math.random() * 0.02,
-      errorRate: this.connectivity.isRunning ? Math.random() * 0.005 : 0.2,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
 
-    // Register GEM modules in SAIIC
+    // Register GEM modules in SAIIC using their real lifecycle state.
     this.saiic.registerModule('gemHealth', () => ({
       healthy: this.gemHealth.isRunning,
-      cpuLoad: 0.03 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemHealth.isRunning ? Math.random() * 0.01 : 0.2,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('gemResearch', () => ({
       healthy: this.gemResearch.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemResearch.isRunning ? Math.random() * 0.01 : 0.2,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('gemMusic', () => ({
       healthy: this.gemMusic.isRunning,
-      cpuLoad: 0.01 + Math.random() * 0.02,
-      memoryUsage: 0.01 + Math.random() * 0.01,
-      errorRate: Math.random() * 0.005,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
     this.saiic.registerModule('gemDevice', () => ({
       healthy: this.gemDevice.isRunning,
-      cpuLoad: 0.02 + Math.random() * 0.03,
-      memoryUsage: 0.02 + Math.random() * 0.02,
-      errorRate: this.gemDevice.isRunning ? Math.random() * 0.01 : 0.15,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
     }));
 
     // Register GEM connectivity nodes
@@ -530,8 +532,8 @@ export class AeternumAGI {
           this.connectivity.isRunning,
           this.saiic.isRunning,
           this.resourceManager.isRunning,
-          true, // GodelAgent
-          true, // SafeCore
+          this._godelContinuousInterval !== null,
+          false, // SafeCore has no independent running-state contract
           this.gemHealth.isRunning,
           this.gemResearch.isRunning,
           this.gemMusic.isRunning,
