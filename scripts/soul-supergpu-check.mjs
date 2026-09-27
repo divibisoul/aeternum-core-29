@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = process.cwd();
+const superGpuSource = fs.readFileSync(path.join(root, 'scripts', 'soul-supergpu.mjs'), 'utf8');
 const registry = JSON.parse(fs.readFileSync(path.join(root, 'docs', 'SOUL-FUSION-REGISTRY.json'), 'utf8'));
 const requiredNuclei = ['N01','N02','N03','N04','N05','N06','N07'];
 const requiredBackends = ['IN_PROCESS','WEBASSEMBLY','WEBGPU','REMOTE_MESH'];
@@ -13,4 +14,4 @@ if (registry.superGPU?.hardwareGpu !== false) throw new Error('SUPERGPU_HARDWARE
 for (const backend of requiredBackends) if (!registry.superGPU.backends.includes(backend)) throw new Error(`SUPERGPU_BACKEND_MISSING:${backend}`);
 for (const stage of requiredStages) if (!registry.fusionStages.includes(stage)) throw new Error(`SUPERGPU_STAGE_MISSING:${stage}`);
 if (registry.superGPU.parallel !== true || registry.superGPU.nativeCapabilityPreservation !== true) throw new Error('SUPERGPU_INVARIANT_MISSING');
-console.log(JSON.stringify({ ok:true, system:'SOUL', fusionVersion:registry.version, mode:registry.superGPU.mode, hardwareGpu:false, nuclei:requiredNuclei.length, backends:registry.superGPU.backends, stages:requiredStages }, null, 2));
+console.log(JSON.stringify({ ok:true, validationState:'STRUCTURAL', system:'SOUL', fusionVersion:registry.version, mode:registry.superGPU.mode, hardwareGpu:false, nuclei:requiredNuclei.length, backends:registry.superGPU.backends, stages:requiredStages }, null, 2));
