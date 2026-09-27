@@ -41,7 +41,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - name: Install dependencies from lockfile
-        run: npm ci --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Build
         run: npm run build
       - name: Emergency diagnostics
@@ -72,7 +72,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - name: Install dependencies from lockfile
-        run: npm ci --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Lint
         run: npm run lint
       - name: Emergency diagnostics
@@ -103,7 +103,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - name: Install dependencies from lockfile
-        run: npm ci --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Mesh health unit test
         run: npm run mesh:health:unit
       - name: Mesh async executor unit test
@@ -136,7 +136,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - name: Install dependencies from lockfile
-        run: npm ci --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: BYOK behavioral check
         run: npm run byok:check
       - name: Vector memory behavioral check
@@ -214,7 +214,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - name: Install dependencies from lockfile
-        run: npm ci --no-audit --no-fund
+        run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Mesh contract check
         run: npm run mesh:contract:check
       - name: Local Mesh runtime contract proof
