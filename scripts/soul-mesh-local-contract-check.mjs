@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
 const baseUrl = `http://127.0.0.1:${port}`;
 let childOutput = '';
+let childExit = null;
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -12,6 +13,7 @@ child.stdout.setEncoding('utf8');
 child.stderr.setEncoding('utf8');
 child.stdout.on('data', chunk => { childOutput += chunk; });
 child.stderr.on('data', chunk => { childOutput += chunk; });
+child.on('exit', (code, signal) => { childExit = { code, signal }; });
 
 const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
