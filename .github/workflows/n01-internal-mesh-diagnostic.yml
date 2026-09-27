@@ -1,0 +1,41 @@
+name: N01 Internal Mesh Direct Diagnostic
+
+on:
+  push:
+    branches:
+      - fix/n01-validation-remediation-2026-09-27
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  direct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --legacy-peer-deps --no-audit --no-fund
+      - name: Start internal server directly
+        run: |
+          set -u
+          set +e
+          SOUL_MESH_N01_PORT=18081 SOUL_MESH_N01_HOST=127.0.0.1 node --trace-uncaught scripts/soul-mesh-server.mjs > "$RUNNER_TEMP/n01-internal.log" 2>&1 &
+          pid=$!
+          sleep 3
+          echo '--- process ---'
+          ps -p "$pid" -o pid,stat,cmd || true
+          echo '--- sockets ---'
+          ss -ltnp | grep 18081 || true
+          echo '--- health ---'
+          curl -sv --max-time 3 http://127.0.0.1:18081/mesh/health || true
+          echo '--- log ---'
+          cat "$RUNNER_TEMP/n01-internal.log" || true
+          kill "$pid" 2>/dev/null || true
+          wait "$pid"
+          code=$?
+          echo "internal server exit code: $code"
+          exit 0
