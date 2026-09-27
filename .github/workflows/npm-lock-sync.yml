@@ -1,0 +1,51 @@
+name: N01 npm lockfile synchronization
+
+on:
+  push:
+    branches:
+      - main
+      - feat/soul-admin-android-plus-final
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/npm-lock-sync.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - package.json
+      - package-lock.json
+      - .github/workflows/npm-lock-sync.yml
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: >-
+      !startsWith(github.event.head_commit.message || '', 'ci(lockfile):') &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate package-lock from package.json
+        run: npm install --package-lock-only --legacy-peer-deps --no-audit --no-fund
+      - name: Commit synchronized lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- package-lock.json; then
+            echo 'package-lock.json is synchronized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          git commit -m 'ci(lockfile): synchronize npm dependency lock'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}"
