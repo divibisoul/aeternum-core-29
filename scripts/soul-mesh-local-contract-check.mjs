@@ -16,11 +16,16 @@ const childExit = new Promise(resolve => child.once('exit', (code, signal) => re
 
 const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
+  let last = { status: null, body: null, error: null };
   while (Date.now() < deadline) {
     try {
       const response = await fetch(`${baseUrl}/api/soul-mesh/health`);
+      const body = await response.text();
+      last = { status: response.status, body: body.slice(0, 4000), error: null };
       if (response.ok) return;
-    } catch {}
+    } catch (error) {
+      last = { status: null, body: null, error: error instanceof Error ? error.message : String(error) };
+    }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
   const exitState = await Promise.race([
@@ -30,6 +35,7 @@ const waitForHealth = async () => {
   throw new Error(JSON.stringify({
     code: 'N01_LOCAL_SERVER_START_TIMEOUT',
     childExit: exitState,
+    lastHealth: last,
     stdout: childStdout,
     stderr: childStderr,
   }));
