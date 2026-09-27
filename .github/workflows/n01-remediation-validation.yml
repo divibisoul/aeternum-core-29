@@ -24,20 +24,13 @@ jobs:
         run: npm run lint
       - name: Build
         run: npm run build
-      - name: Start local Mesh
-        run: |
-          set -euo pipefail
-          node scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-mesh.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/n01-mesh.pid"
       - name: Local Mesh contract
-        run: node scripts/soul-mesh-local-contract-check.mjs
-      - name: Dump Mesh process log on failure
-        if: failure()
-        run: cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
-      - name: Stop local Mesh
-        if: always()
         run: |
-          if test -f "$RUNNER_TEMP/n01-mesh.pid"; then kill "$(cat "$RUNNER_TEMP/n01-mesh.pid")" 2>/dev/null || true; fi
+          set -o pipefail
+          node scripts/soul-mesh-local-contract-check.mjs 2>&1 | tee "$RUNNER_TEMP/n01-mesh.log"
+      - name: Preserve local Mesh log
+        if: always()
+        run: cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
 
   mesh-integration:
     runs-on: ubuntu-latest
