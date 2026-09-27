@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   NODE_VERSION: '22'
@@ -36,28 +36,14 @@ jobs:
             env | cut -d= -f1 | sort || true
           } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/build.log"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies and reconcile lockfile
-        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
       - name: Build
         run: npm run build
-      - name: Persist reconciled lockfile
-        run: |
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json already current"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "fix(n01): persist npm lockfile reconciliation"
-          git push origin HEAD:${GITHUB_HEAD_REF}
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
@@ -81,15 +67,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/n01-first-step"
           { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/lint.log"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies and reconcile lockfile
-        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
       - name: Lint
         run: npm run lint
       - name: Emergency diagnostics
@@ -115,15 +98,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/n01-first-step"
           { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/mesh-unit.log"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies and reconcile lockfile
-        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
       - name: Mesh health unit test
         run: npm run mesh:health:unit
       - name: Mesh async executor unit test
@@ -151,15 +131,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/n01-first-step"
           { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/byok-vector.log"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies and reconcile lockfile
-        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
       - name: BYOK behavioral check
         run: npm run byok:check
       - name: Vector memory behavioral check
@@ -187,9 +164,6 @@ jobs:
           mkdir -p "$RUNNER_TEMP/n01-first-step"
           { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/syntax.log"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -235,15 +209,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/n01-first-step"
           { date -u; uname -a || true; node --version || true; npm --version || true; df -hT || true; free -h || true; } 2>&1 | tee "$RUNNER_TEMP/n01-first-step/contract.log"
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - name: Install dependencies and reconcile lockfile
-        run: npm install --no-audit --no-fund --legacy-peer-deps
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
       - name: Mesh contract check
         run: npm run mesh:contract:check
       - name: Local Mesh runtime contract proof
