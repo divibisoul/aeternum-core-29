@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 const BACKENDS = ['IN_PROCESS', 'WEBASSEMBLY', 'WEBGPU', 'REMOTE_MESH'];
 const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 
-export function createSuperGPU({ resolveOwner, forward, self = 'N01' }) {
+export function createSuperGPU({ resolveOwner, forward, localExecute, self = 'N01' }) {
   if (typeof resolveOwner !== 'function' || typeof forward !== 'function') throw new Error('SUPERGPU_DEPENDENCIES_REQUIRED');
 
   function resolve(task) {
@@ -25,7 +25,11 @@ export function createSuperGPU({ resolveOwner, forward, self = 'N01' }) {
     const plan = resolve(task);
     const startedAt = Date.now();
     if (plan.owner === self) {
-      return { ...plan, execution: 'local', output: { owner: self, capability: plan.capability, payload: task.payload }, startedAt, finishedAt: Date.now(), durationMs: Date.now() - startedAt };
+      if (typeof localExecute !== 'function') {
+        throw new Error(`IN_PROCESS_EXECUTOR_UNAVAILABLE:${plan.capability}`);
+      }
+      const value = await localExecute(task, correlationId);
+      return { ...plan, execution: 'local', output: value, startedAt, finishedAt: Date.now(), durationMs: Date.now() - startedAt };
     }
     const message = {
       protocol: 'soul-mesh/1',

@@ -373,7 +373,7 @@ export function AGIActivePanel() {
                       {d.moduleId}
                     </span>
                     <span className="font-mono text-muted-foreground">
-                      {(d.cpuLoad * 100).toFixed(0)}%/{(d.memoryUsage * 100).toFixed(0)}%
+                      {d.cpuLoad === null ? 'N/D' : `${(d.cpuLoad * 100).toFixed(0)}%`}/{d.memoryUsage === null ? 'N/D' : `${(d.memoryUsage * 100).toFixed(0)}%`}
                     </span>
                   </div>
                 ))}
