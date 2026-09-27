@@ -1,0 +1,30 @@
+name: N01 startup probe
+
+on:
+  push:
+    branches:
+      - feat/phase2-block1-core-2026-09-25
+    paths:
+      - scripts/soul-mesh-startup-probe.mjs
+      - scripts/soul-mesh-server.mjs
+      - scripts/soul-supergpu.mjs
+      - scripts/supabase-vector-memory.mjs
+      - scripts/n01-cognitive-delegation.mjs
+      - scripts/sara-federation.mjs
+      - scripts/n01-byok-gemini.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - run: node scripts/soul-mesh-startup-probe.mjs
