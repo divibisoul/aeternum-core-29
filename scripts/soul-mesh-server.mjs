@@ -5,8 +5,7 @@ import { inferInitialIntent } from './n01-byok-gemini.mjs';
 import { buildCognitiveDelegationPayload } from './n01-cognitive-delegation.mjs';
 import { requestSara, saraConfigured, saraHealthConfigured, saraDescribe } from './sara-federation.mjs';
 
-// Runtime scope: keep the server bootstrap self-contained; the closing brace below is intentional.
-{
+// Runtime scope remains module-level; preserve the existing bootstrap structure.
 const PORT = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const HOST = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
 const SECRET = process.env.SOUL_MESH_SECRET || '';
