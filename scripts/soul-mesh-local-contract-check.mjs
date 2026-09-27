@@ -11,10 +11,22 @@ const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
 });
 child.stdout.on('data', chunk => { childOutput += String(chunk); });
 child.stderr.on('data', chunk => { childError += String(chunk); });
+let childExited = false;
+let childExitCode = null;
+let childExitSignal = null;
+child.on('exit', (code, signal) => {
+  childExited = true;
+  childExitCode = code;
+  childExitSignal = signal;
+});
 
 const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
   while (Date.now() < deadline) {
+    if (childExited) {
+      const detail = [childOutput.trim(), childError.trim()].filter(Boolean).join('\n').slice(-6000);
+      throw new Error('N01_LOCAL_SERVER_CHILD_EXITED:code=' + childExitCode + ':signal=' + (childExitSignal || 'none') + (detail ? ':' + detail : ''));
+    }
     try {
       const response = await fetch(`${baseUrl}/api/soul-mesh/health`);
       if (response.ok) return;
