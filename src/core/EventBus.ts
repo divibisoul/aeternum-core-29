@@ -39,6 +39,12 @@ export interface AeternumEvents {
   'nav:module:select': { moduleId: string };
   'nav:settings:open': void;
   'soul:mesh:message': unknown;
+  'clareira.packet.ingested': { correlationId: string; sourceId: string };
+  'clareira.packet.processed': { correlationId: string; latencyMs: number };
+  'clareira.packet.dropped': { correlationId: string; reason: string };
+  'clareira.degraded': { reason: string };
+  'clareira.started': { at: number };
+  'clareira.stopped': { at: number };
 }
 export interface TelemetryData { latencyMs: number; tokensPerSecond: number; activeModules: number; memoryUsage: number; uptime: number; }
 type EventCallback<T> = (data: T) => void | Promise<void>;

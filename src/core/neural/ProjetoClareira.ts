@@ -180,6 +180,7 @@ class ProjetoClareiraSystem {
 
     this._running = false;
 
+    void EventBus.emit('clareira.stopped', { at: Date.now() });
     console.log('[ProjetoClareira] Sistema parado');
   }
 
@@ -228,6 +229,48 @@ class ProjetoClareiraSystem {
       console.log(`[ProjetoClareira] Estímulo injetado em ${target.id}`);
     }
 
+    return success;
+  }
+
+  /**
+   * Recebe um InformationPacket criado por uma fronteira federada.
+   * O pacote existente é preservado; nenhuma nova identidade é gerada.
+   */
+  injectPacket(packet: InformationPacket): boolean {
+    if (!this._running) {
+      console.warn('[ProjetoClareira] Sistema não está em execução');
+      return false;
+    }
+
+    let target: ProcessingNode | undefined;
+    if (packet.destinationHint) {
+      target = this.allNodes.find(n => n.id === packet.destinationHint);
+      if (!target) {
+        const correlationId = String(packet.metadata?.correlationId ?? packet.id);
+        void EventBus.emit('clareira.packet.dropped', {
+          correlationId,
+          reason: `DESTINATION_NOT_FOUND:${packet.destinationHint}`,
+        });
+        return false;
+      }
+    } else {
+      let hash = 0;
+      const packetId = String(packet.id);
+      for (let i = 0; i < packetId.length; i++) {
+        hash = ((hash << 5) - hash) + packetId.charCodeAt(i);
+        hash |= 0;
+      }
+      const targetIndex = Math.abs(hash) % this.allNodes.length;
+      target = this.allNodes[targetIndex];
+    }
+    if (!target) return false;
+
+    const correlationId = String(packet.metadata?.correlationId ?? packet.id);
+    const success = target.receivePacket(packet);
+    if (success) {
+      this.packetsInjected++;
+      void EventBus.emit('clareira.packet.ingested', { correlationId, sourceId: packet.sourceId });
+    }
     return success;
   }
 

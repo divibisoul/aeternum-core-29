@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { ProjetoClareira, type SystemMetrics } from '@/core/neural';
+import { ProjetoClareira, ClareiraBridge, type SystemMetrics } from '@/core/neural';
 
 export function useProjetoClareira() {
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -21,6 +21,8 @@ export function useProjetoClareira() {
     
     setRunning(ProjetoClareira.running);
 
+    ClareiraBridge.install();
+
     // Atualizar métricas periodicamente
     const interval = setInterval(() => {
       setMetrics(ProjetoClareira.getMetrics());
@@ -29,12 +31,15 @@ export function useProjetoClareira() {
 
     return () => {
       clearInterval(interval);
+      void Promise.resolve(ClareiraBridge.uninstall());
     };
   }, []);
 
   const injectStimulus = useCallback((data: string, criticality = 0.5) => {
     return ProjetoClareira.injectStimulus(data, criticality);
   }, []);
+
+  const ingestPacket = useCallback((packet: Parameters<typeof ClareiraBridge.ingest>[0]) => ClareiraBridge.ingest(packet), []);
 
   const requestDecision = useCallback(async (action: string, context = 'general') => {
     return ProjetoClareira.requestDecision(action, context);
@@ -46,5 +51,7 @@ export function useProjetoClareira() {
     status: ProjetoClareira.getStatus(),
     injectStimulus,
     requestDecision,
+    ingestPacket,
+    clareiraMetrics: ClareiraBridge.metrics(),
   };
 }
