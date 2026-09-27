@@ -40,29 +40,22 @@ const queryClient = new QueryClient({
 function AeternumCore() {
   const [systemReady, setSystemReady] = useState(false);
   const [initStage, setInitStage] = useState<string>('');
+  const [initializationError, setInitializationError] = useState<string | null>(null);
   const isAuthenticated = useGlobalStore(selectIsAuthenticated);
 
   const initializeSystems = useCallback(async () => {
     try {
-      console.log('[Aeternum] Inicializando 17 motores de primeiro plano...');
+      setInitializationError(null);
+      console.log('[Aeternum] Inicialização dos motores de primeiro plano...');
       
       setInitStage('Inicializando sistema neural...');
       if (!ProjetoClareira.initialized) ProjetoClareira.initialize();
       if (!ProjetoClareira.running) ProjetoClareira.start();
-      await new Promise(r => setTimeout(r, 100));
       
-      setInitStage('Ativando consciência algorítmica...');
-      const experienciaInicial = Array(10).fill(null).map(() => Math.random());
-      const resultado = ConscienciaAlgoritmicaInstance.processar(experienciaInicial, 'inicialização');
-      console.log('[Aeternum] ConscienciaAlgoritmica - Coerência:', resultado.metricas.coerenciaMedia.toFixed(3));
-      await new Promise(r => setTimeout(r, 100));
-      
-      setInitStage('Inicializando 17 motores AGI + GEMs...');
+      setInitStage('Inicializando AGI + GEMs...');
       const agi = AeternumAGI.getInstance();
       agi.initialize();
       agi.start();
-      console.log('[Aeternum] AeternumAGI - 17 motores de primeiro plano contínuo ativos');
-      await new Promise(r => setTimeout(r, 100));
       
       setInitStage('Carregando módulos...');
       await ModuleRegistry.initialize();
@@ -70,31 +63,24 @@ function AeternumCore() {
       if (modules.length > 0 && !ModuleRegistry.getActiveId()) {
         ModuleRegistry.activate(modules[0].metadata.id);
       }
-      await new Promise(r => setTimeout(r, 100));
       
-      setInitStage('Validando integridade...');
-      const testResult = ConscienciaAlgoritmicaInstance.testarSistemaCompleto();
       const agiMetrics = agi.getFullMetrics();
       const saiicMetrics = agi.saiic.getMetrics();
-      
-      if (testResult.sucesso) {
-        toast.success(
-          `17 motores online | Coerência: ${(testResult.coerenciaMedia * 100).toFixed(1)}% | ` +
-          `AGI: ${agiMetrics.overall.activeSubsystems}/${agiMetrics.overall.subsystems} | ` +
-          `SAIIC: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}% | ` +
-          `GEMs: 4/4`
-        );
-      } else {
-        toast.warning('Sistemas parcialmente ativos');
-      }
+      const active = agiMetrics.overall.activeSubsystems;
+      const expected = agiMetrics.overall.subsystems;
+      toast.message(
+        `Motores ativos: ${active}/${expected} | SAIIC integridade observada: ${(saiicMetrics.overallIntegrity * 100).toFixed(0)}%`
+      );
       
       setSystemReady(true);
-      console.log('[Aeternum] Todos os 17 sistemas de primeiro plano prontos');
+      console.log('[Aeternum] Inicialização concluída com estado observado');
       
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error('[Aeternum] Erro na inicialização:', error);
-      toast.error('Erro ao inicializar sistemas');
-      setSystemReady(true);
+      setInitializationError(message);
+      setSystemReady(false);
+      toast.error('Inicialização bloqueada: ' + message);
     }
   }, []);
 
@@ -112,6 +98,23 @@ function AeternumCore() {
 
   if (!isAuthenticated) {
     return <LoginScreen onLogin={() => {}} />;
+  }
+
+  if (initializationError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <div className="max-w-xl text-center space-y-4">
+          <h2 className="text-xl font-bold font-mono">AETERNUM — inicialização bloqueada</h2>
+          <p className="text-sm text-muted-foreground">{initializationError}</p>
+          <button
+            className="px-4 py-2 rounded border"
+            onClick={() => void initializeSystems()}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!systemReady) {

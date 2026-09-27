@@ -15,9 +15,34 @@ import { homeostasisManager, HomeostasisManager } from './HomeostasisManager';
 import { InformationChannel } from './InformationChannel';
 import {
   type SystemMetrics,
-  type InformationPacket,
-  createInformationPacket,
+  type ClareiraSnapshot,
+  type ClareiraDeviceState,
 } from './types';
+import { VagusNerve } from './VagusNerve';
+import { ClareiraSaraBridge } from './ClareiraSaraBridge';
+import { ClareiraAndroidBridge } from './ClareiraAndroidBridge';
+import { InputTransducer } from './InputTransducer';
+import {
+  NucleoApps,
+  NucleoArmazenamento,
+  NucleoConfiguracao,
+  NucleoContexto,
+  NucleoControleMotor,
+  NucleoDecisao,
+  NucleoEmocional,
+  NucleoEstado,
+  NucleoExecutor,
+  NucleoKernel,
+  NucleoLinguagem,
+  NucleoMemoria,
+  NucleoPercepcao,
+  NucleoRaciocinio,
+  NucleoRede,
+  NucleoSemantica,
+  NucleoSensores,
+  NucleoUsuario,
+  NucleoVigilancia,
+} from './SpecializedNuclei';
 
 /**
  * ProjetoClareira - Sistema Neural Bio-Inspirado
@@ -29,6 +54,10 @@ class ProjetoClareiraSystem {
   private allNodes: ProcessingNode[] = [];
   private channels: InformationChannel[] = [];
   private homeostasis: HomeostasisManager;
+  private vagus: VagusNerve;
+  private saraBridge: ClareiraSaraBridge;
+  private readonly androidBridge = new ClareiraAndroidBridge();
+  private readonly inputTransducer = new InputTransducer();
   
   private _initialized = false;
   private _running = false;
@@ -39,21 +68,36 @@ class ProjetoClareiraSystem {
     // Criar núcleo central
     this.nucleoRaiz = new NucleoRaizAlma('NC-001');
     
-    // Criar nós primários
-    for (let i = 1; i <= 3; i++) {
-      this.primaryNodes.push(new ProcessingNode(`NP-${i.toString().padStart(3, '0')}`, 'Primary'));
+    // Criar os 12 núcleos primários especializados preservando os contratos existentes
+    const primaryClasses = [
+      NucleoDecisao, NucleoPercepcao, NucleoEstado, NucleoExecutor,
+      NucleoVigilancia, NucleoUsuario, NucleoConfiguracao, NucleoKernel,
+      NucleoApps, NucleoRede, NucleoArmazenamento, NucleoContexto,
+    ];
+    for (let i = 0; i < primaryClasses.length; i++) {
+      const Primary = primaryClasses[i];
+      this.primaryNodes.push(new Primary(`NP-${String(i + 1).padStart(3, '0')}`));
     }
-    
-    // Criar nós secundários
-    for (let i = 1; i <= 5; i++) {
-      this.secondaryNodes.push(new ProcessingNode(`NS-${i.toString().padStart(3, '0')}`, 'Secondary'));
+
+    // Quatro núcleos secundários por primário = 48 instâncias secundárias
+    const secondaryClasses = [
+      NucleoSemantica, NucleoSensores, NucleoMemoria, NucleoLinguagem,
+      NucleoEmocional, NucleoRaciocinio, NucleoControleMotor,
+    ];
+    for (let i = 0; i < this.primaryNodes.length * 4; i++) {
+      const Secondary = secondaryClasses[i % secondaryClasses.length];
+      this.secondaryNodes.push(new Secondary(`MS-${String(i + 1).padStart(3, '0')}`));
     }
     
     // Consolidar todos os nós
     this.allNodes = [this.nucleoRaiz, ...this.primaryNodes, ...this.secondaryNodes];
     
-    // Referência ao HomeostasisManager
+    // Referência ao HomeostasisManager e integração autonômica
     this.homeostasis = homeostasisManager;
+    this.vagus = new VagusNerve(this.homeostasis);
+    this.saraBridge = new ClareiraSaraBridge();
+    this.homeostasis.attachVagus(this.vagus);
+    for (const node of this.allNodes) this.vagus.registerNode(node);
 
     EventBus.emit('module:registered', {
       id: 'projeto-clareira',
@@ -88,47 +132,50 @@ class ProjetoClareiraSystem {
    * Configura canais de comunicação entre nós
    */
   private setupChannels(): void {
-    // Conectar nós primários ao núcleo central
+    // Central <-> Primary: 12 pares bidirecionais
     for (const node of this.primaryNodes) {
-      const channel = new InformationChannel(
+      const up = new InformationChannel(
         node.id,
         this.nucleoRaiz.id,
         'Central',
-        1.5 // Alta bandwidth para primários
+        1.5
       );
-      
-      node.addOutputChannel(channel);
-      this.channels.push(channel);
-    }
-
-    // Conectar nós secundários aos primários
-    for (let i = 0; i < this.secondaryNodes.length; i++) {
-      const secondary = this.secondaryNodes[i];
-      const primaryIndex = i % this.primaryNodes.length;
-      const primary = this.primaryNodes[primaryIndex];
-      
-      const channel = new InformationChannel(
-        secondary.id,
-        primary.id,
-        'Primary',
-        1.0
-      );
-      
-      secondary.addOutputChannel(channel);
-      this.channels.push(channel);
-    }
-
-    // Conectar núcleo central aos primários (bidirecional)
-    for (const node of this.primaryNodes) {
-      const reverseChannel = new InformationChannel(
+      const down = new InformationChannel(
         this.nucleoRaiz.id,
         node.id,
         'Primary',
         1.5
       );
-      
-      this.nucleoRaiz.addOutputChannel(reverseChannel);
-      this.channels.push(reverseChannel);
+      node.addOutputChannel(up);
+      node.addInputChannel(down);
+      this.nucleoRaiz.addInputChannel(up);
+      this.nucleoRaiz.addOutputChannel(down);
+      this.channels.push(up, down);
+    }
+
+    // Primary <-> Secondary: quatro secundários por primário
+    const secondariesPerPrimary = 4;
+    for (let i = 0; i < this.secondaryNodes.length; i++) {
+      const secondary = this.secondaryNodes[i];
+      const primary = this.primaryNodes[Math.floor(i / secondariesPerPrimary)];
+
+      const up = new InformationChannel(
+        secondary.id,
+        primary.id,
+        'Primary',
+        1.0
+      );
+      const down = new InformationChannel(
+        primary.id,
+        secondary.id,
+        'Secondary',
+        1.0
+      );
+      secondary.addOutputChannel(up);
+      secondary.addInputChannel(down);
+      primary.addInputChannel(up);
+      primary.addOutputChannel(down);
+      this.channels.push(up, down);
     }
 
     console.log('[ProjetoClareira] Configurados', this.channels.length, 'canais');
@@ -150,8 +197,9 @@ class ProjetoClareiraSystem {
       node.start();
     }
 
-    // Iniciar homeostase
+    // Iniciar homeostase e nervo vago
     this.homeostasis.start();
+    this.vagus.start();
 
     this._running = true;
 
@@ -170,7 +218,8 @@ class ProjetoClareiraSystem {
 
     console.log('[ProjetoClareira] Parando sistema...');
 
-    // Parar homeostase
+    // Parar nervo vago e homeostase
+    this.vagus.stop();
     this.homeostasis.stop();
 
     // Parar todos os nós
@@ -196,38 +245,27 @@ class ProjetoClareiraSystem {
       return false;
     }
 
-    const packet = createInformationPacket(
+    const target = targetNodeId
+      ? this.allNodes.find(node => node.id === targetNodeId)
+      : this.secondaryNodes.find(node => node.active)
+        ?? this.primaryNodes.find(node => node.active)
+        ?? (this.nucleoRaiz.active ? this.nucleoRaiz : undefined);
+
+    if (!target || !target.active) return false;
+
+    const nodeMetrics = target.getMetrics();
+    const packet = this.inputTransducer.transduce(
       data,
-      10.0,
-      criticality,
-      'Data',
       'EXTERNAL',
-      targetNodeId,
-      { injectedAt: Date.now() }
+      nodeMetrics.temperature,
+      nodeMetrics.energy / Math.max(1, nodeMetrics.energyCapacity),
+      'Data',
+      target.id,
+      { injectedAt: Date.now(), source: 'SOUL_RUNTIME' },
     );
 
-    // Selecionar nó alvo
-    let target: ProcessingNode;
-    
-    if (targetNodeId) {
-      const found = this.allNodes.find(n => n.id === targetNodeId);
-      if (found) {
-        target = found;
-      } else {
-        target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
-      }
-    } else {
-      // Selecionar aleatoriamente
-      target = this.allNodes[Math.floor(Math.random() * this.allNodes.length)];
-    }
-
     const success = target.receivePacket(packet);
-    
-    if (success) {
-      this.packetsInjected++;
-      console.log(`[ProjetoClareira] Estímulo injetado em ${target.id}`);
-    }
-
+    if (success) this.packetsInjected++;
     return success;
   }
 
@@ -243,31 +281,20 @@ class ProjetoClareiraSystem {
   }
 
   /**
-   * Executa simulação por duração especificada
+   * Executa o runtime por uma duração especificada
+   */
+  async runForDuration(durationMs: number = 5000): Promise<SystemMetrics> {
+    if (durationMs < 0) throw new Error('CLAREIRA_DURATION_INVALID');
+    if (!this._running) this.start();
+    await new Promise(resolve => setTimeout(resolve, durationMs));
+    return this.getMetrics();
+  }
+
+  /**
+   * Compatibilidade retroativa sem geração de estímulos artificiais.
    */
   async runSimulation(durationMs: number = 5000): Promise<SystemMetrics> {
-    if (!this._running) {
-      this.start();
-    }
-
-    const startTime = Date.now();
-    
-    // Injetar estímulos periódicos
-    const stimulusInterval = setInterval(() => {
-      if (Math.random() < 0.3) {
-        this.injectStimulus(
-          `Stimulus at ${Date.now()}`,
-          Math.random(),
-        );
-      }
-    }, 200);
-
-    // Aguardar duração
-    await new Promise(resolve => setTimeout(resolve, durationMs));
-
-    clearInterval(stimulusInterval);
-
-    return this.getMetrics();
+    return this.runForDuration(durationMs);
   }
 
   /**
@@ -277,7 +304,12 @@ class ProjetoClareiraSystem {
     const homeostasisMetrics = this.homeostasis.getMetrics();
     const nodeMetrics = this.allNodes.map(n => n.getMetrics());
     
-    const avgLoad = nodeMetrics.reduce((sum, m) => sum + (m.energy / 100), 0) / nodeMetrics.length;
+    const avgLoad = nodeMetrics.length > 0
+      ? nodeMetrics.reduce(
+          (sum, m) => sum + (m.energy / Math.max(1, m.energyCapacity)),
+          0,
+        ) / nodeMetrics.length
+      : 0;
     const avgTemp = nodeMetrics.reduce((sum, m) => sum + m.temperature, 0) / nodeMetrics.length;
     const totalPackets = nodeMetrics.reduce((sum, m) => sum + m.packetsProcessed, 0);
 
@@ -290,8 +322,147 @@ class ProjetoClareiraSystem {
       turboActive: homeostasisMetrics.turboActive,
       packetsProcessed: totalPackets,
       tunelamentosRealizados: this.packetsInjected,
+      vagalTone: this.vagus.snapshot().vagalTone,
+      activeVagusBranches: this.vagus.snapshot().activeNodeBranches,
+      redundantVagusBranches: this.vagus.snapshot().redundantBranches,
+      vagalSignalLatencyMs: this.vagus.snapshot().observedLatencyMs ?? undefined,
+      droppedPackets: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0),
+      dropRate: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) +
+          this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0) > 0
+        ? this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0) /
+          (this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0) +
+           this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0))
+        : 0,
       timestamp: Date.now(),
     };
+  }
+
+  updateDeviceState(state: ClareiraDeviceState): void {
+    this.homeostasis.updateDeviceState(state);
+  }
+
+  getSnapshot(): ClareiraSnapshot {
+    const status = this.getStatus();
+    return {
+      schemaVersion: '1.1.0',
+      timestamp: Date.now(),
+      blueprintVersion: '1.1.0',
+      status: this._running ? 'RUNNING' : this._initialized ? 'INITIALIZED' : 'STOPPED',
+      metrics: this.getMetrics(),
+      nodes: status.nodes,
+      channels: status.channels,
+      homeostasis: status.homeostasis,
+      vagus: this.vagus.snapshot(),
+      deviceState: this.homeostasis.getDeviceState() ?? undefined,
+    };
+  }
+
+  persistSnapshot(): ClareiraSnapshot {
+    const snapshot = this.getSnapshot();
+    if (typeof localStorage === 'undefined') {
+      throw new Error('CLAREIRA_LOCAL_PERSISTENCE_UNAVAILABLE');
+    }
+    localStorage.setItem('clareira.snapshot.v1', JSON.stringify(snapshot));
+    EventBus.emit('memory:stored', {
+      id: 'clareira-snapshot',
+      type: 'clareira-state',
+    });
+    return snapshot;
+  }
+
+  loadSnapshot(): ClareiraSnapshot | null {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem('clareira.snapshot.v1');
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as ClareiraSnapshot;
+    } catch {
+      throw new Error('CLAREIRA_SNAPSHOT_INVALID');
+    }
+  }
+
+  exportMetricsCSV(): string {
+    const snapshot = this.getSnapshot();
+    const header = [
+      'timestamp', 'node_id', 'level', 'active', 'energy',
+      'temperature', 'processing_rate', 'queue_size', 'output_channels', 'input_channels',
+    ];
+    const rows = snapshot.nodes.map(node => [
+      snapshot.timestamp,
+      node.id,
+      node.level,
+      node.active,
+      node.energy,
+      node.temperature,
+      node.processingRate,
+      node.queueSize,
+      node.outputChannels,
+      node.inputChannels,
+    ]);
+    return [header, ...rows]
+      .map(row => row.map(value => JSON.stringify(value)).join(','))
+      .join('\n');
+  }
+
+  async getAndroidSnapshot(timeoutMs = 5000) {
+    return this.androidBridge.snapshot(timeoutMs);
+  }
+
+  async setAndroidBrightness(percent: number, timeoutMs = 5000) {
+    return this.androidBridge.setBrightness(percent, timeoutMs);
+  }
+
+  async requestAndroidKillBackground(packageName: string, timeoutMs = 5000) {
+    return this.androidBridge.killBackground(packageName, timeoutMs);
+  }
+
+  async openAndroidWifiPanel(timeoutMs = 5000) {
+    return this.androidBridge.openWifiPanel(timeoutMs);
+  }
+
+  async requestAndroidBluetoothEnable(timeoutMs = 5000) {
+    return this.androidBridge.requestBluetoothEnable(timeoutMs);
+  }
+
+  async openAndroidAirplaneSettings(timeoutMs = 5000) {
+    return this.androidBridge.openAirplaneSettings(timeoutMs);
+  }
+
+  async syncStateToSara(correlationId?: string) {
+    return this.saraBridge.syncState(this.getSnapshot(), correlationId);
+  }
+
+  async pullVagalCommandsFromSara(limit = 16) {
+    return this.saraBridge.pullAndApplyVagalCommands(
+      (nodeId, command, payload) => {
+        const node = this.allNodes.find(item => item.id === nodeId);
+        if (!node) return false;
+        if (!node.active && command !== 'resume') return false;
+        node.applyVagalCommand(command, payload);
+        return true;
+      },
+      limit,
+    );
+  }
+
+  async auditStateThroughSara(correlationId?: string) {
+    return this.saraBridge.auditLatestState(correlationId);
+  }
+
+  async dispatchVagalCommandToSara(
+    nodeId: string,
+    command: 'calm' | 'turbo' | 'reduce_thermal' | 'shutdown' | 'resume',
+    payload: Record<string, unknown> = {},
+    priority = 0.5,
+    correlationId?: string,
+  ) {
+    return this.saraBridge.dispatchVagalCommand(
+      nodeId,
+      command,
+      payload,
+      priority,
+      correlationId,
+    );
   }
 
   /**

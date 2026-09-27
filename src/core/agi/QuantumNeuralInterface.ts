@@ -20,6 +20,8 @@ export interface QuantumState {
   coherence: number;
   fidelity: number;
   errorRate: number;
+  backendStatus: 'UNAVAILABLE' | 'OBSERVED';
+  measurementAvailable: boolean;
 }
 
 export class NeuralCommunication {
@@ -74,49 +76,49 @@ export class QuantumNetworking {
   constructor() {
     this.quantumState = {
       entangled: false,
-      coherence: 0.95,
-      fidelity: 0.98,
-      errorRate: 0.001
+      coherence: 0,
+      fidelity: 0,
+      errorRate: 0,
+      backendStatus: 'UNAVAILABLE',
+      measurementAvailable: false
     };
   }
 
-  setupQuantumKeyDistribution(): void {
-    this.quantumState.fidelity = 0.999;
-  }
+  setupQuantumKeyDistribution(): boolean { return false; }
 
-  enableQuantumTeleportation(): void {
-    this.quantumState.entangled = true;
-  }
+  enableQuantumTeleportation(): boolean { return false; }
 
-  implementQuantumErrorCorrection(): void {
-    this.quantumState.errorRate = 0.0001;
-  }
+  implementQuantumErrorCorrection(): boolean { return false; }
 
-  prepareForQuantumInternet(): void {
-    this.quantumState.coherence = 0.999;
-  }
+  prepareForQuantumInternet(): boolean { return false; }
 
   establishQuantumEntanglement(nodeId: string): boolean {
+    if (!this.quantumState.measurementAvailable) return false;
     this.entangledNodes.add(nodeId);
     this.quantumState.entangled = true;
     return true;
   }
 
   /**
-   * Simulate quantum decoherence and correction over time
+   * Atualiza somente por medição externa. Sem backend, não há evolução sintética.
+   * and correction over time
    */
   tick(): void {
-    // Natural decoherence
-    this.quantumState.coherence *= (0.999 + Math.random() * 0.001);
-    this.quantumState.fidelity *= (0.9995 + Math.random() * 0.0005);
-    
-    // Error correction brings it back
-    if (this.quantumState.coherence < 0.95) {
-      this.quantumState.coherence = Math.min(1, this.quantumState.coherence * 1.01);
-    }
-    if (this.quantumState.fidelity < 0.97) {
-      this.quantumState.fidelity = Math.min(1, this.quantumState.fidelity * 1.005);
-    }
+    // Mantido para compatibilidade do ciclo antigo; sem backend observado, não altera estado.
+  }
+
+  recordObservedQuantumState(state: Partial<Pick<QuantumState, 'coherence' | 'fidelity' | 'errorRate'>>): boolean {
+    const values = ['coherence','fidelity','errorRate'] as const;
+    if (values.some(key => {
+      const value = state[key];
+      return value != null && (!Number.isFinite(value) || value < 0);
+    })) return false;
+    if (state.coherence != null) this.quantumState.coherence = Math.min(1, state.coherence);
+    if (state.fidelity != null) this.quantumState.fidelity = Math.min(1, state.fidelity);
+    if (state.errorRate != null) this.quantumState.errorRate = Math.min(1, state.errorRate);
+    this.quantumState.backendStatus = 'OBSERVED';
+    this.quantumState.measurementAvailable = true;
+    return true;
   }
 
   getQuantumMetrics() {
@@ -146,12 +148,8 @@ export class QuantumNeuralInterface {
     this.neural.enableEEGMonitoring();
     this.neural.setupThoughtRecognition();
 
-    this.quantum.setupQuantumKeyDistribution();
-    this.quantum.enableQuantumTeleportation();
-    this.quantum.implementQuantumErrorCorrection();
-    this.quantum.prepareForQuantumInternet();
-
-    this.hybridMode = true;
+    // Sem backend quântico real, somente a camada neural observável é ativada.
+    this.hybridMode = false;
     this.isInitialized = true;
   }
 
@@ -176,6 +174,7 @@ export class QuantumNeuralInterface {
     neuralSignal: NeuralSignal;
     quantumCoherence: number;
     quantumFidelity: number;
+    quantumAvailable: boolean;
     hybridActive: boolean;
   } {
     // Generate neural signal from message semantics
@@ -196,6 +195,7 @@ export class QuantumNeuralInterface {
       neuralSignal: signal,
       quantumCoherence: qm.coherence,
       quantumFidelity: qm.fidelity,
+      quantumAvailable: qm.measurementAvailable,
       hybridActive: this.hybridMode
     };
   }

@@ -7,6 +7,7 @@ import { SafeSelfImprovementCore } from './SafeSelfImprovementCore';
 export interface SystemHealth {
   overallScore: number;
   moduleScores: Record<string, number>;
+  unmeasurableModules: string[];
   criticalIssues: string[];
   warnings: string[];
   recommendations: string[];
@@ -16,27 +17,35 @@ export interface SystemHealth {
 export interface ModuleHealth {
   name: string;
   status: 'healthy' | 'degraded' | 'failed' | 'recovering';
-  performance: number;
-  memoryUsage: number;
-  errorRate: number;
+  performance: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
   uptime: number;
+  livenessObserved: boolean;
 }
+
+export type ModuleHealthProvider = () => {
+  performance: number | null;
+  memoryUsage: number | null;
+  errorRate: number | null;
+  healthy: boolean;
+};
 
 export class IntegrityScanner {
   private scanHistory: SystemHealth[] = [];
   private moduleRegistry: Map<string, ModuleHealth> = new Map();
+  private providers: Map<string, ModuleHealthProvider> = new Map();
 
-  constructor() {
-    const modules = [
-      'neural_processor', 'memory_system', 'ethics_guardian',
-      'consciousness_monitor', 'godel_agent', 'recursive_lattice',
-      'darwin_machine', 'quantum_bridge'
-    ];
-    modules.forEach(name => {
-      this.moduleRegistry.set(name, {
-        name, status: 'healthy', performance: 0.95,
-        memoryUsage: Math.random() * 0.3 + 0.1, errorRate: 0.01, uptime: Date.now()
-      });
+  registerModule(name: string, provider: ModuleHealthProvider): void {
+    this.providers.set(name, provider);
+    this.moduleRegistry.set(name, {
+      name,
+      status: 'degraded',
+      performance: null,
+      memoryUsage: null,
+      errorRate: null,
+      uptime: Date.now(),
+      livenessObserved: false,
     });
   }
 
@@ -46,24 +55,58 @@ export class IntegrityScanner {
     const warnings: string[] = [];
     const recommendations: string[] = [];
     let totalScore = 0, count = 0;
+    const unmeasurableModules: string[] = [];
 
     for (const [name, health] of this.moduleRegistry) {
-      health.performance = Math.min(1, Math.max(0.1, health.performance + (Math.random() - 0.5) * 0.1));
-      health.errorRate = Math.max(0, health.errorRate + (Math.random() - 0.5) * 0.01);
-      health.status = health.performance < 0.5 ? 'failed' : health.performance < 0.7 ? 'degraded' : 'healthy';
+      const provider = this.providers.get(name);
+      if (!provider) {
+        warnings.push(name + ': fornecedor de saúde ausente');
+        continue;
+      }
+      try {
+        const observed = provider();
+        health.performance = observed.performance == null ? null : Math.max(0, Math.min(1, observed.performance));
+        health.memoryUsage = observed.memoryUsage == null ? null : Math.max(0, Math.min(1, observed.memoryUsage));
+        health.errorRate = observed.errorRate == null ? null : Math.max(0, Math.min(1, observed.errorRate));
+        health.livenessObserved = true;
+        health.status = !observed.healthy
+          ? 'failed'
+          : health.performance != null && health.performance < 0.5
+          ? 'degraded'
+          : 'healthy';
+      } catch (error) {
+        health.status = 'failed';
+        health.errorRate = 1;
+        health.livenessObserved = false;
+        criticalIssues.push(name + ' - health provider failed: ' + String(error));
+      }
 
-      const score = health.performance * 0.5 + (1 - health.errorRate) * 0.3 + (1 - health.memoryUsage) * 0.2;
+      const components: Array<{ value: number; weight: number }> = [];
+      if (health.performance != null) components.push({ value: health.performance, weight: 0.5 });
+      if (health.errorRate != null) components.push({ value: 1 - health.errorRate, weight: 0.3 });
+      if (health.memoryUsage != null) components.push({ value: 1 - health.memoryUsage, weight: 0.2 });
+
+      if (components.length === 0) {
+        unmeasurableModules.push(name);
+        warnings.push(name + ' - desempenho/memória/erro não mensurados');
+        continue;
+      }
+
+      const weight = components.reduce((sum, part) => sum + part.weight, 0);
+      const score = components.reduce((sum, part) => sum + part.value * part.weight, 0) / weight;
       moduleScores[name] = score;
       totalScore += score;
       count++;
 
-      if (score < 0.5) criticalIssues.push(`${name} crítico (${(score * 100).toFixed(1)}%)`);
-      else if (score < 0.7) warnings.push(`${name} degradado (${(score * 100).toFixed(1)}%)`);
-      if (health.errorRate > 0.05) recommendations.push(`Reinicializar ${name}`);
+      if (score < 0.5) criticalIssues.push(name + ' crítico (' + (score * 100).toFixed(1) + '%)');
+      else if (score < 0.7) warnings.push(name + ' degradado (' + (score * 100).toFixed(1) + '%)');
+      if (health.errorRate != null && health.errorRate > 0.05) recommendations.push('Reinicializar ' + name);
     }
 
+    const overallScore = count > 0 ? totalScore / count : 0;
+    if (count === 0) criticalIssues.push('NO_OBSERVED_HEALTH_PROVIDERS');
     const result: SystemHealth = {
-      overallScore: totalScore / count, moduleScores, criticalIssues,
+      overallScore, moduleScores, unmeasurableModules, criticalIssues,
       warnings, recommendations, lastScanTimestamp: Date.now()
     };
     this.scanHistory.push(result);
@@ -75,14 +118,30 @@ export class IntegrityScanner {
   getScanHistory(): SystemHealth[] { return [...this.scanHistory]; }
 }
 
+export type RebuildHandler = (moduleName: string) => Promise<{ version: string; performance: number }> | { version: string; performance: number };
+
 export class ReconstructionEngine {
-  private history: Array<{ timestamp: number; moduleName: string; success: boolean }> = [];
+  private history: Array<{ timestamp: number; moduleName: string; success: boolean; evidence: string }> = [];
+  private handlers: Map<string, RebuildHandler> = new Map();
+
+  registerHandler(moduleName: string, handler: RebuildHandler): void {
+    this.handlers.set(moduleName, handler);
+  }
 
   async rebuildModule(moduleName: string): Promise<any> {
-    await new Promise(r => setTimeout(r, 500));
-    const success = Math.random() > 0.05;
-    this.history.push({ timestamp: Date.now(), moduleName, success });
-    return { name: moduleName, version: `rebuilt_${Date.now()}`, performance: 0.95, status: 'healthy' };
+    const handler = this.handlers.get(moduleName);
+    if (!handler) {
+      this.history.push({ timestamp: Date.now(), moduleName, success: false, evidence: 'EXECUTION_REQUIRED' });
+      return { name: moduleName, version: null, performance: null, status: 'EXECUTION_REQUIRED' };
+    }
+    try {
+      const result = await handler(moduleName);
+      this.history.push({ timestamp: Date.now(), moduleName, success: true, evidence: 'OBSERVED_HANDLER_RESULT' });
+      return { name: moduleName, ...result, status: 'healthy' };
+    } catch (error) {
+      this.history.push({ timestamp: Date.now(), moduleName, success: false, evidence: 'HANDLER_FAILED' });
+      return { name: moduleName, version: null, performance: null, status: 'BLOCKED_EXTERNAL', error: String(error) };
+    }
   }
 
   getHistory() { return [...this.history]; }

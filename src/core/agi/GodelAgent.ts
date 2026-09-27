@@ -47,7 +47,7 @@ export class GodelAgent {
           const mod: SelfModificationCommand = {
             target: key, operation: 'expand',
             parameters: { targetImprovement: 0.9 - value, approach: 'gradual', safetyLevel: 'high' },
-            justification: `Enhance ${key} capability`, expectedImprovement: Math.random() * 0.1 + 0.05
+            justification: `Enhance ${key} capability`, expectedImprovement: Math.min(0.05, Math.max(0, 0.9 - value))
           };
           capabilities[key] = Math.min(1.0, value + mod.expectedImprovement);
           this.improvementHistory.push(mod);

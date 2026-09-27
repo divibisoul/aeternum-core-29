@@ -13,44 +13,34 @@ interface CausalData {
 }
 
 export function CausalReasoningEngine() {
-  const [inferenceAccuracy, setInferenceAccuracy] = useState(0.94);
-  const [causalStrength, setCausalStrength] = useState(0.87);
-  const [counterfactuals, setCounterfactuals] = useState(156);
-  const [interventions, setInterventions] = useState(23);
-  const [pathsDiscovered, setPathsDiscovered] = useState(1247);
-  const [activeInferences, setActiveInferences] = useState(12);
+  const [inferenceAccuracy, setInferenceAccuracy] = useState(0);
+  const [causalStrength, setCausalStrength] = useState(0);
+  const [counterfactuals, setCounterfactuals] = useState(0);
+  const [interventions, setInterventions] = useState(0);
+  const [pathsDiscovered, setPathsDiscovered] = useState(0);
+  const [activeInferences, setActiveInferences] = useState(0);
   const [causalData, setCausalData] = useState<CausalData[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const agi = AeternumAGI.getInstance();
-      const godelState = agi.godelAgent.getMetaCognitionState();
-
-      const newAccuracy = Math.max(0.8, Math.min(0.99, inferenceAccuracy + (Math.random() - 0.5) * 0.02));
-      const newStrength = Math.max(0.7, Math.min(0.95, godelState.modelingAccuracy + (Math.random() - 0.5) * 0.03));
-
-      setInferenceAccuracy(newAccuracy);
-      setCausalStrength(newStrength);
-      setCounterfactuals(prev => prev + Math.floor(Math.random() * 5));
-      setInterventions(prev => Math.random() < 0.3 ? prev + 1 : prev);
-      setPathsDiscovered(prev => prev + Math.floor(Math.random() * 8));
-      setActiveInferences(prev => Math.max(5, Math.min(25, prev + Math.floor((Math.random() - 0.5) * 6))));
-
+    const update = () => {
+      const state = AeternumAGI.getInstance().godelAgent.getMetaCognitionState();
+      const observed = Number.isFinite(state.modelingAccuracy) ? Math.max(0, Math.min(1, state.modelingAccuracy)) : 0;
+      setInferenceAccuracy(observed);
+      setCausalStrength(observed);
       setCausalData(prev => [...prev.slice(-19), {
-        time: new Date().toLocaleTimeString([], { minute: "2-digit", second: "2-digit" }),
-        accuracy: newAccuracy * 100,
-        strength: newStrength * 100,
+        time: new Date().toLocaleTimeString([], { minute: '2-digit', second: '2-digit' }),
+        accuracy: observed * 100,
+        strength: observed * 100,
       }]);
-    }, 2500);
-
+    };
+    update();
+    const interval = setInterval(update, 2500);
     return () => clearInterval(interval);
-  }, [inferenceAccuracy]);
+  }, []);
 
-  const status = inferenceAccuracy >= 0.9 && causalStrength >= 0.85
-    ? { label: "Optimal", color: "bg-emerald-500/20 text-emerald-400" }
-    : inferenceAccuracy >= 0.85
-    ? { label: "Stable", color: "bg-amber-500/20 text-amber-400" }
-    : { label: "Adjusting", color: "bg-sky-500/20 text-sky-400" };
+
+
+  const status = { label: "Base observada no Gödel", color: "bg-muted text-muted-foreground" };
 
   return (
     <Card className="h-full border-border/50 bg-card/80 backdrop-blur-sm">
@@ -63,7 +53,7 @@ export function CausalReasoningEngine() {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <Badge className={status.color}>{status.label}</Badge>
-          <span className="text-xs text-muted-foreground">{activeInferences} inferências</span>
+          <span className="text-xs text-muted-foreground">{activeInferences} inferências observadas</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

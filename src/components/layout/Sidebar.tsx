@@ -112,7 +112,7 @@ export function Sidebar() {
             >
               <span className="font-mono">v1.0.0</span>
               <span className="mx-2 text-border">|</span>
-              <span className="text-primary">ONLINE</span>
+              <span className="text-primary">BUILD</span>
             </motion.div>
           ) : (
             <motion.div

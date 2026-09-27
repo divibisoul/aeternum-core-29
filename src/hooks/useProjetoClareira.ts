@@ -21,14 +21,30 @@ export function useProjetoClareira() {
     
     setRunning(ProjetoClareira.running);
 
+    const handleDeviceState = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail || typeof detail !== 'object') return;
+      ProjetoClareira.updateDeviceState(detail);
+    };
+
+    window.addEventListener('soul:device-state', handleDeviceState);
+    void readInitialDeviceState();
+
     // Atualizar métricas periodicamente
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       setMetrics(ProjetoClareira.getMetrics());
       setRunning(ProjetoClareira.running);
+      try {
+        await ProjetoClareira.syncStateToSara();
+        await ProjetoClareira.pullVagalCommandsFromSara();
+      } catch {
+        // SARA remains external; local Clareira continues operating on transport failure.
+      }
     }, 2000);
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('soul:device-state', handleDeviceState);
     };
   }, []);
 
