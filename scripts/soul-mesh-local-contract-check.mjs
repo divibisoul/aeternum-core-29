@@ -7,6 +7,12 @@ const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
   stdio: ['ignore', 'pipe', 'pipe'],
 });
+let childStdout = '';
+let childStderr = '';
+child.stdout.on('data', chunk => { childStdout = (childStdout + chunk.toString()).slice(-8000); });
+child.stderr.on('data', chunk => { childStderr = (childStderr + chunk.toString()).slice(-8000); });
+
+const childExit = new Promise(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
 
 const waitForHealth = async () => {
   const deadline = Date.now() + 15_000;
@@ -17,7 +23,16 @@ const waitForHealth = async () => {
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error('N01_LOCAL_SERVER_START_TIMEOUT');
+  const exitState = await Promise.race([
+    childExit,
+    new Promise(resolve => setTimeout(() => resolve(null), 100)),
+  ]);
+  throw new Error(JSON.stringify({
+    code: 'N01_LOCAL_SERVER_START_TIMEOUT',
+    childExit: exitState,
+    stdout: childStdout,
+    stderr: childStderr,
+  }));
 };
 
 const json = async (response) => ({ status: response.status, body: await response.json().catch(() => ({})) });
