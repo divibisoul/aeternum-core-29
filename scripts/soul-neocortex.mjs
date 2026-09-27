@@ -6,16 +6,17 @@ const SIGNALS = ['GOAL', 'CONTEXT', 'CAPABILITY', 'RESULT', 'ERROR', 'FEEDBACK']
 
 function clamp(value, min = 0, max = 1) { return Math.max(min, Math.min(max, Number(value) || 0)); }
 
-export function createNeoCortex({ resolveOwner, forward }) {
+export function createNeoCortex({ resolveOwner, forward, executeLocal }) {
   if (typeof resolveOwner !== 'function' || typeof forward !== 'function') throw new Error('NEOCORTEX_DEPENDENCIES_REQUIRED');
+  if (executeLocal !== undefined && typeof executeLocal !== 'function') throw new Error('NEOCORTEX_LOCAL_EXECUTOR_INVALID');
 
   const nodes = new Map();
   const goals = new Map();
   const workingMemory = new Map();
   const signals = new Map();
-  const superGPU = createSuperGPU({ resolveOwner, forward, self: 'N01' });
+  const superGPU = createSuperGPU({ resolveOwner, forward, executeLocal, self: 'N01' });
 
-  for (const nucleus of NUCLEI) nodes.set(nucleus, { nucleus, capabilities: [], salience: 1, load: 0, available: true });
+  for (const nucleus of NUCLEI) nodes.set(nucleus, { nucleus, capabilities: [], salience: 1, load: 0, available: nucleus === 'N01' });
 
   function registerNode(node) {
     if (!node || !NUCLEI.includes(node.nucleus)) throw new Error('INVALID_NEOCORTEX_NODE');
