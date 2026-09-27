@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const modules = [
+// Deterministic startup probe: imports every N01 runtime dependency and verifies internal HTTP health.\nconst modules = [
   'scripts/soul-supergpu.mjs',
   'scripts/supabase-vector-memory.mjs',
   'scripts/n01-cognitive-delegation.mjs',
