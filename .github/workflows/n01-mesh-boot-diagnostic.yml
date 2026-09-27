@@ -23,7 +23,7 @@ jobs:
       - name: Start Mesh wrapper
         run: |
           set -u
-          node --trace-uncaught scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-boot.log" 2>&1 &
+          SOUL_MESH_N01_PORT=18080 SOUL_MESH_N01_HOST=127.0.0.1 node --trace-uncaught scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-boot.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/n01-boot.pid"
           sleep 3
           echo '--- processes ---'
