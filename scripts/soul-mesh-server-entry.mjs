@@ -13,6 +13,8 @@ const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(internalPort) },
   stdio: 'inherit',
 });
+child.on('spawn', () => console.log('SOUL N01 internal mesh child spawned on ' + internalPort));
+child.on('error', (error) => console.error('SOUL N01 internal mesh child error: ' + error.message));
 
 function upstreamPath(reqUrl) {
   if (reqUrl === '/api/soul-mesh/register') return '/mesh/register';
@@ -206,7 +208,8 @@ const server = http.createServer((req, res) => proxy(req, res).catch(error => {
   if (!res.headersSent) res.writeHead(400, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'SOUL_MESH_INGRESS_ERROR' }));
 }));
-server.listen(publicPort, host);
+server.on('error', (error) => console.error('SOUL N01 public ingress error: ' + error.message));
+server.listen(publicPort, host, () => console.log('SOUL N01 public ingress listening on ' + host + ':' + publicPort + ', internal=' + internalPort));
 
 function shutdown(signal) {
   server.close(() => child.kill('SIGTERM'));
