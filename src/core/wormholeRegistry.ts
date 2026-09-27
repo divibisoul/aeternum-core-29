@@ -17,10 +17,10 @@ export interface ModuleSignature {
   registeredAt: number;
 }
 
-let externalRegistry: { register?: Function } | null = null;
+const externalRegistry: { register?: (id: string, component: unknown, signature: ModuleSignature) => void } | null = null;
 
 class WormholeRegistry {
-  private registry: Map<string, any> = new Map();
+  private registry: Map<string, unknown> = new Map();
   private signatures: Map<string, ModuleSignature> = new Map();
   private connections: Map<string, string[]> = new Map();
 
@@ -38,7 +38,7 @@ class WormholeRegistry {
     externalRegistry?.register?.(id, component, full);
   }
 
-  get<T = any>(id: string): T | undefined { return this.registry.get(id); }
+  get<T = unknown>(id: string): T | undefined { return this.registry.get(id) as T | undefined; }
   has(id: string): boolean { return this.registry.has(id); }
   list(): string[] { return Array.from(this.registry.keys()); }
   getSignature(id: string): ModuleSignature | undefined { return this.signatures.get(id); }
