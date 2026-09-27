@@ -1,0 +1,1 @@
+Automated repair trigger for the N01 feature branch: synchronize package-lock.json with package.json before the standard validation workflow. This record is retained as evidence of the corrective action.
