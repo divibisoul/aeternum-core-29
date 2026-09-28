@@ -53,7 +53,7 @@ export class NeuralManagementCore {
       .map((char) => char.charCodeAt(0) / 255);
 
     const padded = Array.from({ length: 4 }, (_, i) => signal[i] ?? 0);
-    let neuralOutput = this.neuralLattice.processInput(padded);
+    const neuralOutput = this.neuralLattice.processInput(padded);
 
     const elapsed = performance.now() - started;
     this.resourceManager.recordExecution(this.name, elapsed);
@@ -64,6 +64,15 @@ export class NeuralManagementCore {
     });
 
     return { request, neuralOutput };
+  }
+
+  processSignal(input: string): number[] {
+    const started = performance.now();
+    const signal = input.slice(0, 4).split('').map((char) => char.charCodeAt(0) / 255);
+    const padded = Array.from({ length: 4 }, (_, i) => signal[i] ?? 0);
+    const output = this.neuralLattice.processInput(padded);
+    this.resourceManager.recordExecution(this.name, performance.now() - started);
+    return output;
   }
 
   getStatus(): NeuralManagementStatus {
