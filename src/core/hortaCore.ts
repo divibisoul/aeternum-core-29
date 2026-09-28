@@ -1,59 +1,113 @@
 /**
- * hortaCore — memória central do Aeternum.
+ * hortaCore — memória central de estado do Aeternum.
  * Não é persistência de disco. É estado em memória com observadores.
  * Complementa (não substitui) qualquer store já existente no N01.
+ *
+ * A mudança registrada aqui é funcional: além do valor atual, cada alteração
+ * recebe uma sequência monotônica e entra no changelog para rastreabilidade.
  */
 
-type ObserverCallback = (value: any) => void;
-type Unsubscribe = () => void;
-
-interface ChangeEntry {
+export interface HortaChange {
   key: string;
-  oldValue: any;
-  newValue: any;
+  oldValue: unknown;
+  newValue: unknown;
   timestamp: number;
+  sequence: number;
 }
 
-class HortaCore {
-  private data: Map<string, any> = new Map();
-  private observers: Map<string, ObserverCallback[]> = new Map();
-  private changeLog: ChangeEntry[] = [];
-  private readonly maxLog = 1000;
+type ObserverCallback = (value: unknown, change: HortaChange) => void;
+type Unsubscribe = () => void;
 
-  set(key: string, value: any): void {
-    const oldValue = this.data.get(key);
+export class HortaCore {
+  private readonly data = new Map<string, unknown>();
+  private readonly observers = new Map<string, ObserverCallback[]>();
+  private readonly allObservers = new Set<(change: HortaChange) => void>();
+  private readonly changeLog: HortaChange[] = [];
+  private readonly maxLog = 1000;
+  private sequence = 0;
+
+  set<T>(key: string, value: T): HortaChange {
+    const change: HortaChange = {
+      key,
+      oldValue: this.data.get(key),
+      newValue: value,
+      timestamp: Date.now(),
+      sequence: ++this.sequence,
+    };
+
     this.data.set(key, value);
-    this.changeLog.push({ key, oldValue, newValue: value, timestamp: Date.now() });
+    this.changeLog.push(change);
     if (this.changeLog.length > this.maxLog) this.changeLog.shift();
 
-    const subs = this.observers.get(key);
-    if (subs) {
-      for (const cb of subs) {
-        try { cb(value); } catch (e) {
-          console.error(`[hortaCore] observer error em "${key}"`, e);
-        }
+    for (const observer of [...(this.observers.get(key) ?? [])]) {
+      try {
+        observer(value, change);
+      } catch (error) {
+        console.error(`[hortaCore] observer error em "${key}"`, error);
       }
     }
+
+    for (const observer of [...this.allObservers]) {
+      try {
+        observer(change);
+      } catch (error) {
+        console.error('[hortaCore] global observer error', error);
+      }
+    }
+
+    return change;
   }
 
-  get<T = any>(key: string): T | undefined { return this.data.get(key); }
-  has(key: string): boolean { return this.data.has(key); }
-  delete(key: string): void { this.data.delete(key); }
+  get<T = unknown>(key: string): T | undefined {
+    return this.data.get(key) as T | undefined;
+  }
+
+  has(key: string): boolean {
+    return this.data.has(key);
+  }
+
+  delete(key: string): void {
+    this.data.delete(key);
+  }
 
   observe(key: string, cb: ObserverCallback): Unsubscribe {
-    if (!this.observers.has(key)) this.observers.set(key, []);
-    this.observers.get(key)!.push(cb);
+    const observers = this.observers.get(key) ?? [];
+    observers.push(cb);
+    this.observers.set(key, observers);
+
     return () => {
-      const arr = this.observers.get(key);
-      if (!arr) return;
-      const i = arr.indexOf(cb);
-      if (i > -1) arr.splice(i, 1);
+      const current = this.observers.get(key);
+      if (!current) return;
+      const index = current.indexOf(cb);
+      if (index >= 0) current.splice(index, 1);
+      if (current.length === 0) this.observers.delete(key);
     };
   }
 
-  keys(): string[] { return Array.from(this.data.keys()); }
-  dump(): Record<string, any> { return Object.fromEntries(this.data); }
-  clear(): void { this.data.clear(); this.observers.clear(); this.changeLog = []; }
+  observeAll(cb: (change: HortaChange) => void): Unsubscribe {
+    this.allObservers.add(cb);
+    return () => this.allObservers.delete(cb);
+  }
+
+  keys(): string[] {
+    return [...this.data.keys()].sort();
+  }
+
+  snapshot(): Record<string, unknown> {
+    return Object.fromEntries(this.data.entries());
+  }
+
+  getChangeLog(): HortaChange[] {
+    return [...this.changeLog];
+  }
+
+  clear(): void {
+    this.data.clear();
+    this.observers.clear();
+    this.allObservers.clear();
+    this.changeLog.length = 0;
+    this.sequence = 0;
+  }
 }
 
 export const hortaCore = new HortaCore();
