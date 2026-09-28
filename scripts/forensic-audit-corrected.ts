@@ -108,6 +108,20 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 const files = walk(ROOT);
+
+function isAuditArtifact(file: string): boolean {
+  const normalized = file.replace(/\\/g, "/");
+  return normalized.startsWith("docs/forensics/")
+    || /(^|/)scripts/forensic-/.test(normalized)
+    || /(^|/)\\.github/workflows/n01-forensic-/.test(normalized)
+    || normalized.startsWith("artifacts/");
+}
+
+const runtimeFiles = files.filter(file =>
+  !isAuditArtifact(file)
+  && /\\.(ts|tsx|js|mjs|cjs|py|go|kt|java)$/.test(file)
+);
+
 const textCache = new Map<string,string>();
 function readText(file: string): string {
   if (!textCache.has(file)) {
@@ -135,7 +149,7 @@ function contentMatches(tokens: string[], candidates: string[]): string[] {
 
 function signalMatches(tokens:string[], terms:string[]):string[] {
   const hits:string[] = [];
-  for (const file of files) {
+  for (const file of runtimeFiles) {
     const text = readText(file);
     if (!text) continue;
     const low=text.toLowerCase();
@@ -197,7 +211,7 @@ function prEvidence(tokens:string[]):number[] {
 const results:ForensicResult[] = [];
 for (const c of ALL) {
   const tokens=normalizedTokens(c);
-  const sourceFiles=files.filter(f=>/\.(ts|tsx|js|mjs|cjs|py|go|kt|java|md|json|yaml|yml)$/.test(f));
+  const sourceFiles=runtimeFiles;
   const mainPaths=contentMatches(tokens, sourceFiles);
   const declaration=contentMatches(tokens, sourceFiles.filter(f=>new RegExp(`(?:${tokens.join("|")})`, "i").test(path.basename(f))));
   const registration=signalMatches(tokens,["register","registry","subscribe","registercomponent","registermodule"]);
@@ -236,7 +250,7 @@ const report={
   generatedAt:new Date().toISOString(),
   repository:run("git",["config","--get","remote.origin.url"]),
   head:run("git",["rev-parse","HEAD"]),
-  branch:run("git",["branch","--show-current"]),
+  branch:process.env.GITHUB_HEAD_REF || process.env.GITHUB_REF_NAME || run("git",["branch","--show-current"]),
   totalConfirmed:COMPONENTS.length,
   totalAdditional:ADDITIONAL_COMPONENTS.length,
   totalScanned:ALL.length,
