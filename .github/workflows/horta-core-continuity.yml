@@ -1,0 +1,30 @@
+name: HortaCore continuity verification
+on:
+  push:
+    branches:
+      - "feat/horta-core-continuity-bridge-2026-09-28"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/core/hortaCore.ts"
+      - "src/core/HortaCoreContinuityBridge.ts"
+      - "src/core/fusion/ProcessorHealthRegistry.ts"
+      - "src/core/mesh/SoulMeshRuntime.ts"
+      - "src/core/index.ts"
+      - "scripts/horta-core-continuity-check.mjs"
+      - ".github/workflows/horta-core-continuity.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node scripts/horta-core-continuity-check.mjs
