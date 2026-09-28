@@ -23,10 +23,8 @@ try {
   assert.equal(state.getChangeLog().length, 2);
 
   await EventBus.emit('system:ready', { modules: ['n01'] });
-  assert.equal(
-    state.get<{ data: { modules: string[] } }>('continuity.event.system:ready.last')?.data.modules.length,
-    1,
-  );
+  const readyState = state.get('continuity.event.system:ready.last');
+  assert.equal(readyState?.data?.modules?.length, 1);
 
   await EventBus.emit('soul:mesh:message', {
     protocol: 'soul-mesh/1',
@@ -39,10 +37,8 @@ try {
     capability: 'mesh.health',
     timestamp: 1000,
   });
-  assert.equal(
-    state.get<{ data: { capability: string } }>('continuity.event.soul:mesh:message.last')?.data.capability,
-    'mesh.health',
-  );
+  const meshState = state.get('continuity.event.soul:mesh:message.last');
+  assert.equal(meshState?.data?.capability, 'mesh.health');
 
   registry.publish({
     processorId: 'N01-mesh-agent',
@@ -56,9 +52,10 @@ try {
     restarts: 0,
   });
 
-  const health = state.get<{ effectiveState: string }>('continuity.fusion.processor.N01-mesh-agent');
+  const health = state.get('continuity.fusion.processor.N01-mesh-agent');
   assert.equal(health?.effectiveState, 'ACTIVE');
-  assert.equal(state.get<{ total: number }>('continuity.fusion.aggregate')?.total, 1);
+  const aggregate = state.get('continuity.fusion.aggregate');
+  assert.equal(aggregate?.total, 1);
 
   bridge.dispose();
   const before = state.getChangeLog().length;
@@ -69,7 +66,7 @@ try {
     status: 'PASS',
     hortaSequence: second.sequence,
     processorState: health?.effectiveState,
-    aggregateProcessors: state.get<{ total: number }>('continuity.fusion.aggregate')?.total,
+    aggregateProcessors: aggregate?.total,
   }, null, 2));
 } finally {
   await server.close();
