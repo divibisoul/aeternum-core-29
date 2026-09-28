@@ -113,7 +113,26 @@ try {
     body: JSON.stringify(pingRequest.message),
   });
   const body = await response.json();
-  if (!response.ok) throw new Error(`N01_LOCAL_MESH_HTTP_${response.status}:${JSON.stringify(body)}`);
+  if (!response.ok) {
+    const clientCanonical = JSON.stringify({
+      protocol: pingRequest.message.protocol,
+      contractVersion: pingRequest.message.contractVersion,
+      id: pingRequest.message.id,
+      correlationId: pingRequest.message.correlationId,
+      source: pingRequest.message.source,
+      target: pingRequest.message.target,
+      kind: pingRequest.message.kind,
+      capability: pingRequest.message.capability,
+      payload: pingRequest.message.payload || {},
+      timestamp: pingRequest.message.timestamp,
+      transport: pingRequest.message.meta?.transport ?? null,
+      meta: pingRequest.message.meta ?? null,
+      nonce: pingRequest.message.nonce,
+    });
+    const clientCanonicalFingerprint = crypto.createHash('sha256').update(clientCanonical, 'utf8').digest('hex');
+    const secretFingerprint = crypto.createHash('sha256').update(SECRET, 'utf8').digest('hex');
+    throw new Error(`N01_LOCAL_MESH_HTTP_${response.status}:${JSON.stringify(body)}:clientCanonicalLength=${clientCanonical.length}:clientCanonicalFingerprint=${clientCanonicalFingerprint}:secretFingerprint=${secretFingerprint}`);
+  }
   const checks = {
     protocol: body.protocol === 'soul-mesh/1', contractVersion: body.contractVersion === '1.1.0',
     source: body.source === 'N01', target: body.target === 'N02', correlationId: body.correlationId === correlationId,
