@@ -31,6 +31,16 @@ export class RecursiveNeuralLattice {
     this.initializeLattice();
   }
 
+  private randomUnit(): number {
+    const cryptoApi = globalThis.crypto;
+    if (!cryptoApi?.getRandomValues) {
+      throw new Error('AETERNUM_BLOCKED_INFRASTRUCTURE: Web Crypto getRandomValues unavailable');
+    }
+    const sample = new Uint32Array(1);
+    cryptoApi.getRandomValues(sample);
+    return sample[0] / 4294967296;
+  }
+
   private initializeLattice(): void {
     const types: Array<{ prefix: string; type: LatticeNode['type']; count: number }> = [
       { prefix: 'input', type: 'input', count: 4 },
@@ -45,7 +55,7 @@ export class RecursiveNeuralLattice {
         this.nodes.set(`${prefix}_${i}`, {
           id: `${prefix}_${i}`, type,
           connections: new Map(), activation: 0,
-          fitness: 0.5, plasticity: 0.7 + Math.random() * 0.3
+          fitness: 0.5, plasticity: 0.7 + this.randomUnit() * 0.3
         });
       }
     }
@@ -53,12 +63,12 @@ export class RecursiveNeuralLattice {
     // Create connections
     const ids = Array.from(this.nodes.keys());
     for (const id of ids) {
-      const connCount = Math.floor(Math.random() * 4) + 2;
+      const connCount = Math.floor(this.randomUnit() * 4) + 2;
       for (let i = 0; i < connCount; i++) {
-        const target = ids[Math.floor(Math.random() * ids.length)];
+        const target = ids[Math.floor(this.randomUnit() * ids.length)];
         if (target !== id) {
           this.nodes.get(id)!.connections.set(target, {
-            weight: Math.random() - 0.5, strength: Math.random() * 0.5 + 0.25
+            weight: this.randomUnit() - 0.5, strength: this.randomUnit() * 0.5 + 0.25
           });
         }
       }
@@ -89,14 +99,14 @@ export class RecursiveNeuralLattice {
       totalFitness += node.fitness;
 
       // Mutate
-      if (node.fitness < 0.4 && Math.random() < 0.15) {
+      if (node.fitness < 0.4 && this.randomUnit() < 0.15) {
         node.connections.forEach(conn => {
-          conn.weight += (Math.random() - 0.5) * 0.1;
+          conn.weight += (this.randomUnit() - 0.5) * 0.1;
           conn.weight = Math.max(-1, Math.min(1, conn.weight));
         });
       }
 
-      node.plasticity = Math.max(0.1, Math.min(1.0, node.plasticity + (Math.random() - 0.5) * 0.05));
+      node.plasticity = Math.max(0.1, Math.min(1.0, node.plasticity + (this.randomUnit() - 0.5) * 0.05));
     });
 
     this.globalFitness = totalFitness / this.nodes.size;
