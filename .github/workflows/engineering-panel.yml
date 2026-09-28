@@ -1,0 +1,23 @@
+name: Engineering Panel real telemetry verification
+on:
+  push:
+    branches:
+      - "feat/engineering-panel-real-heartbeat-2026-09-28"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/components/agi/EngineeringPanel.tsx"
+      - "scripts/engineering-panel-source-check.mjs"
+      - ".github/workflows/engineering-panel.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/engineering-panel-source-check.mjs
