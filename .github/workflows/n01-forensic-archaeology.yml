@@ -1,6 +1,9 @@
 name: N01 forensic archaeological audit
 
 on:
+  push:
+    branches:
+      - "audit/phase0-n01-forensics-2026-09-28"
   pull_request:
     branches: [main]
     paths:
