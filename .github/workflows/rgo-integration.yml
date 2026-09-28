@@ -1,0 +1,15 @@
+name: rgo-integration
+on:
+  push:
+    branches: [rgo-integration-2026-09-28]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - run: npm ci
+      - run: node --experimental-strip-types __tests__/rgo.spec.ts
+      - run: npm run build
