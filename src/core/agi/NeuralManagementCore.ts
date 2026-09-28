@@ -30,10 +30,16 @@ export class NeuralManagementCore {
   readonly name = 'NeuralManagementCore';
   readonly version = '1.0.0';
 
+  private readonly neuralLattice: RecursiveNeuralLattice;
+  private readonly resourceManager: ResourceManager;
+
   constructor(
-    private readonly neuralLattice: RecursiveNeuralLattice,
-    private readonly resourceManager: ResourceManager,
-  ) {}
+    neuralLattice: RecursiveNeuralLattice,
+    resourceManager: ResourceManager,
+  ) {
+    this.neuralLattice = neuralLattice;
+    this.resourceManager = resourceManager;
+  }
 
   /**
    * Processa mantendo o pipeline histórico do PrecisionEngine e conectando
