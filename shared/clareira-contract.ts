@@ -34,6 +34,8 @@ export interface ClareiraMetrics {
   channels: { total: number; open: number };
   packets: {
     ingested: number;
+    /** Gateway acceptance/queue admission, distinct from actual processing. */
+    accepted?: number;
     processed: number;
     dropped: number;
     errored: number;
