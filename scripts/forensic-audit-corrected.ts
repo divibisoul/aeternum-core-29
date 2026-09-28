@@ -131,6 +131,25 @@ function readText(file: string): string {
   return textCache.get(file)!;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^$\{\}()|[\]\\]/g, "\\function normalizedTokens(c: Component): string[] {
+");
+}
+
+function containsExact(text: string, token: string): boolean {
+  const value = token.trim();
+  if (!value) return false;
+  const pattern = new RegExp(
+    `(^|[^\\p{L}\\p{N}_])${escapeRegExp(value)}(?=$|[^\\p{L}\\p{N}_])`,
+    "iu",
+  );
+  return pattern.test(text);
+}
+
+function anyExact(text: string, tokens: string[]): boolean {
+  return tokens.some(token => containsExact(text, token));
+}
+
 function normalizedTokens(c: Component): string[] {
   const base = c.id.replace(/[_-]+/g," ");
   const pascal = base.split(/\s+/).filter(Boolean).map(s => s[0]?.toUpperCase()+s.slice(1)).join("");
@@ -142,7 +161,7 @@ function contentMatches(tokens: string[], candidates: string[]): string[] {
   for (const file of candidates) {
     const text = readText(file);
     if (!text) continue;
-    if (tokens.some(t => text.toLowerCase().includes(t.toLowerCase()))) result.push(file);
+    if (anyExact(text, tokens)) result.push(file);
   }
   return result.slice(0,30);
 }
@@ -153,7 +172,7 @@ function signalMatches(tokens:string[], terms:string[]):string[] {
     const text = readText(file);
     if (!text) continue;
     const low=text.toLowerCase();
-    if (tokens.some(t=>low.includes(t.toLowerCase())) && terms.some(t=>low.includes(t))) hits.push(file);
+    if (anyExact(text, tokens) && terms.some(t=>low.includes(t))) hits.push(file);
   }
   return hits.slice(0,20);
 }
@@ -216,7 +235,7 @@ for (const c of ALL) {
   const tokens=normalizedTokens(c);
   const sourceFiles=runtimeFiles;
   const mainPaths=contentMatches(tokens, sourceFiles);
-  const declaration=contentMatches(tokens, sourceFiles.filter(f=>new RegExp(`(?:${tokens.join("|")})`, "i").test(path.basename(f))));
+  const declaration=contentMatches(tokens, sourceFiles.filter(f=>anyExact(path.basename(f), tokens)));
   const registration=signalMatches(tokens,["register","registry","subscribe","registercomponent","registermodule"]);
   const boot=signalMatches(tokens,["initialize","init()","start()","boot","startup"]);
   const execution=signalMatches(tokens,["execute","dispatch","process","run","handle"]);
