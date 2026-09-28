@@ -465,6 +465,7 @@ export class AeternumAGI {
     connectivityMetrics: ReturnType<ConnectivityManager['getMetrics']>;
     saiicMetrics: ReturnType<SAIIC['getMetrics']>;
     resourceMetrics: ReturnType<ResourceManager['getMetrics']>;
+    neuralManagement: ReturnType<NeuralManagementCore['getStatus']>;
   } {
     const startMs = performance.now();
 
@@ -472,7 +473,6 @@ export class AeternumAGI {
     const intention = this.consciousness.processInput(userInput);
 
     // 2. Neural lattice processes semantic signal
-    const inputSignal = userInput.split('').slice(0, 4).map(c => c.charCodeAt(0) / 255);
     const latticeOutput = this.neuralManagement.processSignal(userInput);
 
     // 3. NIP processes epistemological uncertainty
