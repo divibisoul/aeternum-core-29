@@ -10,6 +10,32 @@ function unsigned(e) {
   return JSON.stringify(rest);
 }
 
+function modernCanonical(message, nonce) {
+  return JSON.stringify({
+    protocol: message.protocol,
+    contractVersion: message.contractVersion,
+    id: message.id,
+    correlationId: modern.message.correlationId,
+    source: message.source,
+    target: message.target,
+    kind: message.kind,
+    capability: message.capability,
+    payload: message.payload,
+    timestamp: message.timestamp,
+    transport: message.meta?.transport,
+    meta: message.meta ?? null,
+    nonce,
+  });
+}
+function makeModernMessage(target, capability, payload = {}) {
+  const id = crypto.randomUUID();
+  const correlationId = crypto.randomUUID();
+  const nonce = crypto.randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
+  const message = { protocol:'soul-mesh/1', contractVersion:CONTRACT_VERSION, id, correlationId, source:'N01', target, kind:'request', capability, payload, timestamp:Date.now(), meta:{runtime:'N01-contract-check',transport:'HTTP',encoding:'json',version:CONTRACT_VERSION,nonce,traceId:correlationId} };
+  const hmac = secret ? crypto.createHmac('sha256', secret).update(modernCanonical(message, nonce), 'utf8').digest('hex') : '';
+  return { message, hmac, nonce };
+}
+
 function makeEnvelope(target, capability, payload = {}) {
   const base = {
     version: '1.0',
@@ -35,6 +61,8 @@ async function post(url, body) {
     headers: {
       'content-type': 'application/json',
       'x-correlation-id': body.correlationId,
+      ...(body.__hmac ? { 'x-soul-mesh-nonce': body.__nonce, 'x-soul-mesh-hmac': body.__hmac } : {}),
+      ...(!body.__hmac && process.env.SOUL_MESH_TOKEN ? { authorization: 'Bearer ' + process.env.SOUL_MESH_TOKEN } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -49,19 +77,8 @@ console.log(JSON.stringify({ stage: 'N01_HEALTH', ok: true, peers: healthBody.pe
 
 if (!n06) throw new Error('SOUL_MESH_N06_URL not configured; canonical N01-N06 E2E cannot be claimed in CI');
 
-const message = makeEnvelope('N06', 'mesh.ping', { probe: 'N01-N06' });
-const result = await post(`${n06.replace(/\/$/, '')}/api/soul-mesh`, {
-  protocol: 'soul-mesh/1',
-  contractVersion: CONTRACT_VERSION,
-  id: message.messageId,
-  correlationId: message.correlationId,
-  source: message.source,
-  target: message.target,
-  kind: 'request',
-  capability: 'mesh.ping',
-  payload: message.payload.payload,
-  timestamp: message.timestamp,
-});
+const modern = makeModernMessage('N06', 'mesh.ping', { probe: 'N01-N06' });
+const result = await post(`${n06.replace(/\/$/, '')}/api/soul-mesh`, { ...modern.message, __hmac: modern.hmac, __nonce: modern.nonce });
 
 if (result.status < 200 || result.status >= 300) {
   throw new Error(`N01-N06 capability failed: HTTP ${result.status} ${JSON.stringify(result.data)}`);
@@ -69,7 +86,7 @@ if (result.status < 200 || result.status >= 300) {
 for (const [field, expected] of [
   ['source', 'N06'],
   ['target', 'N01'],
-  ['correlationId', message.correlationId],
+  ['correlationId', modern.message.correlationId],
   ['contractVersion', CONTRACT_VERSION],
 ]) {
   if (result.data?.[field] !== expected) {
