@@ -119,7 +119,7 @@ function isAuditArtifact(file: string): boolean {
 
 const runtimeFiles = files.filter(file =>
   !isAuditArtifact(file)
-  && /\\.(ts|tsx|js|mjs|cjs|py|go|kt|java)$/.test(file)
+  && /\.(ts|tsx|js|mjs|cjs|py|go|kt|java)$/.test(file)
 );
 
 const textCache = new Map<string,string>();
@@ -191,9 +191,12 @@ function gitPathHistory(tokens:string[]):string[] {
 
 function branchEvidence(tokens:string[]):string[] {
   const out = new Set<string>();
+  const pathspecs = ["*.ts","*.tsx","*.js","*.mjs","*.cjs","*.py","*.go","*.kt","*.java"];
   for (const branch of branches.slice(0,300)) {
-    const v = run("git",["grep","-Il","--ignore-case",tokens[0],branch,"--","src","scripts","docs"]);
-    if (v) out.add(branch);
+    const args = ["grep","-Il","--ignore-case",tokens[0],branch,"--",...pathspecs];
+    const v = run("git", args);
+    const matched = v.split("\n").map(s => s.trim()).filter(Boolean);
+    if (matched.some(file => !isAuditArtifact(file))) out.add(branch);
   }
   return [...out].slice(0,30);
 }
