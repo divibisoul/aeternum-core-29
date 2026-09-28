@@ -1,6 +1,17 @@
-export type NeuralOperation = "neural.forward@1.0.0" | "neural.learn@1.0.0";
+export type NeuralOperation = "neural.forward@1.0.0" | "neural.learn@1.0.0" | "neural.parameters@1.0.0";
 export type NeuralRequest = { operation: NeuralOperation; payload: number[]; correlationId?: string; deadlineMs?: number };
-export type NeuralResponse = { traceId: string; correlationId: string; payload?: number[]; data?: unknown; status?: string };
+export type NeuralResponse = { traceId: string;
+
+export type NeuralParameters = {
+  size: number;
+  learning_rate: number;
+  optimizer: string;
+  regularization: number;
+  gradient_clip: number;
+  heads: number;
+  batch_cache: number;
+  layers: Array<{ Activation?: string; activation?: string; DropoutRate?: number; dropoutRate?: number }>;
+}; correlationId: string; payload?: number[]; data?: unknown; status?: string };
 
 type CanonicalEnvelope = {
   protocol: "soul-mesh/1";
@@ -109,7 +120,7 @@ export class N07NeuralBridge {
   }
 
   async invoke(request: NeuralRequest): Promise<NeuralResponse> {
-    if (request.payload.length === 0 || request.payload.some(value => !Number.isFinite(value))) {
+    if (request.operation !== "neural.parameters@1.0.0" && (request.payload.length === 0 || request.payload.some(value => !Number.isFinite(value)))) {
       throw new Error("neural payload must contain finite numbers");
     }
 
@@ -157,12 +168,24 @@ export class N07NeuralBridge {
       await verifyCanonicalResponse(result, response, this.secret);
       const payload = result.payload as Record<string, unknown> | undefined;
       const values = Array.isArray(payload?.values) ? payload.values.map(Number) : undefined;
+
+      const metadata = (result.metadata) as Record<string, unknown> | undefined;
+      let parameters: NeuralParameters | undefined;
+      const rawParameters = metadata?.parameters;
+      if (typeof rawParameters === "string" && rawParameters.trim()) {
+        try {
+          parameters = JSON.parse(rawParameters) as NeuralParameters;
+        } catch {
+          throw new Error("N07 Mesh neural parameters payload is invalid JSON");
+        }
+      }
       return {
         traceId: String(result.id ?? result.messageId ?? envelope.id),
         correlationId,
         payload: values,
         data: result.payload,
         status: String(payload?.status ?? result.status ?? "ok"),
+        parameters,
       };
     } finally {
       clearTimeout(timer);
@@ -179,4 +202,14 @@ export class N07NeuralBridge {
     }
     return this.invoke({ operation: "neural.learn@1.0.0", payload: [...input, ...target], correlationId });
   }
+  async parameters(correlationId?: string): Promise<NeuralParameters> {
+    const response = await this.invoke({
+      operation: "neural.parameters@1.0.0",
+      payload: [],
+      correlationId,
+    });
+    if (!response.parameters) throw new Error("N07 Mesh neural parameters missing");
+    return response.parameters;
+  }
+
 }
