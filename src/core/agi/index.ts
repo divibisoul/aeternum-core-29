@@ -35,6 +35,7 @@ import { QuantumNeuralInterface } from './QuantumNeuralInterface';
 import { ConnectivityManager } from './ConnectivityManager';
 import { SAIIC } from './SAIIC';
 import { ResourceManager } from './ResourceManager';
+import { NeuralManagementCore } from './NeuralManagementCore';
 import { GEMHealth } from '@/core/gems/GEMHealth';
 import { GEMResearch } from '@/core/gems/GEMResearch';
 import { GEMMusic } from '@/core/gems/GEMMusic';
@@ -54,6 +55,7 @@ export { QuantumNeuralInterface, NeuralCommunication, QuantumNetworking } from '
 export { ConnectivityManager } from './ConnectivityManager';
 export { SAIIC } from './SAIIC';
 export { ResourceManager } from './ResourceManager';
+export { NeuralManagementCore } from './NeuralManagementCore';
 
 export type { UserIntention, ProactiveSuggestion } from './AGIConsciousness';
 export type { MetaCognitionState, SelfModificationCommand } from './GodelAgent';
@@ -65,6 +67,7 @@ export type { NeuralSignal, QuantumState } from './QuantumNeuralInterface';
 export type { ConnectivityMetrics, MeshNode } from './ConnectivityManager';
 export type { SAIICMetrics, AnticorpoAction, IntegrityReport, ModuleDiagnostic } from './SAIIC';
 export type { ResourceMetrics, ModuleResourceProfile } from './ResourceManager';
+export type { NeuralManagementStatus } from './NeuralManagementCore';
 
 // GEMs exports
 export { GEMHealth } from '@/core/gems/GEMHealth';
@@ -106,6 +109,7 @@ export class AeternumAGI {
   // 2 infrastructure engines
   public saiic: SAIIC;
   public resourceManager: ResourceManager;
+  public neuralManagement: NeuralManagementCore;
 
   // 4 GEM modules
   public gemHealth: GEMHealth;
@@ -138,6 +142,7 @@ export class AeternumAGI {
     this.connectivity = new ConnectivityManager();
     this.saiic = new SAIIC();
     this.resourceManager = new ResourceManager();
+    this.neuralManagement = new NeuralManagementCore(this.neuralLattice, this.resourceManager);
     this.gemHealth = new GEMHealth();
     this.gemResearch = new GEMResearch();
     this.gemMusic = new GEMMusic();
@@ -163,7 +168,7 @@ export class AeternumAGI {
     const allSubsystemIds = [
       'consciousness', 'godel', 'darwin', 'lattice',
       'safeCore', 'selfHealing', 'ethics', 'hyperSafety',
-      'nip', 'saiic', 'resourceManager'
+      'nip', 'saiic', 'resourceManager', 'neuralManagement'
     ];
     allSubsystemIds.forEach(id => {
       this.quantumNeural.establishEntanglement(id);
@@ -185,6 +190,7 @@ export class AeternumAGI {
       ['connectivity', 0.5],
       ['safeCore', 0.5],
       ['resourceManager', 0.4],
+      ['neuralManagement', 0.85],
       ['gemHealth', 0.75],
       ['gemResearch', 0.5],
       ['gemMusic', 0.3],
@@ -211,6 +217,12 @@ export class AeternumAGI {
     }));
     this.saiic.registerModule('darwinMachine', () => ({
       healthy: this.darwinMachine.isRunning,
+      cpuLoad: null,
+      memoryUsage: null,
+      errorRate: null,
+    }));
+    this.saiic.registerModule('neuralManagement', () => ({
+      healthy: this.neuralManagement.getStatus().connected,
       cpuLoad: null,
       memoryUsage: null,
       errorRate: null,
@@ -511,6 +523,7 @@ export class AeternumAGI {
       connectivity: this.connectivity.getMetrics(),
       saiic: this.saiic.getMetrics(),
       resources: this.resourceManager.getMetrics(),
+      neuralManagement: this.neuralManagement.getStatus(),
       gemHealth: this.gemHealth.metrics,
       gemResearch: this.gemResearch.getMetrics(),
       gemMusic: this.gemMusic.getMetrics(),
