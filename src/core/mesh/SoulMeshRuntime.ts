@@ -54,7 +54,7 @@ export function startSoulMeshRuntime(): () => void {
   // infrastructure. No capability implementation is copied or replaced.
   const processor = new N01AgentProcessor(agents, 'N01-mesh-agent');
   const healthRegistry = new ProcessorHealthRegistry();
-  const processorRuntime = new ProcessorRuntime(processor, { healthRegistry });
+  const processorRuntime = new ProcessorRuntime(processor, { healthRegistry, heartbeatIntervalMs: 10_000 });
   const runtimeReady = processorRuntime.start();
 
   const meshAgentHandler = async (message: SoulMeshMessage) => {
