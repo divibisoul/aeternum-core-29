@@ -67,7 +67,7 @@ class EventBusImpl {
   getLog(): Array<{ event: string; data: unknown; timestamp: number }> { return [...this.eventLog]; }
   listenerCount<K extends keyof AeternumEvents>(event: K): number { return this.listeners.get(event)?.length ?? 0; }
   private addListener<K extends keyof AeternumEvents>(event: K, callback: EventCallback<AeternumEvents[K]>, once: boolean): UnsubscribeFn { const id = ++this.subscriptionId; const subscription = { id, callback: callback as EventCallback<unknown>, once }; if (!this.listeners.has(event)) this.listeners.set(event, []); this.listeners.get(event)!.push(subscription); return () => { const subs = this.listeners.get(event); if (subs) { const index = subs.findIndex(s => s.id === id); if (index > -1) subs.splice(index, 1); } }; }
-  private logEvent(event: string, data: unknown): void { this.eventLog.push({ event, data, timestamp: Date.now() }); if (this.eventLog.length > this.maxLogSize) this.eventLog.shift(); if (import.meta.env.DEV) console.log(`[EventBus] ${event}`, data); }
+  private logEvent(event: string, data: unknown): void { this.eventLog.push({ event, data, timestamp: Date.now() }); if (this.eventLog.length > this.maxLogSize) this.eventLog.shift(); if (import.meta.env?.DEV) console.log(`[EventBus] ${event}`, data); }
 }
 export const EventBus = new EventBusImpl();
 import { useEffect } from 'react';
