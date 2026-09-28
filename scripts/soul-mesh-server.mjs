@@ -126,7 +126,83 @@ function capabilityList(){ return ['clareira.ingest','clareira.metrics','inferen
 function localFusionSnapshot(){ return {system:'SOUL',fusionVersion:FUSION_VERSION,reference:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,nuclei:[SELF,...PEER_IDS].map(id=>({id,role:id===SELF?'host-reference-gateway':(peers.get(id)?.role||'independent-ai'),status:id===SELF?'online':(peers.get(id)?.status||'unknown'),endpoint:id===SELF?`http://${HOST}:${PORT}`:(peers.get(id)?.url||null),capabilities:id===SELF?capabilityList():(peers.get(id)?.capabilities||[]),channels:channelsFor(id)})),transports:TRANSPORTS,directionalChannels:84,ownership:'native-per-nucleus',fusion:'federated-independent-runtimes',superGPU:superGPU.describe(),byokInference:{provider:'google-gemini',configured:Boolean(process.env.GEMINI_API_KEY?.trim())},sara:saraDescribe(),federatedProviders:{SARA:{owner:'SARA',transport:'HTTP',configured:saraConfigured(),operations:saraDescribe().operations}}}; }
 function resolveOwner(capability){ if(capability==='inference.intent') return 'N01'; if(capability?.startsWith('clareira.')) return 'N01'; for(const peer of peers.values()) if(Array.isArray(peer.capabilities)&&peer.capabilities.includes(capability)) return peer.id; if(capability?.startsWith('inference.')||capability?.startsWith('conversation.')) return 'N02'; if(capability?.startsWith('audio.')||capability?.startsWith('speech.')||capability?.startsWith('multimodal.')) return 'N03'; if(capability?.startsWith('document.')||capability?.startsWith('tool:')||capability?.startsWith('tool.')||capability?.startsWith('artifact.')) return 'N04'; if(capability?.startsWith('orchestration.')||capability?.startsWith('dispatch.')) return 'N05'; if(capability?.startsWith('pilot.')||capability?.startsWith('cognitive.')||capability?.startsWith('support.')) return 'N06'; return null; }
 function resolveCapability(capability){ if(typeof capability!=='string'||!capability.trim()) throw new Error('CAPABILITY_REQUIRED'); if(capability.startsWith('sara.')) return {capability,owner:null,provider:'SARA',available:capability==='sara.health'?saraHealthConfigured():saraConfigured(),transport:'HTTP',nativeOwnership:false}; const owner=resolveOwner(capability); if(!owner) return {capability,owner:null,available:false,transport:null}; return {capability,owner,available:owner===SELF||Boolean(peers.get(owner)?.url),transport:owner===SELF?'IN_PROCESS':'REMOTE_MESH',nativeOwnership:true}; }
-async function forward(target,message){ const peer=peers.get(target); if(!peer?.url) throw new Error(`PEER_NOT_DISCOVERED:${target}`); const until=circuitOpenUntil.get(target)||0; if(until>Date.now()) throw new Error(`PEER_CIRCUIT_OPEN:${target}`); const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),30_000); try{ const response=await fetch(peer.url+'/api/soul-mesh',{method:'POST',headers:{'content-type':'application/json','x-correlation-id':message.correlationId},body:JSON.stringify(message),signal:controller.signal,cache:'no-store'}); const body=await response.json().catch(()=>({})); if(!response.ok) throw new Error(`PEER_HTTP_${response.status}`); failures.set(target,0); peer.lastSeen=Date.now(); peer.status='healthy'; return body; }catch(error){ const count=(failures.get(target)||0)+1; failures.set(target,count); if(count>=5) circuitOpenUntil.set(target,Date.now()+60_000); throw error; } finally{ clearTimeout(timer); } }
+function peerHmacHeaders(message){
+  const secret=(process.env.SOUL_MESH_HMAC_SECRET || process.env.SOUL_MESH_SECRET || '').trim();
+  if(!secret) return {headers:{},message};
+  const nonce=crypto.randomUUID();
+  const signed={...message,nonce,meta:{...(message.meta||{}),nonce}};
+  const canonical=JSON.stringify({
+    protocol:signed.protocol,contractVersion:signed.contractVersion,id:signed.id,
+    correlationId:signed.correlationId,source:signed.source,target:signed.target,
+    kind:signed.kind,capability:signed.capability,payload:signed.payload,
+    timestamp:signed.timestamp,transport:signed.meta?.transport,meta:signed.meta,nonce
+  });
+  return {
+    message:signed,
+    headers:{
+      'x-soul-mesh-nonce':nonce,
+      'x-soul-mesh-hmac':crypto.createHmac('sha256',secret).update(canonical,'utf8').digest('hex')
+    }
+  };
+}
+function verifyPeerResponse(request,response){
+  if(!response || response.protocol!==PROTOCOL || response.contractVersion!==CONTRACT_VERSION) throw new Error('PEER_CONTRACT_MISMATCH');
+  if(response.source!==request.target || response.target!==SELF) throw new Error('PEER_ROUTE_MISMATCH');
+  if(response.correlationId!==request.correlationId) throw new Error('PEER_CORRELATION_MISMATCH');
+  const secret=(process.env.SOUL_MESH_HMAC_SECRET || process.env.SOUL_MESH_SECRET || '').trim();
+  if(secret){
+    const nonce=String(response.nonce || response.meta?.nonce || '').trim();
+    const supplied=String(response.hmac || '').trim();
+    if(!nonce || !/^[0-9a-f]{64}$/i.test(supplied)) throw new Error('PEER_HMAC_MISSING');
+    const canonical=JSON.stringify({
+      version:'1.0',contractVersion:response.contractVersion,messageId:response.id,
+      source:response.source,target:response.target,timestamp:response.timestamp,nonce,
+      correlationId:response.correlationId,
+      type:response.kind==='error'?'ERROR':'TASK_RESULT',
+      payload:{capability:response.capability||'',payload:response.payload||{}}
+    });
+    const expected=crypto.createHmac('sha256',secret).update(canonical,'utf8').digest('hex');
+    if(expected.length!==supplied.length || !crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(supplied))) throw new Error('PEER_HMAC_INVALID');
+  }
+  return response;
+}
+async function forward(target,message){
+  const peer=peers.get(target);
+  if(!peer?.url) throw new Error(`PEER_NOT_DISCOVERED:${target}`);
+  const until=circuitOpenUntil.get(target)||0;
+  if(until>Date.now()) throw new Error(`PEER_CIRCUIT_OPEN:${target}`);
+  const signed=peerHmacHeaders(message);
+  const sharedToken=(process.env.SOUL_MESH_TOKEN||'').trim();
+  const headers={
+    'content-type':'application/json',
+    'accept':'application/json',
+    'x-soul-correlation-id':message.correlationId,
+    ...signed.headers
+  };
+  if(!signed.headers['x-soul-mesh-hmac'] && sharedToken) headers.authorization=`Bearer ${sharedToken}`;
+  const outbound=signed.message;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),30_000);
+  try{
+    const response=await fetch(peer.url+'/api/soul-mesh',{
+      method:'POST',headers,body:JSON.stringify(outbound),signal:controller.signal,cache:'no-store'
+    });
+    const body=await response.json().catch(()=>null);
+    if(!response.ok) throw new Error(`PEER_HTTP_${response.status}`);
+    verifyPeerResponse(outbound,body);
+    failures.set(target,0);
+    peer.lastSeen=Date.now();
+    peer.status='healthy';
+    return body;
+  }catch(error){
+    const count=(failures.get(target)||0)+1;
+    failures.set(target,count);
+    if(count>=5) circuitOpenUntil.set(target,Date.now()+60_000);
+    throw error;
+  }finally{
+    clearTimeout(timer);
+  }
+}
 function bootstrapPeers(){ for(const id of PEER_IDS){ const endpoint=normalizeUrl(process.env[`SOUL_MESH_${id}_URL`]); if(endpoint) peers.set(id,{id,url:endpoint,capabilities:[],role:'independent-ai',lastSeen:Date.now(),status:'configured'}); } }
 async function executeLocalCapability(task, correlationId) {
   if (task.capability === 'inference.intent') {
