@@ -12,5 +12,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: 22}
       - run: npm install --no-audit --no-fund
-      - run: node --experimental-strip-types __tests__/rgo.spec.ts
+      - run: npx --yes tsx --test __tests__/rgo.spec.ts
       - run: npm run build
