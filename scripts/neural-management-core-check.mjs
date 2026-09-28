@@ -27,6 +27,8 @@ try {
   const status = core.getStatus();
   assert.equal(status.name, 'NeuralManagementCore');
   assert.equal(status.connected, true);
+  assert.ok(status.neural.nodeCount > 0);
+  assert.ok(status.resources.modulesManaged > 0);
   assert.equal(status.neural.nodeCount, 22);
   assert.equal(status.processing.totalProcessed, 0);
   assert.equal(status.resources.modulesManaged, 1);
