@@ -31,12 +31,13 @@ function modernRequest(source, capability, payload) {
     payload, timestamp: Date.now(), nonce: crypto.randomUUID(),
     meta: { runtime: source, transport: 'HTTP', encoding: 'json', version: '1.1.0' },
   };
+  const hmac = signModern(message);
   return {
-    message,
+    message: { ...message, hmac },
     headers: {
       'content-type': 'application/json',
       'x-soul-mesh-nonce': message.nonce,
-      'x-soul-mesh-hmac': signModern(message),
+      'x-soul-mesh-hmac': hmac,
       'x-correlation-id': message.correlationId,
     },
   };
