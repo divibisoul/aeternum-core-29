@@ -1,0 +1,48 @@
+name: N01 forensic archaeological audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/forensic-audit-corrected.ts"
+      - ".github/workflows/n01-forensic-archaeology.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  forensic-audit:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout full Git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Execute forensic audit
+        run: node --experimental-strip-types scripts/forensic-audit-corrected.ts
+
+      - name: Validate report exists
+        run: test -s artifacts/forensic-audit-report.json
+
+      - name: Print evidence summary
+        run: cat artifacts/forensic-audit-report.json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const r=JSON.parse(s); console.log(JSON.stringify({generatedAt:r.generatedAt,head:r.head,branch:r.branch,totalScanned:r.totalScanned,active:r.results.filter(x=>x.status==="ACTIVE").length,foundInMain:r.results.filter(x=>x.status==="FOUND_IN_MAIN").length,history:r.results.filter(x=>["FOUND_IN_BRANCH","FOUND_IN_HISTORY","FOUND_IN_PR","FOUND_IN_STASH"].includes(x.status)).length,absent:r.results.filter(x=>x.status==="NOT_FOUND_ANYWHERE").length},null,2))})'
+
+      - name: Upload forensic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: n01-forensic-audit-report
+          path: artifacts/forensic-audit-report.json
+          if-no-files-found: error
