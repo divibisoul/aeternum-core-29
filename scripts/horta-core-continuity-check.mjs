@@ -19,7 +19,7 @@ try {
   const second = state.set('test.value', 2);
   assert.equal(first.sequence, 1);
   assert.equal(second.sequence, 2);
-  assert.equal(state.get<number>('test.value'), 2);
+  assert.equal(state.get('test.value'), 2);
   assert.equal(state.getChangeLog().length, 2);
 
   await EventBus.emit('system:ready', { modules: ['n01'] });
