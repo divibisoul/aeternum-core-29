@@ -132,10 +132,8 @@ function readText(file: string): string {
 }
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^$\{\}()|[\]\\]/g, "\\function normalizedTokens(c: Component): string[] {
-");
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-
 function containsExact(text: string, token: string): boolean {
   const value = token.trim();
   if (!value) return false;
