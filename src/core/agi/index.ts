@@ -168,8 +168,9 @@ export class AeternumAGI {
     const allSubsystemIds = [
       'consciousness', 'godel', 'darwin', 'lattice',
       'safeCore', 'selfHealing', 'ethics', 'hyperSafety',
-      'nip', 'saiic', 'resourceManager', 'neuralManagement'
+      'nip', 'saiic', 'resourceManager'
     ];
+    allSubsystemIds.push('neuralManagement');
     allSubsystemIds.forEach(id => {
       this.quantumNeural.establishEntanglement(id);
       this.connectivity.registerNode(id, 'agi-engine');
@@ -190,12 +191,12 @@ export class AeternumAGI {
       ['connectivity', 0.5],
       ['safeCore', 0.5],
       ['resourceManager', 0.4],
-      ['neuralManagement', 0.85],
       ['gemHealth', 0.75],
       ['gemResearch', 0.5],
       ['gemMusic', 0.3],
       ['gemDevice', 0.65],
     ];
+    modulePriorities.push(['neuralManagement', 0.85]);
     modulePriorities.forEach(([id, priority]) => {
       this.resourceManager.registerModule(id, priority);
     });
