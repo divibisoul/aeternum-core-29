@@ -15,7 +15,7 @@ function modernCanonical(message, nonce) {
     protocol: message.protocol,
     contractVersion: message.contractVersion,
     id: message.id,
-    correlationId: modern.message.correlationId,
+    correlationId: message.correlationId,
     source: message.source,
     target: message.target,
     kind: message.kind,
@@ -56,15 +56,16 @@ function makeEnvelope(target, capability, payload = {}) {
 }
 
 async function post(url, body) {
+  const { __hmac, __nonce, ...wireBody } = body;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       'x-correlation-id': body.correlationId,
-      ...(body.__hmac ? { 'x-soul-mesh-nonce': body.__nonce, 'x-soul-mesh-hmac': body.__hmac } : {}),
+      ...(__hmac ? { 'x-soul-mesh-nonce': __nonce, 'x-soul-mesh-hmac': __hmac } : {}),
       ...(!body.__hmac && process.env.SOUL_MESH_TOKEN ? { authorization: 'Bearer ' + process.env.SOUL_MESH_TOKEN } : {}),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(wireBody),
   });
   const data = await response.json().catch(() => ({}));
   return { status: response.status, data };
