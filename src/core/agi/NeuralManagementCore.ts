@@ -6,10 +6,10 @@
  * PrecisionEngine (processamento), ResourceManager (recursos) e
  * RecursiveNeuralLattice (execução neural local).
  */
-import { EventBus } from '../EventBus';
-import { PrecisionEngine } from '../PrecisionEngine';
-import { RecursiveNeuralLattice, type LatticeMetrics } from './RecursiveNeuralLattice';
-import { ResourceManager, type ResourceMetrics } from './ResourceManager';
+import { EventBus } from '../EventBus.ts';
+import { PrecisionEngine } from '../PrecisionEngine.ts';
+import { RecursiveNeuralLattice, type LatticeMetrics } from './RecursiveNeuralLattice.ts';
+import { ResourceManager, type ResourceMetrics } from './ResourceManager.ts';
 
 export interface NeuralManagementStatus {
   name: string;
