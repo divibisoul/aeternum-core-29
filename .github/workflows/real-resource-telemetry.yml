@@ -1,0 +1,30 @@
+name: Real resource telemetry verification
+
+on:
+  push:
+    branches:
+      - "fix/real-resource-telemetry-2026-09-28"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/core/agi/ResourceManager.ts"
+      - "src/core/agi/RecursiveNeuralLattice.ts"
+      - "scripts/real-resource-telemetry-check.mjs"
+      - ".github/workflows/real-resource-telemetry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Execute real telemetry regression
+        run: node scripts/real-resource-telemetry-check.mjs
