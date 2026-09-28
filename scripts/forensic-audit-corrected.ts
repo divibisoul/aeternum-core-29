@@ -112,7 +112,7 @@ const files = walk(ROOT);
 function isAuditArtifact(file: string): boolean {
   const normalized = file.replace(/\\/g, "/");
   return normalized.startsWith("docs/forensics/")
-    || /(^|/)scripts/forensic-/.test(normalized)
+    || normalized.includes("scripts/forensic-")
     || normalized.includes(".github/workflows/n01-forensic-")
     || normalized.startsWith("artifacts/");
 }
