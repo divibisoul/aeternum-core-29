@@ -4,7 +4,6 @@
  * Expõe apenas os artefatos do Aeternum.
  */
 export { nervoVago } from './eventBus';
-export { hortaCore } from './hortaCore';
 export { wormhole } from './wormholeRegistry';
 export type { ModuleSignature } from './wormholeRegistry';
 export { NeuralCoordinates } from './neuralCoordinates';
