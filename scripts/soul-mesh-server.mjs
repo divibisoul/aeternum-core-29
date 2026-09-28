@@ -90,20 +90,6 @@ function verifyProtocolMessage(e, req) {
   if (!headerNonce || !headerHmac || headerNonce !== e.nonce || headerHmac !== actual) throw new Error('MESH_HEADER_HMAC_INVALID');
   seenNonces.set(e.nonce, Date.now());
 }
-function protocolResponseHmacCanonical({id,target,correlationId,type,payload,capability,nonce}) {
-  return JSON.stringify({
-    version: VERSION,
-    contractVersion: CONTRACT_VERSION,
-    messageId: id,
-    source: SELF,
-    target,
-    timestamp: timestampForResponse,
-    nonce,
-    correlationId,
-    type,
-    payload: { capability: capability || '', payload: payload || {} },
-  });
-}
 function signedProtocolResponse({target,correlationId,capability,kind,payload}) {
   if (!SECRET || SECRET.length < 16) throw new Error('MESH_HMAC_SECRET_NOT_CONFIGURED');
   const id = crypto.randomUUID();
