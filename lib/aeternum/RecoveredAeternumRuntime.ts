@@ -1,6 +1,9 @@
 import { hortaCore } from "../../src/core/hortaCore";
 import { architectureGuideModule } from "./governance/ArchitectureGuideModule";
-import { AeternumOrchestrator, aeternumBus, aeternumHortaCore, aeternumWormhole } from "./AeternumOrchestrator";
+import { AeternumOrchestrator } from "./AeternumOrchestrator";
+import { aeternumBus } from "./EventBus";
+import { aeternumHortaCore } from "./HortaCore";
+import { aeternumWormhole } from "./WormholeRegistry";
 import { blueprintModule } from "./evolution/BlueprintModule";
 import { neuralForgeModule } from "./evolution/NeuralForgeModule";
 import {
