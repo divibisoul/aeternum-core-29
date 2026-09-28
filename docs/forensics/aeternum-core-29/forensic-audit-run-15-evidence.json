@@ -8,31 +8,27 @@
     "head_sha": "1e14df3a985c50a951bb94f01d8c908aaec9616b",
     "artifact_id": 10990267863,
     "artifact_name": "n01-forensic-audit-report",
-    "artifact_digest": "sha256:a55518b7fca92223ef6cf8513e14283141465d8e3967c3822d4ea21eb98d216d"
+    "artifact_digest": "sha256:a55518b7fca92223ef6cf8513e14283141465d8e3967c3822d4ea21eb98d216d",
+    "artifact_zip": "https://api.github.com/repos/divibisoul/aeternum-core-29/actions/artifacts/10990267863/zip"
   },
   "measured": {
     "total_scanned": 73,
     "confirmed_components": 46,
     "additional_components": 27,
     "status_counts": {
-      "ACTIVE": 11,
-      "INACTIVE": 2,
-      "FOUND_IN_BRANCH": 16,
+      "ACTIVE": 12,
+      "INACTIVE": 6,
+      "FOUND_IN_BRANCH": 11,
       "FOUND_IN_HISTORY": 3,
       "NOT_FOUND_ANYWHERE": 41
     },
     "module_counts": {
       "total": 29,
-      "NOT_FOUND_ANYWHERE": 21,
-      "FOUND_IN_BRANCH": 6,
+      "ACTIVE": 1,
+      "INACTIVE": 5,
+      "FOUND_IN_BRANCH": 1,
       "FOUND_IN_HISTORY": 1,
-      "INACTIVE": 1
-    },
-    "additional_counts": {
-      "ACTIVE": 9,
-      "FOUND_IN_BRANCH": 7,
-      "FOUND_IN_HISTORY": 2,
-      "NOT_FOUND_ANYWHERE": 9
+      "NOT_FOUND_ANYWHERE": 21
     }
   },
   "interpretation": {
