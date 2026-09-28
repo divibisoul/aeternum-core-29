@@ -5,6 +5,7 @@
  */
 export { nervoVago } from './eventBus';
 export { hortaCore } from './hortaCore';
+export { recoveredAeternumRuntime } from '../../lib/aeternum/RecoveredAeternumRuntime';
 export { wormhole } from './wormholeRegistry';
 export type { ModuleSignature } from './wormholeRegistry';
 export { NeuralCoordinates } from './neuralCoordinates';
