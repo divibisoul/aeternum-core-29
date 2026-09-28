@@ -3,8 +3,47 @@ import crypto from 'node:crypto';
 
 const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
 const baseUrl = `http://127.0.0.1:${port}`;
+const SECRET = process.env.SOUL_MESH_HMAC_SECRET?.trim() || 'n01-local-contract-secret-2026';
+
+function signModern(message) {
+  const canonical = JSON.stringify({
+    protocol: message.protocol,
+    contractVersion: message.contractVersion,
+    id: message.id,
+    correlationId: message.correlationId,
+    source: message.source,
+    target: message.target,
+    kind: message.kind,
+    capability: message.capability,
+    payload: message.payload || {},
+    timestamp: message.timestamp,
+    transport: message.meta?.transport ?? null,
+    meta: message.meta ?? null,
+    nonce: message.nonce,
+  });
+  return crypto.createHmac('sha256', SECRET).update(canonical, 'utf8').digest('hex');
+}
+
+function modernRequest(source, capability, payload) {
+  const message = {
+    protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
+    correlationId: crypto.randomUUID(), source, target: 'N01', kind: 'request', capability,
+    payload, timestamp: Date.now(), nonce: crypto.randomUUID(),
+    meta: { runtime: source, transport: 'HTTP', encoding: 'json', version: '1.1.0' },
+  };
+  const hmac = signModern(message);
+  return {
+    message: { ...message, hmac },
+    headers: {
+      'content-type': 'application/json',
+      'x-soul-mesh-nonce': message.nonce,
+      'x-soul-mesh-hmac': hmac,
+      'x-correlation-id': message.correlationId,
+    },
+  };
+}
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
-  env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
+  env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1', SOUL_MESH_HMAC_SECRET: SECRET, SOUL_MESH_SECRET: SECRET, SOUL_MESH_LOCAL_TEST_DIAGNOSTICS: '1' },
   stdio: ['ignore', 'inherit', 'inherit'],
 });
 
@@ -43,13 +82,23 @@ try {
   }
 
   const n07CorrelationId = crypto.randomUUID();
-  const n07Response = await fetch(`${baseUrl}/api/soul-mesh`, {
+  const n07Id = crypto.randomUUID();
+  const n07Nonce = crypto.randomUUID();
+  const n07Timestamp = Date.now();
+  const n07ResponseUnsigned = {
+    version: '1.0', contractVersion: '1.1.0', messageId: n07Id, source: 'N07', target: 'N01',
+    timestamp: n07Timestamp, nonce: n07Nonce, correlationId: n07CorrelationId, type: 'TASK_RESULT',
+    payload: { capability: 'neural.forward', payload: { status: 'ok', values: [1, 2, 3] } },
+  };
+  const n07Hmac = crypto.createHmac('sha256', SECRET).update(JSON.stringify(n07ResponseUnsigned), 'utf8').digest('hex');
+  const n07Response = await fetch(baseUrl + '/api/soul-mesh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
-      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
+      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: n07Id,
       correlationId: n07CorrelationId, source: 'N07', target: 'N01', kind: 'response',
-      capability: 'neural.forward', payload: { status: 'ok', values: [1, 2, 3] }, timestamp: Date.now(),
+      capability: 'neural.forward', payload: { status: 'ok', values: [1, 2, 3] }, timestamp: n07Timestamp,
+      nonce: n07Nonce, hmac: n07Hmac, version: '1.0', messageId: n07Id, type: 'TASK_RESULT',
     }),
   });
   const n07Body = await n07Response.json();
@@ -57,32 +106,46 @@ try {
     throw new Error(`N01_N07_RESPONSE_ROUTE_FAILED:${JSON.stringify(n07Body)}`);
   }
 
-  const correlationId = crypto.randomUUID();
-  const response = await fetch(`${baseUrl}/api/soul-mesh`, {
-    method: 'POST', headers: { 'content-type': 'application/json', 'x-correlation-id': correlationId },
-    body: JSON.stringify({
-      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
-      correlationId, source: 'N02', target: 'N01', kind: 'request', capability: 'mesh.ping',
-      payload: { probe: 'local-runtime-contract' }, timestamp: Date.now(), nonce: crypto.randomUUID(),
-    }),
+  const pingRequest = modernRequest('N02', 'mesh.ping', { probe: 'local-runtime-contract' });
+  const correlationId = pingRequest.message.correlationId;
+  const response = await fetch(baseUrl + '/api/soul-mesh', {
+    method: 'POST',
+    headers: pingRequest.headers,
+    body: JSON.stringify(pingRequest.message),
   });
   const body = await response.json();
-  if (!response.ok) throw new Error(`N01_LOCAL_MESH_HTTP_${response.status}:${JSON.stringify(body)}`);
+  if (!response.ok) {
+    const clientCanonical = JSON.stringify({
+      protocol: pingRequest.message.protocol,
+      contractVersion: pingRequest.message.contractVersion,
+      id: pingRequest.message.id,
+      correlationId: pingRequest.message.correlationId,
+      source: pingRequest.message.source,
+      target: pingRequest.message.target,
+      kind: pingRequest.message.kind,
+      capability: pingRequest.message.capability,
+      payload: pingRequest.message.payload || {},
+      timestamp: pingRequest.message.timestamp,
+      transport: pingRequest.message.meta?.transport ?? null,
+      meta: pingRequest.message.meta ?? null,
+      nonce: pingRequest.message.nonce,
+    });
+    const clientCanonicalFingerprint = crypto.createHash('sha256').update(clientCanonical, 'utf8').digest('hex');
+    const secretFingerprint = crypto.createHash('sha256').update(SECRET, 'utf8').digest('hex');
+    throw new Error(`N01_LOCAL_MESH_HTTP_${response.status}:${JSON.stringify(body)}:clientCanonicalLength=${clientCanonical.length}:clientCanonicalFingerprint=${clientCanonicalFingerprint}:secretFingerprint=${secretFingerprint}`);
+  }
   const checks = {
     protocol: body.protocol === 'soul-mesh/1', contractVersion: body.contractVersion === '1.1.0',
     source: body.source === 'N01', target: body.target === 'N02', correlationId: body.correlationId === correlationId,
     kind: body.kind === 'response', capability: body.capability === 'mesh.ping',
   };
+  const superGpuRequest = modernRequest('N02', 'mesh.supergpu.execute', {
+    task: { id: 'local-unsupported-capability-check', capability: 'clareira.ingest', payload: { probe: 'no-echo' } },
+  });
   const superGpuGuardResponse = await fetch(baseUrl + '/api/soul-mesh', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
-      correlationId: crypto.randomUUID(), source: 'N02', target: 'N01', kind: 'request',
-      capability: 'mesh.supergpu.execute',
-      payload: { task: { id: 'local-unsupported-capability-check', capability: 'clareira.ingest', payload: { probe: 'no-echo' } } },
-      timestamp: Date.now(),
-    }),
+    headers: superGpuRequest.headers,
+    body: JSON.stringify(superGpuRequest.message),
   });
   const superGpuGuardBody = await superGpuGuardResponse.json();
   if (superGpuGuardResponse.status !== 502 ||

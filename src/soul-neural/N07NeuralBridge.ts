@@ -1,24 +1,55 @@
-export type NeuralOperation = "neural.forward@1.0.0" | "neural.learn@1.0.0";
-export type NeuralRequest = { operation: NeuralOperation; payload: number[]; correlationId?: string; deadlineMs?: number };
-export type NeuralResponse = { traceId: string; correlationId: string; payload?: number[]; data?: unknown; status?: string };
+export type NeuralOperation =
+  | "neural.forward@1.0.0"
+  | "neural.learn@1.0.0"
+  | "neural.parameters@1.0.0";
+
+export type NeuralParameters = {
+  size: number;
+  learning_rate: number;
+  optimizer: string;
+  regularization: number;
+  gradient_clip: number;
+  heads: number;
+  batch_cache: number;
+  layers: Array<Record<string, unknown>>;
+};
+
+export type NeuralRequest = {
+  operation: NeuralOperation;
+  payload: number[];
+  correlationId?: string;
+  deadlineMs?: number;
+};
+
+export type NeuralResponse = {
+  traceId: string;
+  correlationId: string;
+  payload?: number[];
+  data?: unknown;
+  status?: string;
+  parameters?: NeuralParameters;
+};
 
 type CanonicalEnvelope = {
   protocol: "soul-mesh/1";
   contractVersion: "1.1.0";
   id: string;
   correlationId: string;
-  source: string;
-  target: string;
-  kind: string;
+  source: "N01";
+  target: "N07";
+  kind: "request";
   capability: string;
-  payload: Record<string, unknown>;
+  payload: { values: number[] };
   timestamp: number;
   nonce: string;
 };
 
 const CONTRACT = "1.1.0" as const;
 const PROTOCOL = "soul-mesh/1" as const;
-const env = () => ((globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {});
+const env = () =>
+  ((globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> };
+  }).process?.env ?? {});
 
 const id = (prefix: string): string => {
   const bytes = new Uint8Array(16);
@@ -63,7 +94,9 @@ function canonicalLegacyResponse(value: Record<string, unknown>, nonce: string):
 }
 
 async function hmacHex(data: string, secret: string): Promise<string> {
-  if (secret.length < 16) throw new Error("SOUL_MESH_HMAC_SECRET must contain at least 16 characters");
+  if (secret.length < 16) {
+    throw new Error("SOUL_MESH_HMAC_SECRET must contain at least 16 characters");
+  }
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -76,15 +109,19 @@ async function hmacHex(data: string, secret: string): Promise<string> {
 }
 
 async function sign(value: CanonicalEnvelope, secret: string): Promise<string> {
-  if (!secret) return "";
+  if (!secret.trim()) return "";
   return hmacHex(canonicalWire(value), secret);
 }
 
-async function verifyCanonicalResponse(value: Record<string, unknown>, response: Response, secret: string): Promise<void> {
-  if (!secret) return;
+async function verifyResponse(
+  value: Record<string, unknown>,
+  response: Response,
+  secret: string,
+): Promise<void> {
+  if (!secret.trim()) return;
   const nonce = response.headers.get("x-soul-mesh-nonce")?.trim() || String(value.nonce ?? "");
   const signature = response.headers.get("x-soul-mesh-hmac")?.trim() || String(value.hmac ?? "");
-  if (!signature || !nonce) throw new Error("N07 Mesh response HMAC credentials missing");
+  if (!nonce || !signature) throw new Error("N07 Mesh response HMAC credentials missing");
   const timestamp = Number(value.timestamp ?? 0);
   if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > 30000) {
     throw new Error("N07 Mesh response timestamp outside accepted clock skew");
@@ -109,7 +146,10 @@ export class N07NeuralBridge {
   }
 
   async invoke(request: NeuralRequest): Promise<NeuralResponse> {
-    if (request.payload.length === 0 || request.payload.some(value => !Number.isFinite(value))) {
+    if (
+      request.operation !== "neural.parameters@1.0.0" &&
+      (request.payload.length === 0 || request.payload.some(value => !Number.isFinite(value)))
+    ) {
       throw new Error("neural payload must contain finite numbers");
     }
 
@@ -135,34 +175,59 @@ export class N07NeuralBridge {
       "x-soul-correlation-id": correlationId,
     };
     const signature = await sign(envelope, this.secret);
+    const body = signature ? JSON.stringify({ ...envelope, hmac: signature }) : JSON.stringify(envelope);
     if (signature) {
       headers["x-soul-mesh-nonce"] = nonce;
       headers["x-soul-mesh-hmac"] = signature;
     }
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.max(1, request.deadlineMs ?? this.timeout));
+    const timer = setTimeout(
+      () => controller.abort(),
+      Math.max(1, request.deadlineMs ?? this.timeout),
+    );
 
     try {
       const response = await fetch(`${this.url}/api/soul-mesh`, {
         method: "POST",
         headers,
-        body: JSON.stringify(envelope),
+        body,
         signal: controller.signal,
       });
       const result = await response.json() as Record<string, unknown>;
-      if (!response.ok) throw new Error(String(result.error ?? `N07 Mesh request failed: ${response.status}`));
-      if (String(result.contractVersion) !== CONTRACT) throw new Error("N07 Mesh response contract mismatch");
-      if (String(result.correlationId) !== correlationId) throw new Error("N07 Mesh correlation mismatch");
-      await verifyCanonicalResponse(result, response, this.secret);
+      if (!response.ok) {
+        throw new Error(String(result.error ?? `N07 Mesh request failed: ${response.status}`));
+      }
+      if (String(result.contractVersion) !== CONTRACT) {
+        throw new Error("N07 Mesh response contract mismatch");
+      }
+      if (String(result.correlationId) !== correlationId) {
+        throw new Error("N07 Mesh correlation mismatch");
+      }
+      await verifyResponse(result, response, this.secret);
+
       const payload = result.payload as Record<string, unknown> | undefined;
-      const values = Array.isArray(payload?.values) ? payload.values.map(Number) : undefined;
+      const values = Array.isArray(payload?.values)
+        ? payload.values.map(Number)
+        : undefined;
+      const metadata = result.metadata as Record<string, unknown> | undefined;
+      let parameters: NeuralParameters | undefined;
+      const rawParameters = metadata?.parameters;
+      if (typeof rawParameters === "string" && rawParameters.trim()) {
+        try {
+          parameters = JSON.parse(rawParameters) as NeuralParameters;
+        } catch {
+          throw new Error("N07 Mesh neural parameters payload is invalid JSON");
+        }
+      }
+
       return {
         traceId: String(result.id ?? result.messageId ?? envelope.id),
         correlationId,
         payload: values,
         data: result.payload,
         status: String(payload?.status ?? result.status ?? "ok"),
+        parameters,
       };
     } finally {
       clearTimeout(timer);
@@ -170,13 +235,31 @@ export class N07NeuralBridge {
   }
 
   forward(payload: number[], correlationId?: string) {
-    return this.invoke({ operation: "neural.forward@1.0.0", payload, correlationId });
+    return this.invoke({
+      operation: "neural.forward@1.0.0",
+      payload,
+      correlationId,
+    });
   }
 
   learn(input: number[], target: number[], correlationId?: string) {
     if (input.length === 0 || input.length !== target.length) {
       throw new Error("input and target dimensions must match");
     }
-    return this.invoke({ operation: "neural.learn@1.0.0", payload: [...input, ...target], correlationId });
+    return this.invoke({
+      operation: "neural.learn@1.0.0",
+      payload: [...input, ...target],
+      correlationId,
+    });
+  }
+
+  async parameters(correlationId?: string): Promise<NeuralParameters> {
+    const response = await this.invoke({
+      operation: "neural.parameters@1.0.0",
+      payload: [],
+      correlationId,
+    });
+    if (!response.parameters) throw new Error("N07 Mesh neural parameters missing");
+    return response.parameters;
   }
 }
