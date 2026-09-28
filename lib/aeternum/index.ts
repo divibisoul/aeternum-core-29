@@ -5,3 +5,8 @@ export * from "./WormholeRegistry";
 export * from "./NeuralCoordinates";
 export * from "./AeternumModuleMap";
 export * from "./AeternumOrchestrator";
+export * from "./RecoveredAeternumHortaBridge";
+export * from "./RecoveredAeternumRuntime";
+export { blueprintModule, BlueprintModule } from "./evolution/BlueprintModule";
+export { neuralForgeModule, NeuralForgeModule } from "./evolution/NeuralForgeModule";
+export { architectureGuideModule, ArchitectureGuideModule } from "./governance/ArchitectureGuideModule";
