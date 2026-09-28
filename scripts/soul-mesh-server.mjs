@@ -82,9 +82,16 @@ function verifyProtocolMessage(e, req) {
   if (!/^N0[1-7]$/.test(e.source) || e.source === SELF || e.target !== SELF) throw new Error('MESH_ROUTE_INVALID');
   nonceCleanup();
   if (seenNonces.has(e.nonce)) throw new Error('MESH_REPLAY_DETECTED');
-  const expected = crypto.createHmac('sha256', SECRET).update(protocolHmacCanonical(e)).digest('hex');
+  const canonicalMessage = protocolHmacCanonical(e);
+  const expected = crypto.createHmac('sha256', SECRET).update(canonicalMessage).digest('hex');
   const actual = String(e.hmac || '');
-  if (!actual || expected.length !== actual.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new Error('MESH_HMAC_INVALID');
+  if (!actual || expected.length !== actual.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) {
+    if (process.env.SOUL_MESH_LOCAL_TEST_DIAGNOSTICS === '1') {
+      const canonicalFingerprint = crypto.createHash('sha256').update(canonicalMessage).digest('hex');
+      console.error(JSON.stringify({ stage: 'N01_LOCAL_HMAC_DIAGNOSTIC', canonicalLength: canonicalMessage.length, canonicalFingerprint, expectedPrefix: expected.slice(0, 12), actualPrefix: actual.slice(0, 12), meta: e.meta ?? null, messageKeys: Object.keys(e) }));
+    }
+    throw new Error('MESH_HMAC_INVALID');
+  }
   const headerNonce = typeof req?.headers?.['x-soul-mesh-nonce'] === 'string' ? req.headers['x-soul-mesh-nonce'].trim() : '';
   const headerHmac = typeof req?.headers?.['x-soul-mesh-hmac'] === 'string' ? req.headers['x-soul-mesh-hmac'].trim() : '';
   if (!headerNonce || !headerHmac || headerNonce !== e.nonce || headerHmac !== actual) throw new Error('MESH_HEADER_HMAC_INVALID');
