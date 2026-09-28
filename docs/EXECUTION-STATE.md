@@ -42,3 +42,7 @@ Reconcile `N01RuntimeGate` with the concrete `SoulMeshMessage` application dispa
 ## Anti-loop rule
 
 After each code change, update this file with the verified commit SHA, validation result, state, blocker (if any), and exactly one next executable action. Never repeat an analysis cycle without changing the evidence state.
+
+
+## Latest correction
+The local Mesh contract probe now provisions a dedicated test HMAC secret and signs modern `soul-mesh/1` requests and the N07 response fixture. This keeps the stricter production authentication path testable without weakening it.
