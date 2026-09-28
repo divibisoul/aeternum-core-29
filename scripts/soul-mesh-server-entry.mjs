@@ -182,8 +182,22 @@ async function proxy(req, res) {
         try {
           const parsed = JSON.parse(body.toString('utf8'));
           if (parsed?.protocol === PROTOCOL && parsed.contractVersion !== CONTRACT_VERSION) {
-            parsed.contractVersion = CONTRACT_VERSION;
-            output = Buffer.from(JSON.stringify(parsed));
+            output = Buffer.from(JSON.stringify({
+              protocol: PROTOCOL,
+              contractVersion: CONTRACT_VERSION,
+              id: crypto.randomUUID(),
+              correlationId: parsed.correlationId || crypto.randomUUID(),
+              source: 'N01',
+              target: parsed.source || 'unknown',
+              kind: 'error',
+              capability: parsed.capability || '',
+              payload: {
+                code: 'SOUL_MESH_CONTRACT_MISMATCH',
+                expected: CONTRACT_VERSION,
+                received: parsed.contractVersion || null,
+              },
+              timestamp: Date.now(),
+            }));
           }
         } catch {
           output = body;
