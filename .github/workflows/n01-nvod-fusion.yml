@@ -1,0 +1,32 @@
+name: N01 NVOD fusion verification
+
+on:
+  push:
+    branches:
+      - "feat/commission-nvod-fusion-runtime-2026-09-28"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/core/fusion/FusionEnvelope.ts"
+      - "src/core/fusion/N01AgentProcessor.ts"
+      - "src/core/fusion/ProcessorRuntime.ts"
+      - "src/core/mesh/SoulMeshRuntime.ts"
+      - "scripts/nvod-fusion-contract-check.mjs"
+      - ".github/workflows/n01-nvod-fusion.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Execute NVOD fusion contract check
+        run: node --experimental-strip-types scripts/nvod-fusion-contract-check.mjs
