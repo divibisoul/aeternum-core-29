@@ -42,7 +42,7 @@ function modernRequest(source, capability, payload) {
   };
 }
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
-  env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1', SOUL_MESH_HMAC_SECRET: SECRET, SOUL_MESH_SECRET: SECRET },
+  env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1', SOUL_MESH_HMAC_SECRET: SECRET, SOUL_MESH_SECRET: SECRET, SOUL_MESH_LOCAL_TEST_DIAGNOSTICS: '1' },
   stdio: ['ignore', 'inherit', 'inherit'],
 });
 
