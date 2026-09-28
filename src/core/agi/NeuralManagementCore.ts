@@ -82,13 +82,17 @@ export class NeuralManagementCore {
   }
 
   getStatus(): NeuralManagementStatus {
+    const neural = this.neuralLattice.getMetrics();
+    const resources = this.resourceManager.getMetrics();
+    const connected = neural.nodeCount > 0 && resources.modulesManaged > 0;
+
     return {
       name: this.name,
       version: this.version,
-      connected: true,
+      connected,
       processing: PrecisionEngine.getStats(),
-      neural: this.neuralLattice.getMetrics(),
-      resources: this.resourceManager.getMetrics(),
+      neural,
+      resources,
     };
   }
 }
