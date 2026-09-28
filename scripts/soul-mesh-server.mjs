@@ -37,7 +37,7 @@ function isClareiraPacket(value) {
 function clareiraMetrics() {
   return {
     capturedAtMs: Date.now(), contractVersion: '1.0.0', ingressOnly: true,
-    packets: { ingested: clareiraIngress.ingested, processed: 0, dropped: clareiraIngress.dropped, errored: clareiraIngress.errored, inFlight: clareiraIngress.queue.length },
+    packets: { ingested: clareiraIngress.ingested, accepted: 0, processed: 0, dropped: clareiraIngress.dropped, errored: clareiraIngress.errored, inFlight: clareiraIngress.queue.length },
     queue: { size: clareiraIngress.queue.length, capacity: CLAREIRA_MAX_QUEUE_SIZE },
   };
 }
