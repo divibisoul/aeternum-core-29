@@ -22,7 +22,7 @@ const failures = new Map();
 const circuitOpenUntil = new Map();
 const CLAREIRA_MAX_QUEUE_SIZE = 100;
 const CLAREIRA_RUNTIME_URL = String(process.env.SOUL_CLAREIRA_RUNTIME_URL || '').trim().replace(/\/$/, '');
-const clareiraIngress = { ingested: 0, accepted: 0, processed: 0, dropped: 0, errored: 0, queue: [] };
+const clareiraIngress = { ingested: 0, accepted: 0, processed: 0, dropped: 0, errored: 0, queue: [], draining: false };
 
 function isClareiraPacket(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
@@ -80,6 +80,30 @@ async function forwardClareiraPacket(packet) {
     clearTimeout(timer);
   }
 }
+async function drainClareiraQueue() {
+  if (!CLAREIRA_RUNTIME_URL || clareiraIngress.queue.length === 0 || clareiraIngress.draining) return;
+  clareiraIngress.draining = true;
+  try {
+    for (let i = 0; i < 10 && clareiraIngress.queue.length > 0; i++) {
+      const packet = clareiraIngress.queue[0];
+      try {
+        const forwarded = await forwardClareiraPacket(packet);
+        if (forwarded.accepted === true && forwarded.processed === true) {
+          clareiraIngress.queue.shift();
+          clareiraIngress.accepted++;
+          clareiraIngress.processed++;
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+  } finally {
+    clareiraIngress.draining = false;
+  }
+}
+
 
 function normalizeUrl(value) { return typeof value === 'string' ? value.trim().replace(/\/$/, '') : ''; }
 function json(res, status, body) { const data = JSON.stringify(body); res.writeHead(status, {'content-type':'application/json; charset=utf-8','cache-control':'no-store'}); res.end(data); }
@@ -144,7 +168,6 @@ async function handle(req,res){ const url=new URL(req.url,`http://${req.headers.
       clareiraIngress.dropped++;
       return respond('error',{code:'CLAREIRA_QUEUE_FULL',capacity:CLAREIRA_MAX_QUEUE_SIZE},429);
     }
-    clareiraIngress.queue.push(packet);
     return respond('error',{
       code:'CLAREIRA_RUNTIME_NOT_CONFIGURED',
       accepted:false,
@@ -175,5 +198,7 @@ async function handle(req,res){ const url=new URL(req.url,`http://${req.headers.
 
 bootstrapPeers();
 const server=http.createServer((req,res)=>handle(req,res).catch(error=>json(res,500,{ok:false,error:error instanceof Error?error.message:'INTERNAL_ERROR'})));
+setInterval(() => { void drainClareiraQueue(); }, 1000).unref();
+
 server.listen(PORT,HOST,()=>console.log(`SOUL N01 Mesh/Fusion ${FUSION_VERSION} listening on ${HOST}:${PORT}`));
 process.on('SIGTERM',()=>server.close()); process.on('SIGINT',()=>server.close());
