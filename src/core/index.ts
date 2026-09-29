@@ -5,6 +5,7 @@
  */
 export { nervoVago } from './eventBus';
 export { wormhole } from './wormholeRegistry';
+export { HortaCore, hortaCore } from './hortaCore';
 export type { ModuleSignature } from './wormholeRegistry';
 export { NeuralCoordinates } from './neuralCoordinates';
 export { HortaCore, hortaCore } from './hortaCore';
