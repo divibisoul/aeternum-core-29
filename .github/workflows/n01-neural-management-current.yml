@@ -1,0 +1,39 @@
+name: N01 NeuralManagementCore current
+
+on:
+  push:
+    branches:
+      - "feat/reintegrate-neural-management-core-current-2026-09-29"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/core/agi/NeuralManagementCore.ts"
+      - "src/core/agi/NeuralManagementCore.test.ts"
+      - "src/core/agi/index.ts"
+      - "src/core/ResourceManager.ts"
+      - "src/core/agi/ResourceManager.ts"
+      - "src/core/EventBus.ts"
+      - "src/core/CodeVault.ts"
+      - "scripts/neural-management-core-check-current.mjs"
+      - ".github/workflows/n01-neural-management-current.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Execute current NeuralManagementCore integration
+        run: node scripts/neural-management-core-check-current.mjs
