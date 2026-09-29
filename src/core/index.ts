@@ -9,6 +9,7 @@ export { HortaCore, hortaCore } from './hortaCore';
 export type { ModuleSignature } from './wormholeRegistry';
 export { NeuralCoordinates } from './neuralCoordinates';
 export { HortaCoreContinuityBridge } from './HortaCoreContinuityBridge';
+export { recoveredAeternumRuntime } from '../../lib/aeternum/RecoveredAeternumRuntime';
 export type { Coordinates } from './neuralCoordinates';
 
 // Bootstrap explícito: importar './core' no App inicializa o GenesisModule.
