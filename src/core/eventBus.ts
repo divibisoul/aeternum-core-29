@@ -5,7 +5,7 @@
  * histórico em memória para auditoria.
  */
 
-import { EventBus as RealEventBus } from './EventBus';
+import { EventBus as RealEventBus } from './EventBus.ts';
 
 type Listener = (data: any) => void;
 type Unsubscribe = () => void;

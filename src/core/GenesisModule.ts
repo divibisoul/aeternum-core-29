@@ -6,7 +6,7 @@
 
 import { hortaCore } from './hortaCore';
 import { wormhole } from './wormholeRegistry';
-import { nervoVago } from './eventBus';
+import { nervoVago } from './eventBus.ts';
 
 export interface GenesisRecord {
   version: string;
