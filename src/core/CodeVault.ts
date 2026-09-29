@@ -63,7 +63,7 @@ class CodeVaultService {
   private async initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Verificar suporte a IndexedDB
-      if (!window.indexedDB) {
+      if (typeof window === 'undefined' || !window.indexedDB) {
         console.warn('[CodeVault] IndexedDB not supported, using memory fallback');
         resolve();
         return;
