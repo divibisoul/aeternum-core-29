@@ -1,9 +1,8 @@
-name: rgo-integration
+name: rgo-trinity-mmd
 on:
   push:
-    branches: [rgo-integration-2026-09-28]
+    branches: [rgo-trinity-mmd-2026-09-28]
   pull_request:
-  workflow_dispatch:
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -12,5 +11,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: 22}
       - run: npm install --no-audit --no-fund
-      - run: npx --yes tsx --test __tests__/rgo.spec.ts
+      - run: npx --yes tsx --test __tests__/rgo.spec.ts src/core/rgo/RgoHortaCore.test.ts
       - run: npm run build
