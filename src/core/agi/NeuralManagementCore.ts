@@ -51,11 +51,11 @@ export class NeuralManagementCore {
 
     const elapsed = performance.now() - started;
     this.resourceManager.recordExecution(this.name, elapsed);
-    void EventBus.emit('neural-management:processed' as never, {
+    void EventBus.emit('neural-management:processed', {
       requestId: request.id,
       processingTimeMs: elapsed,
       neuralOutputSize: neuralOutput.length,
-    } as never);
+    });
 
     return { request, neuralOutput };
   }
