@@ -7,6 +7,7 @@
 import { hortaCore } from './hortaCore';
 import { wormhole } from './wormholeRegistry';
 import { nervoVago } from './eventBus';
+import { recoveredAeternumRuntime } from '../../lib/aeternum/RecoveredAeternumRuntime';
 
 export interface GenesisRecord {
   version: string;
@@ -57,6 +58,9 @@ class GenesisModule {
       dependencies: ['hortaCore', 'wormholeRegistry'],
     });
     nervoVago.on('genesis.query', () => this.respond());
+
+    // Boot the recovered Aeternum graph without auto-activating historical modules.
+    recoveredAeternumRuntime.boot();
   }
 
   respond(): void {
