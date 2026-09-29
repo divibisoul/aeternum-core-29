@@ -4,10 +4,15 @@ on:
     paths:
       - 'soul-sentinel/**'
       - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'soul-sentinel/**'
+      - '.github/workflows/android.yml'
   workflow_dispatch:
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     defaults:
       run:
         working-directory: soul-sentinel
@@ -18,5 +23,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
-      - run: gradle assembleDebug
-      - run: gradle test
+        with:
+          gradle-version: '8.10.2'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+      - run: gradle assembleDebug --stacktrace
+      - run: gradle test --stacktrace
