@@ -10,6 +10,7 @@ import { N01AgentProcessor } from '../fusion/N01AgentProcessor';
 import { ProcessorHealthRegistry } from '../fusion/ProcessorHealthRegistry';
 import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
+import { recoveredAeternumCapabilityBridge } from '../../../lib/aeternum/RecoveredAeternumCapabilityBridge';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -20,9 +21,13 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
+
+      if (message.capability === 'aeternum.architecture.guide' || message.capability === 'aeternum.blueprint.create' || message.capability === 'aeternum.neuralforge.create') {
+        return recoveredAeternumCapabilityBridge.execute(message.capability, message.payload);
+      }
 
       if (message.capability === 'supercompute.execute') {
         const input = message.payload as { tasks?: SuperComputeTask[] };
@@ -43,7 +48,7 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create'],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
