@@ -1,0 +1,26 @@
+name: Buried Aeternum recovery verification
+on:
+  push:
+    branches:
+      - "recovery/cycle3-buried-functions-2026-09-28"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/aeternum/**"
+      - "scripts/verify-buried-aeternum-recovery.mjs"
+      - ".github/workflows/buried-aeternum-recovery.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node scripts/verify-buried-aeternum-recovery.mjs
