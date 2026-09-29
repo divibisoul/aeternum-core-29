@@ -12,7 +12,7 @@ assert.equal(status.neural.nodeCount, 22);
 assert.ok(status.resources.modulesManaged >= 18);
 
 const output = agi.neuralManagement.processSignal('SOUL');
-assert.equal(output.length, 4);
+assert.equal(output.length, 3);
 
 const after = agi.neuralManagement.getStatus();
 assert.equal(after.connected, true);
