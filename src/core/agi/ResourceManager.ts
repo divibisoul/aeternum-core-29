@@ -29,6 +29,15 @@ export interface ResourceSnapshot {
   quantumSliceMs: number;
 }
 
+export type ResourceTelemetryStatus = 'MEASURED' | 'BLOCKED';
+export interface ResourceTelemetryState {
+  status: ResourceTelemetryStatus;
+  cpuSource: string | null;
+  memorySource: string | null;
+  reason?: string;
+  sampledAt: number;
+}
+
 export interface ResourceMetrics {
   isRunning: boolean;
   modulesManaged: number;
@@ -37,6 +46,7 @@ export interface ResourceMetrics {
   rebalanceCount: number;
   avgQuantumSliceMs: number;
   hotModules: string[]; // modules consuming most resources
+  telemetry: ResourceTelemetryState;
 }
 
 export class ResourceManager {
@@ -49,6 +59,14 @@ export class ResourceManager {
   
   private totalCpuUsage = 0;
   private totalMemoryUsage = 0;
+  private telemetry: ResourceTelemetryState = {
+    status: 'BLOCKED',
+    cpuSource: null,
+    memorySource: null,
+    reason: 'Real process telemetry is unavailable in this runtime.',
+    sampledAt: 0,
+  };
+  private previousCpu: { user: number; system: number; sampledAt: number } | null = null;
 
   get isRunning(): boolean { return this._running; }
 
@@ -133,24 +151,47 @@ export class ResourceManager {
    * Monitor resource usage across all modules
    */
   private monitorResources(): void {
-    let totalCpu = 0;
-    let totalMem = 0;
+    const processRef = (globalThis as typeof globalThis & {
+      process?: {
+        cpuUsage?: () => { user: number; system: number };
+        memoryUsage?: () => { heapUsed: number; heapTotal: number };
+      };
+    }).process;
 
-    for (const profile of this.moduleProfiles.values()) {
-      if (!profile.isActive) continue;
-
-      // Simulate CPU usage based on execution frequency and time
-      const cpuUsage = Math.min(1, (profile.lastExecutionMs / this._quantumSliceMs) * profile.cpuAllocation);
-      totalCpu += cpuUsage;
-
-      // Simulate memory usage with gradual fluctuation
-      const memDelta = (Math.random() - 0.5) * 0.02;
-      profile.memoryAllocation = Math.max(0.01, Math.min(0.3, profile.memoryAllocation + memDelta));
-      totalMem += profile.memoryAllocation;
+    if (!processRef?.cpuUsage || !processRef?.memoryUsage) {
+      this.telemetry = {
+        status: 'BLOCKED',
+        cpuSource: null,
+        memorySource: null,
+        reason: 'Real process CPU/memory telemetry is unavailable in this runtime.',
+        sampledAt: Date.now(),
+      };
+      return;
     }
 
-    this.totalCpuUsage = Math.min(1, totalCpu / Math.max(1, this.moduleProfiles.size));
-    this.totalMemoryUsage = Math.min(1, totalMem);
+    const now = Date.now();
+    const cpu = processRef.cpuUsage();
+    const memory = processRef.memoryUsage();
+
+    if (this.previousCpu) {
+      const cpuDeltaMicros =
+        (cpu.user + cpu.system) -
+        (this.previousCpu.user + this.previousCpu.system);
+      const wallDeltaMicros = Math.max(1, (now - this.previousCpu.sampledAt) * 1000);
+      this.totalCpuUsage = Math.max(0, Math.min(1, cpuDeltaMicros / wallDeltaMicros));
+    }
+
+    this.totalMemoryUsage = memory.heapTotal > 0
+      ? Math.max(0, Math.min(1, memory.heapUsed / memory.heapTotal))
+      : 0;
+
+    this.previousCpu = { user: cpu.user, system: cpu.system, sampledAt: now };
+    this.telemetry = {
+      status: 'MEASURED',
+      cpuSource: 'process.cpuUsage(user+system)/wall-time',
+      memorySource: 'process.memoryUsage(heapUsed/heapTotal)',
+      sampledAt: now,
+    };
   }
 
   /**
@@ -203,6 +244,7 @@ export class ResourceManager {
       rebalanceCount: this._rebalanceCount,
       avgQuantumSliceMs: this._quantumSliceMs,
       hotModules,
+      telemetry: { ...this.telemetry },
     };
   }
 
