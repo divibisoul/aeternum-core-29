@@ -1,0 +1,24 @@
+name: Recovered Aeternum Mesh capability verification
+on:
+  push:
+    branches:
+      - "feat/recovered-aeternum-mesh-capability-bridge-2026-09-29"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/aeternum/**"
+      - "src/core/mesh/SoulMeshCapabilities.ts"
+      - "src/core/mesh/SoulMeshRuntime.ts"
+      - "scripts/recovered-aeternum-mesh-capability-check.mjs"
+      - ".github/workflows/recovered-aeternum-mesh-capability.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node scripts/recovered-aeternum-mesh-capability-check.mjs
+      - run: npm run build
