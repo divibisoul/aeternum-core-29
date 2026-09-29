@@ -41,6 +41,7 @@ export interface HealthRegistryOptions {
 
 export class ProcessorHealthRegistry {
   private readonly beats = new Map<string, Heartbeat>();
+  private readonly listeners = new Set<(health: ProcessorHealth) => void>();
   private readonly stalenessMs: number;
   private readonly queueDegradedThreshold: number;
   private readonly errorRateUnhealthyThreshold: number;
@@ -56,6 +57,19 @@ export class ProcessorHealthRegistry {
   publish(beat: Heartbeat): void {
     if (!beat.processorId.trim()) throw new Error('HEARTBEAT_PROCESSOR_ID_REQUIRED');
     this.beats.set(beat.processorId, { ...beat });
+    const health = this.evaluate(beat);
+    for (const listener of [...this.listeners]) {
+      try {
+        listener(health);
+      } catch (error) {
+        console.error('[ProcessorHealthRegistry] observer error', error);
+      }
+    }
+  }
+
+  onUpdate(listener: (health: ProcessorHealth) => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
   }
 
   remove(processorId: string): boolean {
