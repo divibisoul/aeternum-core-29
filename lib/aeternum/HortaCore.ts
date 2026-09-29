@@ -12,6 +12,7 @@ export class AeternumHortaCore {
   private readonly data = new Map<string, unknown>();
   private readonly observers = new Map<string, Set<Observer>>();
   private readonly changes: HortaChange[] = [];
+  private readonly allObservers = new Set<(change: HortaChange) => void>();
   private sequence = 0;
 
   constructor(private readonly maxChanges = 2000) {}
@@ -32,6 +33,7 @@ export class AeternumHortaCore {
     for (const observer of observers) {
       void Promise.resolve(observer(value, change));
     }
+    for (const observer of [...this.allObservers]) observer(change);
     return change;
   }
 
@@ -53,6 +55,11 @@ export class AeternumHortaCore {
       current.delete(observer);
       if (current.size === 0) this.observers.delete(key);
     };
+  }
+
+  observeAll(observer: (change: HortaChange) => void): () => void {
+    this.allObservers.add(observer);
+    return () => this.allObservers.delete(observer);
   }
 
   keys(): string[] {
