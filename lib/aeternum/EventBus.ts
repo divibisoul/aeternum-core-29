@@ -1,4 +1,4 @@
-import { EventBus as CoreEventBus } from "../../src/core/EventBus";
+import { EventBus as CoreEventBus } from "../../src/core/EventBus.ts";
 import type { AeternumEvent } from "./AeternumTypes";
 
 type Listener<T = unknown> = (data: T) => void | Promise<void>;
