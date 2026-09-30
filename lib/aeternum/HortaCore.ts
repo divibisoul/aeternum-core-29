@@ -1,70 +1,117 @@
-export interface HortaChange {
-  key: string;
-  oldValue: unknown;
-  newValue: unknown;
-  timestamp: number;
-  sequence: number;
-}
+import {
+  HortaCore as CanonicalHortaCore,
+  hortaCore as canonicalHortaCore,
+  type HortaChange,
+  type HortaVascularDirection,
+  type HortaVascularHealth,
+  type HortaVascularOutcome,
+  type HortaVascularPulse,
+  type HortaVessel,
+} from "../../src/core/hortaCore";
+
+export type { HortaChange, HortaVascularDirection, HortaVascularHealth, HortaVascularOutcome, HortaVascularPulse, HortaVessel };
 
 type Observer = (value: unknown, change: HortaChange) => void | Promise<void>;
 
+/**
+ * Compatibility facade over the canonical N01 HortaCore.
+ *
+ * The legacy AETERNUM surface stays available, but it no longer owns an
+ * independent state store. Vascular state and Mesh circulation therefore have
+ * exactly one runtime authority.
+ */
 export class AeternumHortaCore {
-  private readonly data = new Map<string, unknown>();
-  private readonly observers = new Map<string, Set<Observer>>();
-  private readonly changes: HortaChange[] = [];
-  private sequence = 0;
-
-  constructor(private readonly maxChanges = 2000) {}
+  constructor(private readonly core: CanonicalHortaCore = canonicalHortaCore) {}
 
   set<T>(key: string, value: T): HortaChange {
-    const change: HortaChange = {
-      key,
-      oldValue: this.data.get(key),
-      newValue: value,
-      timestamp: Date.now(),
-      sequence: ++this.sequence,
-    };
-    this.data.set(key, value);
-    this.changes.push(change);
-    if (this.changes.length > this.maxChanges) this.changes.shift();
-
-    const observers = [...(this.observers.get(key) ?? [])];
-    for (const observer of observers) {
-      void Promise.resolve(observer(value, change));
-    }
-    return change;
+    return this.core.set(key, value);
   }
 
   get<T>(key: string): T | undefined {
-    return this.data.get(key) as T | undefined;
+    return this.core.get<T>(key);
   }
 
   has(key: string): boolean {
-    return this.data.has(key);
+    return this.core.has(key);
+  }
+
+  delete(key: string): void {
+    this.core.delete(key);
   }
 
   observe(key: string, observer: Observer): () => void {
-    const observers = this.observers.get(key) ?? new Set<Observer>();
-    observers.add(observer);
-    this.observers.set(key, observers);
-    return () => {
-      const current = this.observers.get(key);
-      if (!current) return;
-      current.delete(observer);
-      if (current.size === 0) this.observers.delete(key);
-    };
+    return this.core.observe(key, observer as (value: unknown, change: HortaChange) => void);
+  }
+
+  observeAll(observer: (change: HortaChange) => void): () => void {
+    return this.core.observeAll(observer);
   }
 
   keys(): string[] {
-    return [...this.data.keys()].sort();
+    return this.core.keys();
   }
 
   snapshot(): Record<string, unknown> {
-    return Object.fromEntries(this.data.entries());
+    return this.core.snapshot();
   }
 
   getChangeLog(): HortaChange[] {
-    return [...this.changes];
+    return this.core.getChangeLog();
+  }
+
+  ensureVessel(
+    source: string,
+    target: string,
+    options: {
+      capacityBytes?: number;
+      resistance?: number;
+      direction?: HortaVascularDirection;
+    } = {},
+  ): HortaVessel {
+    return this.core.ensureVessel(source, target, options);
+  }
+
+  getVessel(id: string): HortaVessel | undefined {
+    return this.core.getVessel(id);
+  }
+
+  listVessels(): HortaVessel[] {
+    return this.core.listVessels();
+  }
+
+  beginVascularPulse(input: {
+    source: string;
+    target: string;
+    direction?: HortaVascularDirection;
+    bytes: number;
+    correlationId?: string;
+    messageId?: string;
+    kind?: string;
+    capability?: string;
+    capacityBytes?: number;
+    resistance?: number;
+  }): HortaVascularPulse {
+    return this.core.beginVascularPulse(input);
+  }
+
+  completeVascularPulse(
+    pulseId: string,
+    outcome: Exclude<HortaVascularOutcome, "started" | "rejected">,
+    error?: string,
+  ): HortaVascularPulse | undefined {
+    return this.core.completeVascularPulse(pulseId, outcome, error);
+  }
+
+  vascularHealth(): HortaVascularHealth {
+    return this.core.vascularHealth();
+  }
+
+  getVascularFlowLog() {
+    return this.core.getVascularFlowLog();
+  }
+
+  clear(): void {
+    this.core.clear();
   }
 }
 
