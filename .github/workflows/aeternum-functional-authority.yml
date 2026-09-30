@@ -1,4 +1,5 @@
 name: Aeternum Functional Authority
+# Revalidation after immutable snapshot publication
 
 on:
   pull_request:
