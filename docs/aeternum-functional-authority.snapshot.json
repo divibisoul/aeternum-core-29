@@ -1,0 +1,202 @@
+{
+  "schemaVersion": "1.0.0",
+  "system": "SOUL",
+  "layer": "AETERNUM",
+  "source": {
+    "repository": "divibisoul/aeternum-core-29",
+    "ref": "928e7403453bbc8af921a596645e4d9cd9b4cf78",
+    "path": "lib/aeternum/AeternumModuleMap.ts"
+  },
+  "fusion": {
+    "protocol": "nvod-fusion/1",
+    "contractVersion": "1.0.0",
+    "mapping": "canonical Soul Mesh at nucleus boundary"
+  },
+  "authorityModel": "connection-derived",
+  "modules": [
+    {
+      "moduleId": "M1_CORE",
+      "executionOwner": "N01",
+      "governanceAuthority": null,
+      "directDependencies": [],
+      "directDependents": [
+        "M2_ORCHESTRATION",
+        "M5_PERCEPTION",
+        "M6_IMMUNITY",
+        "M8_GOVERNANCE_MEMORY"
+      ],
+      "transitiveDependents": [
+        "M2_ORCHESTRATION",
+        "M3_LANGUAGE",
+        "M4_MIND",
+        "M5_PERCEPTION",
+        "M6_IMMUNITY",
+        "M7_EVOLUTION",
+        "M8_GOVERNANCE_MEMORY"
+      ],
+      "connectionScore": 15,
+      "roles": [
+        "ANCHOR",
+        "DEPENDENCY",
+        "EXECUTOR"
+      ],
+      "authorityPath": [
+        "M1_CORE"
+      ]
+    },
+    {
+      "moduleId": "M2_ORCHESTRATION",
+      "executionOwner": "N01",
+      "governanceAuthority": null,
+      "directDependencies": [
+        "M1_CORE"
+      ],
+      "directDependents": [
+        "M3_LANGUAGE",
+        "M4_MIND",
+        "M6_IMMUNITY"
+      ],
+      "transitiveDependents": [
+        "M3_LANGUAGE",
+        "M4_MIND",
+        "M6_IMMUNITY",
+        "M7_EVOLUTION",
+        "M8_GOVERNANCE_MEMORY"
+      ],
+      "connectionScore": 11,
+      "roles": [
+        "DEPENDENCY",
+        "EXECUTOR",
+        "ORCHESTRATOR"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M2_ORCHESTRATION"
+      ]
+    },
+    {
+      "moduleId": "M6_IMMUNITY",
+      "executionOwner": "N07",
+      "governanceAuthority": "SARA",
+      "directDependencies": [
+        "M1_CORE",
+        "M2_ORCHESTRATION"
+      ],
+      "directDependents": [
+        "M7_EVOLUTION",
+        "M8_GOVERNANCE_MEMORY"
+      ],
+      "transitiveDependents": [
+        "M7_EVOLUTION",
+        "M8_GOVERNANCE_MEMORY"
+      ],
+      "connectionScore": 6,
+      "roles": [
+        "DEPENDENCY",
+        "EXECUTOR",
+        "GOVERNOR"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M6_IMMUNITY"
+      ]
+    },
+    {
+      "moduleId": "M3_LANGUAGE",
+      "executionOwner": "N05",
+      "governanceAuthority": null,
+      "directDependencies": [
+        "M2_ORCHESTRATION"
+      ],
+      "directDependents": [],
+      "transitiveDependents": [],
+      "connectionScore": 0,
+      "roles": [
+        "EXECUTOR"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M2_ORCHESTRATION",
+        "M3_LANGUAGE"
+      ]
+    },
+    {
+      "moduleId": "M4_MIND",
+      "executionOwner": "N06",
+      "governanceAuthority": null,
+      "directDependencies": [
+        "M2_ORCHESTRATION"
+      ],
+      "directDependents": [],
+      "transitiveDependents": [],
+      "connectionScore": 0,
+      "roles": [
+        "EXECUTOR"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M2_ORCHESTRATION",
+        "M4_MIND"
+      ]
+    },
+    {
+      "moduleId": "M5_PERCEPTION",
+      "executionOwner": "N03",
+      "governanceAuthority": null,
+      "directDependencies": [
+        "M1_CORE"
+      ],
+      "directDependents": [],
+      "transitiveDependents": [],
+      "connectionScore": 0,
+      "roles": [
+        "EXECUTOR"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M5_PERCEPTION"
+      ]
+    },
+    {
+      "moduleId": "M7_EVOLUTION",
+      "executionOwner": "N07",
+      "governanceAuthority": "SARA",
+      "directDependencies": [
+        "M6_IMMUNITY"
+      ],
+      "directDependents": [],
+      "transitiveDependents": [],
+      "connectionScore": 0,
+      "roles": [
+        "EXECUTOR",
+        "GOVERNOR"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M6_IMMUNITY",
+        "M7_EVOLUTION"
+      ]
+    },
+    {
+      "moduleId": "M8_GOVERNANCE_MEMORY",
+      "executionOwner": "N07",
+      "governanceAuthority": "SARA",
+      "directDependencies": [
+        "M1_CORE",
+        "M6_IMMUNITY"
+      ],
+      "directDependents": [],
+      "transitiveDependents": [],
+      "connectionScore": 0,
+      "roles": [
+        "EXECUTOR",
+        "GOVERNOR",
+        "MEMORY"
+      ],
+      "authorityPath": [
+        "M1_CORE",
+        "M8_GOVERNANCE_MEMORY"
+      ]
+    }
+  ]
+}
