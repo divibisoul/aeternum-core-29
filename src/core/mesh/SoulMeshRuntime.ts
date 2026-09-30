@@ -145,6 +145,9 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('mesh.capabilities', meshAgentHandler),
     router.onRequest('mesh.describe', meshAgentHandler),
     router.onRequest('supercompute.execute', meshAgentHandler),
+    router.onRequest('memory.gemini.embedding', meshAgentHandler),
+    router.onRequest('memory.semantic.vector.recall', meshAgentHandler),
+    router.onRequest('memory.semantic.vector.remember', meshAgentHandler),
   ];
 
   const unsubscribe = EventBus.on('soul:mesh:message', async (message) => {
