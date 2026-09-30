@@ -10,6 +10,7 @@ import { N01AgentProcessor } from '../fusion/N01AgentProcessor';
 import { ProcessorHealthRegistry } from '../fusion/ProcessorHealthRegistry';
 import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
+import { storeRgoStageInHortaCore, type RgoStagePayload } from '../rgo/RgoHortaCore';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -20,9 +21,15 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
+
+      if (message.capability === 'rgo.hortacore.store') {
+        const stage = message.payload as RgoStagePayload;
+        const stored = storeRgoStageInHortaCore(stage);
+        return { nucleus: 'N01', capability: message.capability, ...stored, persisted: true, timestamp: Date.now() };
+      }
 
       if (message.capability === 'supercompute.execute') {
         const input = message.payload as { tasks?: SuperComputeTask[] };
@@ -83,6 +90,7 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('mesh.capabilities', meshAgentHandler),
     router.onRequest('mesh.describe', meshAgentHandler),
     router.onRequest('supercompute.execute', meshAgentHandler),
+    router.onRequest('rgo.hortacore.store', meshAgentHandler),
   ];
 
   const unsubscribe = EventBus.on('soul:mesh:message', async (message) => {
