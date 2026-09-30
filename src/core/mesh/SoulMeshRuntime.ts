@@ -10,7 +10,7 @@ import { N01AgentProcessor } from '../fusion/N01AgentProcessor';
 import { ProcessorHealthRegistry } from '../fusion/ProcessorHealthRegistry';
 import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
-import { createSupabaseVectorMemory } from '../soul-fusion/SupabaseVectorMemory';
+import { createSupabaseVectorMemory } from '../../soul-fusion/SupabaseVectorMemory';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
