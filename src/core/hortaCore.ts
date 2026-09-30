@@ -197,7 +197,7 @@ export class HortaCore {
       throw new Error('HORTA_INVALID_VESSEL_ENDPOINTS');
     }
     const direction = options.direction ?? 'outbound';
-    const id = `artery:${normalizedSource}->${normalizedTarget}`;
+    const id = `artery:${normalizedSource}->${normalizedTarget}:${direction}`;
     const existing = this.vessels.get(id);
     if (existing) return { ...existing };
     const vessel: HortaVessel = {
@@ -333,8 +333,11 @@ export class HortaCore {
     const totalBytes = vessels.reduce((sum, vessel) => sum + vessel.totalBytes, 0);
     const totalDurationMs = vessels.reduce((sum, vessel) => sum + vessel.totalDurationMs, 0);
     const throughputBytesPerSecond = totalDurationMs > 0 ? totalBytes / (totalDurationMs / 1000) : 0;
+    const currentlySaturated = vessels.some(
+      vessel => vessel.inFlightBytes >= vessel.capacityBytes,
+    );
     return {
-      status: rejectedPulses > 0 || pressure < 0.1 ? 'DEGRADED' : 'HEALTHY',
+      status: currentlySaturated || pressure < 0.1 ? 'DEGRADED' : 'HEALTHY',
       vesselCount: vessels.length,
       activePulses,
       inFlightBytes,
