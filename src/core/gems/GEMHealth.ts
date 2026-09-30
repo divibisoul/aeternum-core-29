@@ -11,11 +11,11 @@
 import { EventBus } from '@/core/EventBus';
 
 export interface HealthMetrics {
-  heartRate: number;
-  hrv: number;
-  stressLevel: number;
-  fatigueIndex: number;
-  sleepQuality: number;
+  heartRate: number | null;
+  hrv: number | null;
+  stressLevel: number | null;
+  fatigueIndex: number | null;
+  sleepQuality: number | null;
   alertsGenerated: number;
   lastAnalysis: number;
   wearableConnected: boolean;
@@ -36,11 +36,11 @@ export class GEMHealth {
   private _running = false;
   private _interval: ReturnType<typeof setInterval> | null = null;
   private _metrics: HealthMetrics = {
-    heartRate: 72,
-    hrv: 55,
-    stressLevel: 0.3,
-    fatigueIndex: 0.2,
-    sleepQuality: 0.75,
+    heartRate: null,
+    hrv: null,
+    stressLevel: null,
+    fatigueIndex: null,
+    sleepQuality: null,
     alertsGenerated: 0,
     lastAnalysis: Date.now(),
     wearableConnected: false,
@@ -77,45 +77,38 @@ export class GEMHealth {
   }
 
   private cycle(): void {
-    // Simulate physiological drift when no wearable connected
-    if (!this._metrics.wearableConnected) {
-      this._metrics.heartRate = 65 + Math.random() * 20;
-      this._metrics.hrv = 40 + Math.random() * 30;
-      this._metrics.stressLevel = Math.max(0, Math.min(1, this._metrics.stressLevel + (Math.random() - 0.52) * 0.05));
-      this._metrics.fatigueIndex = Math.max(0, Math.min(1, this._metrics.fatigueIndex + (Math.random() - 0.48) * 0.03));
-    }
-
     this._metrics.lastAnalysis = Date.now();
     this._metrics.cyclesCompleted++;
     this.analyzeAndAlert();
 
-    // Keep history bounded
+    // Keep history bounded; null-valued fields explicitly mean unmeasured.
     this._history.push({ ...this._metrics });
     if (this._history.length > 100) this._history.shift();
   }
 
   private analyzeAndAlert(): void {
     const { heartRate, hrv, stressLevel, fatigueIndex } = this._metrics;
+    if (!this._metrics.wearableConnected) return;
 
     // HRV anomaly detection
-    if (hrv < 20) {
+    if (hrv != null && hrv < 20) {
       this.emitAlert('critical', 'hrv', hrv, 20, 'HRV criticamente baixo - risco cardiovascular');
-    } else if (hrv < 30) {
+    } else if (hrv != null && hrv < 30) {
       this.emitAlert('warning', 'hrv', hrv, 30, 'HRV abaixo do normal');
     }
 
     // Heart rate anomaly
-    if (heartRate > 120) {
+    if (heartRate != null && heartRate > 120) {
       this.emitAlert('warning', 'heartRate', heartRate, 120, 'Frequência cardíaca elevada');
     }
 
     // Stress threshold
-    if (stressLevel > 0.8) {
+    if (stressLevel != null && stressLevel > 0.8) {
       this.emitAlert('warning', 'stress', stressLevel, 0.8, 'Nível de stress elevado');
     }
 
     // Fatigue
-    if (fatigueIndex > 0.7) {
+    if (fatigueIndex != null && fatigueIndex > 0.7) {
       this.emitAlert('info', 'fatigue', fatigueIndex, 0.7, 'Fadiga detectada - sugere-se pausa');
     }
   }
@@ -126,7 +119,7 @@ export class GEMHealth {
     if (recent) return;
 
     const alert: HealthAlert = {
-      id: `health_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+      id: crypto.randomUUID(),
       type, metric, value, threshold, message,
       timestamp: Date.now(),
     };
