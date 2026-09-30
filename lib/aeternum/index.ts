@@ -5,3 +5,7 @@ export * from "./WormholeRegistry";
 export * from "./NeuralCoordinates";
 export * from "./AeternumModuleMap";
 export * from "./AeternumOrchestrator";
+
+export * from "./RecoveredAeternumHortaBridge";
+export * from "./RecoveredAeternumRuntime";
+export * from "./RecoveredAeternumCapabilityBridge";
