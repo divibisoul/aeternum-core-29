@@ -122,6 +122,12 @@ export class SupabaseVectorMemory {
     }
   }
 
+  async embedText(text: string, options: { apiKey?: string } = {}): Promise<number[] | null> {
+    const input = typeof text === 'string' ? text.trim() : '';
+    if (!input) return null;
+    return this.embedding(input, options.apiKey);
+  }
+
   async recall(text: string, options: { apiKey?: string; sessionId?: string; threshold?: number; limit?: number } = {}): Promise<SoulMemory[]> {
     try {
       const input = typeof text === 'string' ? text.trim() : '';
