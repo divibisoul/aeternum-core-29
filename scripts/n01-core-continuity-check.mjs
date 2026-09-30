@@ -9,18 +9,19 @@ const [{ EventBus }, { nervoVago }, { aeternumBus }, { ProjetoClareira }, { Modu
     import('../src/core/ModuleRegistry.ts'),
   ]);
 
-let canonicalSeen = 0;
-const unsubscribeCanonical = EventBus.on('continuity.probe', () => {
-  canonicalSeen += 1;
+let aeternumBridgeSeen = 0;
+const unsubscribeCanonical = EventBus.on('aeternum:bridge', (payload) => {
+  if (payload?.event === 'continuity.probe') aeternumBridgeSeen += 1;
 });
 await aeternumBus.emit('continuity.probe', { source: 'aeternum-facade' });
-assert.equal(canonicalSeen, 1);
+assert.equal(aeternumBridgeSeen, 1);
 
 let nervoSeen = 0;
 const unsubscribeNervo = nervoVago.on('continuity.probe', () => {
   nervoSeen += 1;
 });
-await nervoVago.emit('continuity.probe', { source: 'nervo-vago' });
+nervoVago.emit('continuity.probe', { source: 'nervo-vago' });
+await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(nervoSeen, 1);
 
 const status = ProjetoClareira.getStatus();
