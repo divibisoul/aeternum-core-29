@@ -1,0 +1,27 @@
+name: N01 NVOD fusion verification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/core/fusion/**'
+      - 'src/core/mesh/SoulMeshRuntime.ts'
+      - 'scripts/nvod-fusion-contract-check.mjs'
+      - '.github/workflows/n01-nvod-fusion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Execute NVOD fusion contract check
+        run: node --experimental-strip-types scripts/nvod-fusion-contract-check.mjs
