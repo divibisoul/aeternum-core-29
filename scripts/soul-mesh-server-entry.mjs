@@ -9,6 +9,7 @@ const N07_URL = String(process.env.SOUL_MESH_N07_URL || '').trim().replace(/\/$/
 const SECRET = String(process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || '').trim();
 const PROTOCOL = 'soul-mesh/1';
 const CONTRACT_VERSION = '1.1.0';
+const MESH_SIGNATURE_VERSION = '2';
 const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(internalPort) },
   stdio: 'inherit',
@@ -67,8 +68,30 @@ function canonicalN07Relay(message, nonce) {
   });
 }
 
+function canonicalN07RelayV2(message, nonce) {
+  return JSON.stringify({
+    protocol: message.protocol,
+    contractVersion: message.contractVersion,
+    id: message.id,
+    messageId: message.id,
+    correlationId: message.correlationId,
+    source: message.source,
+    target: message.target,
+    kind: message.kind,
+    type: message.type ?? null,
+    capability: message.capability,
+    operation: message.operation ?? null,
+    payload: message.payload || {},
+    metadata: message.metadata ?? null,
+    timestamp: message.timestamp,
+    transport: message.meta?.transport,
+    meta: message.meta,
+    nonce,
+  });
+}
+
 function signN07Relay(message, nonce) {
-  return crypto.createHmac('sha256', SECRET).update(canonicalN07Relay(message, nonce)).digest('hex');
+  return crypto.createHmac('sha256', SECRET).update(canonicalN07RelayV2(message, nonce)).digest('hex');
 }
 
 function verifyN07Response(message) {
@@ -113,6 +136,7 @@ async function relayToN07(message) {
         'x-soul-correlation-id': message.correlationId,
         'x-soul-mesh-nonce': nonce,
         'x-soul-mesh-hmac': signature,
+        'x-soul-mesh-signature-version': MESH_SIGNATURE_VERSION,
       },
       body: JSON.stringify(message),
       signal: controller.signal,
