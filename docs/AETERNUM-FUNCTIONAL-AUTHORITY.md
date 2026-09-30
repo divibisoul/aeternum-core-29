@@ -28,4 +28,4 @@ O NVOD continua sendo o envelope de fusão interno de N01 e é mapeado para o So
 
 `scripts/n01-aeternum-functional-authority-check.mjs` executa contra os módulos reais do repositório. Falhas no grafo (ID duplicado, dependência desconhecida ou ciclo) fazem o processo falhar.
 
-Estado: **estruturalmente implementado; execução CI depende do PR desta frente**.
+Snapshot interoperável publicado em `docs/aeternum-functional-authority.snapshot.json`, apontando para o SHA exato do mapa-fonte. O snapshot é uma projeção verificável, não uma nova autoridade. Estado: **estruturalmente implementado; CI desta frente deve verificar mapa + snapshot**.
