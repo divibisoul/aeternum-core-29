@@ -1,4 +1,4 @@
-export type NeuralOperation = "neural.forward@1.0.0" | "neural.learn@1.0.0";
+export type NeuralOperation = "neural.forward@1.0.0" | "neural.learn@1.0.0" | "learning.feedback@1.0.0";
 export type NeuralRequest = { operation: NeuralOperation; payload: number[]; correlationId?: string; deadlineMs?: number };
 export type NeuralResponse = { traceId: string; correlationId: string; payload?: number[]; data?: unknown; status?: string };
 
@@ -124,7 +124,7 @@ export class N07NeuralBridge {
       target: "N07",
       kind: "request",
       capability: request.operation.split("@")[0],
-      payload: { values: request.payload },
+      payload: { values: request.payload, ...(request.payloadMetadata ?? {}) },
       timestamp: Date.now(),
       nonce,
     };
@@ -178,5 +178,17 @@ export class N07NeuralBridge {
       throw new Error("input and target dimensions must match");
     }
     return this.invoke({ operation: "neural.learn@1.0.0", payload: [...input, ...target], correlationId });
+  }
+
+  feedback(reward: number, confidence: number, target: string, capability: string, outcome = "observed", provenance = "mesh-observed", correlationId?: string) {
+    if (!Number.isFinite(reward) || reward < -1 || reward > 1) throw new Error("learning reward must be finite and within [-1,1]");
+    if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) throw new Error("learning confidence must be finite and within [0,1]");
+    if (!target.trim() || !capability.trim()) throw new Error("learning target and capability are required");
+    return this.invoke({
+      operation: "learning.feedback@1.0.0",
+      payload: [reward, confidence],
+      correlationId,
+      payloadMetadata: { target: target.trim(), capability: capability.trim(), outcome, provenance },
+    });
   }
 }
