@@ -23,6 +23,7 @@ export const SOUL_MESH_CORE_CAPABILITIES: Record<SoulNucleus, SoulMeshCapability
     { id: 'android.battery', version: '1.0', description: 'Observed Android battery state', request: true, response: true, events: true, owner: 'N01', execution: 'native' },
     { id: 'android.memory', version: '1.0', description: 'Observed Android memory state', request: true, response: true, events: true, owner: 'N01', execution: 'native' },
     { id: 'android.network', version: '1.0', description: 'Observed Android network state', request: true, response: true, events: true, owner: 'N01', execution: 'native' },
+    { id: 'rgo.hortacore.store', version: '1.0.0', description: 'Persist an RGO Trinity stage in the existing N01 HortaCore memory', request: true, response: true, events: true, owner: 'N01', execution: 'native' },
   ],
   N02: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N02', execution: 'observability' }],
   N03: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N03', execution: 'observability' }],
