@@ -40,6 +40,7 @@ export interface AeternumEvents {
   'nav:module:select': { moduleId: string };
   'nav:settings:open': void;
   'soul:mesh:message': unknown;
+  'aeternum:bridge': { event:string; data:unknown };
   'clareira.packet.ingested': { correlationId: string; sourceId: string };
   'clareira.packet.processed': { correlationId: string; latencyMs: number };
   'clareira.packet.dropped': { correlationId: string; reason: string };
