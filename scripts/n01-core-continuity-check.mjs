@@ -27,7 +27,7 @@ assert.equal(nervoSeen, 1);
 const status = ProjetoClareira.getStatus();
 assert.equal(status.nodes.length, 9);
 for (const id of ['NC-001', 'NP-001', 'NP-002', 'NP-003', 'NS-001', 'NS-002', 'NS-003', 'NS-004', 'NS-005']) {
-  assert.ok(status.nodes.some((node) => node.nodeId === id), id);
+  assert.ok(status.nodes.some((node) => node.id === id), id);
 }
 
 assert.equal(typeof EventBus.emit, 'function');
