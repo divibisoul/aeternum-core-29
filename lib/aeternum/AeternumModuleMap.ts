@@ -1,4 +1,4 @@
-import type { AeternumModuleDescriptor } from "./AeternumTypes";
+import type { AeternumModuleDescriptor } from "./AeternumTypes.ts";
 
 export const AETERNUM_8_MODULES: readonly AeternumModuleDescriptor[] = [
   {
