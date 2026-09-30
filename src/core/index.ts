@@ -13,3 +13,6 @@ export type { Coordinates } from './neuralCoordinates';
 
 // Bootstrap explícito: importar './core' no App inicializa o GenesisModule.
 export { genesisModule } from './GenesisModule';
+
+export { HortaCoreMeshBridge } from './mesh/HortaCoreMeshBridge';
+export type { SoulMeshTrafficObserver } from './mesh/SoulMeshRouter';
