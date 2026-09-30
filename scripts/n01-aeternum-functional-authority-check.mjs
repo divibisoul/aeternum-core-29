@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import assert from "node:assert/strict";
 import { AETERNUM_8_MODULES, validateAeternumModuleGraph } from "../lib/aeternum/AeternumModuleMap.ts";
 import { authorityForModule, resolveFunctionalAuthority } from "../lib/aeternum/AeternumFunctionalAuthority.ts";
@@ -34,3 +36,20 @@ console.log(JSON.stringify({
   anchorScore: m1.connectionScore,
   m6Governance: m6.governanceAuthority,
 }));
+
+const snapshotPath = path.join(process.cwd(), 'docs', 'aeternum-functional-authority.snapshot.json');
+const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+if (snapshot.schemaVersion !== '1.0.0' || snapshot.system !== 'SOUL' || snapshot.layer !== 'AETERNUM') throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_HEADER_INVALID');
+const expected = new Map(records.map((record) => [record.moduleId, record]));
+if (!Array.isArray(snapshot.modules) || snapshot.modules.length !== records.length) throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_COUNT_MISMATCH');
+for (const item of snapshot.modules) {
+  const live = expected.get(item.moduleId);
+  if (!live) throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_UNKNOWN_MODULE:' + item.moduleId);
+  if (item.executionOwner !== live.executionOwner || item.governanceAuthority !== live.governanceAuthority || item.connectionScore !== live.connectionScore) {
+    throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_DIVERGED:' + item.moduleId);
+  }
+  if (JSON.stringify(item.directDependencies) !== JSON.stringify(live.directDependencies)) throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_DEPENDENCIES_DIVERGED:' + item.moduleId);
+  if (JSON.stringify(item.directDependents) !== JSON.stringify(live.directDependents)) throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_DEPENDENTS_DIVERGED:' + item.moduleId);
+  if (JSON.stringify(item.transitiveDependents) !== JSON.stringify(live.transitiveDependents)) throw new Error('AETERNUM_AUTHORITY_SNAPSHOT_TRANSITIVE_DIVERGED:' + item.moduleId);
+}
+console.log(JSON.stringify({snapshot: 'CONSISTENT_WITH_LIVE_RESOLVER', source: snapshot.source, modules: snapshot.modules.length}));
