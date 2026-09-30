@@ -1,0 +1,21 @@
+name: N01 Core Continuity Restoration Guard
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - fase0/n01-core-continuity-main-2026-09-30
+
+jobs:
+  continuity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node --experimental-strip-types scripts/n01-core-continuity-check.mjs
+      - run: npm run build
