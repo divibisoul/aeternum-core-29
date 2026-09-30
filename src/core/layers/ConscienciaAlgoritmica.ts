@@ -229,9 +229,11 @@ export class ConscienciaAlgoritmica {
     
     const coerencias: number[] = [];
     
-    // 10 iterações de teste
+    // 10 iterações determinísticas para validar as camadas sem sintetizar dados aleatórios.
     for (let i = 0; i < 10; i++) {
-      const experiencia = Array(10).fill(null).map(() => Math.random());
+      const experiencia = Array.from({ length: 10 }, (_, index) =>
+        ((i + 1) * (index + 3)) % 17 / 16,
+      );
       const resultado = this.processar(experiencia, 'teste-automatico');
       coerencias.push(resultado.metricas.coerenciaMedia);
     }
