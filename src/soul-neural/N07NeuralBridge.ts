@@ -1,5 +1,5 @@
 export type NeuralOperation = "neural.forward@1.0.0" | "neural.learn@1.0.0" | "learning.feedback@1.0.0";
-export type NeuralRequest = { operation: NeuralOperation; payload: number[]; correlationId?: string; deadlineMs?: number };
+export type NeuralRequest = { operation: NeuralOperation; payload: number[]; correlationId?: string; deadlineMs?: number; payloadMetadata?: Record<string,string> };
 export type NeuralResponse = { traceId: string; correlationId: string; payload?: number[]; data?: unknown; status?: string };
 
 type CanonicalEnvelope = {
