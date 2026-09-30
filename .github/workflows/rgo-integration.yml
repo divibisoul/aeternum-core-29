@@ -1,0 +1,19 @@
+name: rgo-trinity-mmd
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "reconcile/**"
+      - "rgo/**"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npx --yes tsx --test __tests__/rgo.spec.ts src/core/rgo/RgoHortaCore.test.ts
+      - run: npm run build
