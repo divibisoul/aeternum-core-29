@@ -14,6 +14,7 @@
     "mesh:health:unit": "node --experimental-strip-types lib/soul-mesh/SoulMeshHealth.test.ts",
     "mesh:async:unit": "node --experimental-strip-types src/core/mesh/SoulMeshAsyncExecutor.test.ts",
     "mesh:contract:check": "node scripts/soul-mesh-contract-check.mjs",
+    "mesh:horta:unit": "node --experimental-strip-types src/core/mesh/HortaCoreMeshBridge.test.ts",
     "fusion:check": "node scripts/soul-fusion-contract-check.mjs",
     "supergpu:check": "node scripts/soul-supergpu-check.mjs",
     "byok:check": "node scripts/test-n01-byok.mjs",
