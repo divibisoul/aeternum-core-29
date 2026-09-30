@@ -1,0 +1,28 @@
+name: Aeternum Functional Authority
+
+on:
+  pull_request:
+    paths:
+      - "lib/aeternum/AeternumModuleMap.ts"
+      - "lib/aeternum/AeternumTypes.ts"
+      - "lib/aeternum/AeternumFunctionalAuthority.ts"
+      - "scripts/n01-aeternum-functional-authority-check.mjs"
+      - ".github/workflows/aeternum-functional-authority.yml"
+      - "package.json"
+  push:
+    branches:
+      - main
+      - "fase0/**"
+      - "recovery/**"
+      - "feat/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify functional authority graph
+        run: node --experimental-strip-types scripts/n01-aeternum-functional-authority-check.mjs
