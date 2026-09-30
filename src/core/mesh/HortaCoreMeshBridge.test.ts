@@ -1,27 +1,7 @@
 import { strict as assert } from 'node:assert';
 import { HortaCore } from '../src/core/hortaCore';
 import { HortaCoreMeshBridge } from '../src/core/mesh/HortaCoreMeshBridge';
-import { SoulMeshRouter } from '../src/core/mesh/SoulMeshRouter';
-import { SOUL_MESH_PROTOCOL, SOUL_MESH_CONTRACT_VERSION, type SoulMeshMessage, type SoulMeshTransport } from '../src/core/mesh/SoulMeshProtocol';
-
-class FakeTransport implements SoulMeshTransport {
-  sent: SoulMeshMessage[] = [];
-  private listener?: (message: SoulMeshMessage) => void | Promise<void>;
-
-  send(message: SoulMeshMessage): Promise<void> {
-    this.sent.push(message);
-    return Promise.resolve();
-  }
-
-  onMessage(handler: (message: SoulMeshMessage) => void | Promise<void>): () => void {
-    this.listener = handler;
-    return () => { this.listener = undefined; };
-  }
-
-  async receive(message: SoulMeshMessage): Promise<void> {
-    await this.listener?.(message);
-  }
-}
+import { SOUL_MESH_PROTOCOL, SOUL_MESH_CONTRACT_VERSION, type SoulMeshMessage } from '../src/core/mesh/SoulMeshProtocol';
 
 function message(partial: Partial<SoulMeshMessage> = {}): SoulMeshMessage {
   return {
@@ -57,18 +37,19 @@ test('HortaCore vascular layer models pressure, flow and backpressure', () => {
   assert.equal(horta.vascularHealth().rejectedPulses, 1);
 });
 
-test('Soul Mesh traffic actually communicates with HortaCore through router instrumentation', async () => {
-  const transport = new FakeTransport();
+test('HortaCoreMeshBridge instruments real Soul Mesh message lifecycle', () => {
   const horta = new HortaCore();
-  const router = new SoulMeshRouter(transport, 'N01');
-  router.setTrafficObserver(new HortaCoreMeshBridge(horta));
+  const bridge = new HortaCoreMeshBridge(horta);
 
-  await router.sendEvent('N02', 'mesh.test', { payload: true });
+  const outbound = message({ source: 'N01', target: 'N02', kind: 'request', capability: 'mesh.health' });
+  const outboundReceipt = bridge.beforeSend(outbound) as { id?: string };
+  assert.equal(typeof outboundReceipt?.id, 'string');
+  bridge.afterSend(outbound, outboundReceipt);
   assert.equal(horta.vascularHealth().completedPulses, 1);
-  assert.equal(transport.sent.length, 1);
+  assert.equal(horta.getVessel('artery:N01->N02:outbound')?.completedPulses, 1);
 
-  await transport.receive(message());
+  const inbound = message({ source: 'N02', target: 'N01', kind: 'response', capability: 'mesh.health' });
+  bridge.onReceive(inbound);
   assert.equal(horta.vascularHealth().completedPulses, 2);
-  assert.equal(horta.vascularHealth().vesselCount, 2);
-  router.close();
+  assert.equal(horta.getVessel('artery:N02->N01:inbound')?.completedPulses, 1);
 });
