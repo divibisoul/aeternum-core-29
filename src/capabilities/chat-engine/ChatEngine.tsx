@@ -61,8 +61,9 @@ interface Message {
     lattice_coherence: number;
     saiic_integrity: number;
     resource_cpu: number;
-    gem_health_stress: number;
+    gem_health_stress: number | null;
     gem_device_connected: boolean;
+    evidence?: 'MEASURED_RUNTIME' | 'UNMEASURED';
   };
 }
 
@@ -290,7 +291,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
 
       // === INTEGRAÇÃO: ConscienciaAlgoritmica ===
       const experiencia = userInput.split('').slice(0, 10).map(c => c.charCodeAt(0) / 255);
-      while (experiencia.length < 10) experiencia.push(Math.random() * 0.5);
+      while (experiencia.length < 10) experiencia.push(0);
       
       const conscienciaResult = ConscienciaAlgoritmicaInstance.processar(experiencia, userInput);
       console.log('[ChatEngine] ConscienciaAlgoritmica processou:', {
@@ -313,6 +314,7 @@ export function ChatEngine({ isActive }: ModuleComponentProps) {
         resource_cpu: agiResult.resourceMetrics.totalCpuUsage,
         gem_health_stress: agi.gemHealth.metrics.stressLevel,
         gem_device_connected: agi.gemDevice.connected,
+        evidence: agi.gemHealth.metrics.wearableConnected ? 'MEASURED_RUNTIME' : 'UNMEASURED',
       };
 
       // === INTEGRAÇÃO: Projeto Clareira ===
