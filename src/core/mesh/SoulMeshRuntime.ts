@@ -10,11 +10,14 @@ import { N01AgentProcessor } from '../fusion/N01AgentProcessor';
 import { ProcessorHealthRegistry } from '../fusion/ProcessorHealthRegistry';
 import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
+import { HortaCoreMeshBridge } from './HortaCoreMeshBridge';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
   const transport = new SoulMeshSupabaseTransport();
   const router = new SoulMeshRouter(transport, 'N01');
+  const hortaMeshBridge = new HortaCoreMeshBridge();
+  router.setTrafficObserver(hortaMeshBridge);
   const agents = new N01AgentRegistry();
 
   agents.register({
@@ -95,6 +98,7 @@ export function startSoulMeshRuntime(): () => void {
   });
 
   return () => {
+    router.setTrafficObserver();
     continuityBridge.dispose();
     registrations.forEach((unsubscribeHandler) => unsubscribeHandler());
     unsubscribe();
