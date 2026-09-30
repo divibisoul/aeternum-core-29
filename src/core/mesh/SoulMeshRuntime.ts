@@ -12,6 +12,7 @@ import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
 import { storeRgoStageInHortaCore, type RgoStagePayload } from '../rgo/RgoHortaCore';
 import { createSupabaseVectorMemory } from '../../soul-fusion/SupabaseVectorMemory';
+import { recoveredAeternumCapabilityBridge } from '../../../lib/aeternum/RecoveredAeternumCapabilityBridge';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -23,9 +24,13 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
+
+      if (message.capability === 'aeternum.architecture.guide' || message.capability === 'aeternum.blueprint.create' || message.capability === 'aeternum.neuralforge.create') {
+        return recoveredAeternumCapabilityBridge.execute(message.capability, message.payload);
+      }
 
       if (message.capability === 'rgo.hortacore.store') {
         const stage = message.payload as RgoStagePayload;
@@ -93,7 +98,7 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create'],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
@@ -137,6 +142,9 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('memory.gemini.embedding', meshAgentHandler),
     router.onRequest('memory.semantic.vector.recall', meshAgentHandler),
     router.onRequest('memory.semantic.vector.remember', meshAgentHandler),
+    router.onRequest('aeternum.architecture.guide', meshAgentHandler),
+    router.onRequest('aeternum.blueprint.create', meshAgentHandler),
+    router.onRequest('aeternum.neuralforge.create', meshAgentHandler),
   ];
 
   const unsubscribe = EventBus.on('soul:mesh:message', async (message) => {
