@@ -10,19 +10,77 @@ import { N01AgentProcessor } from '../fusion/N01AgentProcessor';
 import { ProcessorHealthRegistry } from '../fusion/ProcessorHealthRegistry';
 import { ProcessorRuntime } from '../fusion/ProcessorRuntime';
 import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
+import { createSupabaseVectorMemory } from '../soul-fusion/SupabaseVectorMemory';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
   const transport = new SoulMeshSupabaseTransport();
   const router = new SoulMeshRouter(transport, 'N01');
   const agents = new N01AgentRegistry();
+  const vectorMemory = createSupabaseVectorMemory();
 
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute'],
+    capabilities: [
+      'mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute',
+      'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember',
+    ],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
+
+      if (message.capability === 'memory.gemini.embedding') {
+        const input = message.payload as { text?: string };
+        const embedding = await vectorMemory.embedText(input?.text ?? '');
+        if (!embedding) throw new Error('N01_GEMINI_EMBEDDING_UNAVAILABLE');
+        return {
+          nucleus: 'N01',
+          capability: message.capability,
+          correlationId: message.correlationId,
+          model: process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-2',
+          dimensions: embedding.length,
+          embedding,
+        };
+      }
+
+      if (message.capability === 'memory.semantic.vector.recall') {
+        const input = message.payload as { text?: string; sessionId?: string; threshold?: number; limit?: number };
+        if (!input?.text?.trim()) throw new Error('N01_MEMORY_RECALL_TEXT_REQUIRED');
+        const memories = await vectorMemory.recall(input.text, {
+          sessionId: input.sessionId,
+          threshold: input.threshold,
+          limit: input.limit,
+        });
+        return {
+          nucleus: 'N01',
+          capability: message.capability,
+          correlationId: message.correlationId,
+          memories,
+        };
+      }
+
+      if (message.capability === 'memory.semantic.vector.remember') {
+        const input = message.payload as {
+          content?: string; agentId?: string; sessionId?: string; memoryType?: string;
+          metadata?: Record<string, unknown>; importance?: number; confidence?: number;
+        };
+        if (!input?.content?.trim()) throw new Error('N01_MEMORY_REMEMBER_CONTENT_REQUIRED');
+        const stored = await vectorMemory.remember(input.content, {
+          agentId: input.agentId,
+          sessionId: input.sessionId,
+          memoryType: input.memoryType,
+          metadata: input.metadata,
+          importance: input.importance,
+          confidence: input.confidence,
+        });
+        if (!stored) throw new Error('N01_MEMORY_REMEMBER_UNAVAILABLE');
+        return {
+          nucleus: 'N01',
+          capability: message.capability,
+          correlationId: message.correlationId,
+          stored: true,
+        };
+      }
 
       if (message.capability === 'supercompute.execute') {
         const input = message.payload as { tasks?: SuperComputeTask[] };
@@ -43,7 +101,11 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute'],
+        capabilities: [
+          'mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe',
+          'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute',
+          'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember',
+        ],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
