@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+// Plain JavaScript runtime check: no TypeScript-only type parameters.
 import { createServer } from 'vite';
 
 const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
