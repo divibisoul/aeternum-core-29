@@ -1,0 +1,29 @@
+name: Recovered Aeternum continuity verification
+on:
+  push:
+    branches:
+      - "integration/recovered-aeternum-current-main-2026-10-01"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/aeternum/**"
+      - "src/core/index.ts"
+      - "src/core/GenesisModule.ts"
+      - "src/core/hortaCore.ts"
+      - "scripts/recovered-aeternum-continuity-check.mjs"
+      - ".github/workflows/recovered-aeternum-continuity.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: node scripts/recovered-aeternum-continuity-check.mjs
