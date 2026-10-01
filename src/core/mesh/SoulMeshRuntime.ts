@@ -122,7 +122,7 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0'],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
@@ -170,6 +170,7 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('aeternum.blueprint.create', meshAgentHandler),
     router.onRequest('aeternum.neuralforge.create', meshAgentHandler),
     router.onRequest('external.capability.execute', meshAgentHandler),
+    router.onRequest('external.capability.execute@1.0.0', meshAgentHandler),
   ];
 
   const unsubscribe = EventBus.on('soul:mesh:message', async (message) => {
