@@ -23,7 +23,7 @@ function circuitAllows(target:NucleusId){const openedAt=circuitOpenedAt.get(targ
 function recordSuccess(target:NucleusId){circuitFailures.delete(target);circuitOpenedAt.delete(target);}
 function recordFailure(target:NucleusId){const failures=(circuitFailures.get(target)??0)+1;circuitFailures.set(target,failures);if(failures>=CIRCUIT_FAILURE_THRESHOLD)circuitOpenedAt.set(target,Date.now());}
 
-export async function sendTo(target:NucleusId,capability:string,payload:unknown,timeoutMs=15000):Promise<SoulMeshMessage>{
+export async function sendTo(target:NucleusId,capability:string,payload:unknown,timeoutMs=15000,correlationId=uuid()):Promise<SoulMeshMessage>{
  if(target==='N01')throw new Error('N01 inbound transport is owned by the Android runtime bridge');
  const directUrl=urls[target];
  const isN07=target==='N07';
@@ -32,7 +32,7 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
  if(isN07&&!relayOrigin)throw new Error('N07_BROWSER_RELAY_ORIGIN_REQUIRED');
  if(!directUrl&&!isN07)throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);if(!capability.trim())throw new Error('SOUL_MESH_CAPABILITY_REQUIRED');
  if(!circuitAllows(target))throw new Error(`SOUL_MESH_CIRCUIT_OPEN:${target}`);
- const correlationId=uuid();let lastError:unknown;
+ let lastError:unknown;
  for(let attempt=1;attempt<=MAX_ATTEMPTS;attempt++){
   const id=uuid();const n=nonce();
   const message:SoulMeshMessage={protocol:'soul-mesh/1',contractVersion:'1.1.0',id,correlationId,source:'N01',target,kind:'request',capability,payload,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:'1.1.0',traceId:correlationId,nonce:n}};
