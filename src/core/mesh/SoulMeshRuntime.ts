@@ -27,7 +27,7 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
 
@@ -35,7 +35,7 @@ export function startSoulMeshRuntime(): () => void {
         return recoveredAeternumCapabilityBridge.execute(message.capability, message.payload);
       }
 
-      if (message.capability === 'external.capability.execute') {
+      if (message.capability === 'external.capability.execute' || message.capability === 'external.capability.execute@1.0.0') {
         const input = message.payload;
         if (!input || typeof input !== 'object' || Array.isArray(input)) {
           throw new Error('N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED');
