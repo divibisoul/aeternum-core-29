@@ -2,6 +2,7 @@ import type { N01N02HybridLink } from '../../src/core/mesh/N01N02HybridLink';
 
 export type N01ExternalCapabilityRequest = {
   capability: string;
+  correlationId: string;
   payload?: unknown;
   workloads?: unknown[];
   candidate?: Record<string, unknown>;
@@ -19,6 +20,8 @@ export async function delegateN01ExternalCapability(
 ): Promise<unknown> {
   const capability = request.capability.trim();
   if (!capability) throw new Error('N01_EXTERNAL_CAPABILITY_REQUIRED');
+  const correlationId = request.correlationId.trim();
+  if (!correlationId) throw new Error('N01_EXTERNAL_CORRELATION_REQUIRED');
 
   const result = await link.requestN02(capability, {
     payload: request.payload ?? {},
@@ -28,7 +31,7 @@ export async function delegateN01ExternalCapability(
       candidate_json: JSON.stringify(request.candidate ?? { capability }),
       strategy: request.strategy ?? 'n01-external-tool-preflight',
     },
-  });
+  }, correlationId);
 
   return result.payload;
 }
