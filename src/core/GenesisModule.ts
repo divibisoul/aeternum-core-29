@@ -7,6 +7,7 @@
 import { hortaCore } from './hortaCore';
 import { wormhole } from './wormholeRegistry';
 import { nervoVago } from './eventBus.ts';
+import { recoveredAeternumRuntime } from '../../lib/aeternum/RecoveredAeternumRuntime';
 
 export interface GenesisRecord {
   version: string;
@@ -57,6 +58,7 @@ class GenesisModule {
       dependencies: ['hortaCore', 'wormholeRegistry'],
     });
     nervoVago.on('genesis.query', () => this.respond());
+    recoveredAeternumRuntime.boot();
   }
 
   respond(): void {
