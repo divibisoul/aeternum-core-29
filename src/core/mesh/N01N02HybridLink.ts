@@ -14,8 +14,8 @@ export class N01N02HybridLink {
     this.router = new SoulMeshRouter(options.transport, 'N01', options.timeoutMs ?? 30000);
   }
 
-  requestN02<T = unknown>(capability: string, payload: T): Promise<SoulMeshMessage> {
-    return this.router.request('N02', capability, payload);
+  requestN02<T = unknown>(capability: string, payload: T, correlationId?: string): Promise<SoulMeshMessage> {
+    return this.router.request('N02', capability, payload, correlationId);
   }
 
   eventToN02<T = unknown>(capability: string, payload: T): Promise<void> {
