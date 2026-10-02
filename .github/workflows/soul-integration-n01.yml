@@ -1,0 +1,36 @@
+name: SOUL Integration CI - N01
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Validate identity
+        run: test -s SOUL_ECOSYSTEM.md
+      - name: Validate submodule paths
+        shell: bash
+        run: |
+          set -e
+          if test -f .gitmodules; then
+            git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | while read p; do test -e "$p"; done
+          fi
+      - name: Validate N07 registry
+        if: github.event.repository.name == 'Orquestrador-'
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('integrations/external-capabilities.json'))
+          assert len(d['repositories']) == 16
+          for x in d['repositories']:
+              assert x['source'].startswith('https://github.com/')
+              assert x['revision']
+              assert x['targets']
+          print('16 external integrations: VALID')
+          PY
