@@ -6,7 +6,7 @@ const configuredPort = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 0);
 const reservePort = (port) => new Promise((resolve, reject) => {
   const server = net.createServer();
   server.once('error', reject);
-  server.listen(port, '127.0.0.1', () => server.close(() => resolve(server.address().port)));
+  server.listen(port, '127.0.0.1', () => { const address = server.address(); const selected = typeof address === 'object' && address ? address.port : port; server.close(() => resolve(selected)); });
 });
 const findPortPair = async () => {
   if (configuredPort > 0) {
