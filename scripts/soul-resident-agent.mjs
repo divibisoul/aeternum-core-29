@@ -13,7 +13,7 @@ export const N01_RESIDENT_AGENT = Object.freeze({
     runtimePolicyEngine: false,
   },
   skills: ['systematic-debugging','verification-before-completion','requesting-code-review'],
-  publishedCapabilities: ['mesh.health','mesh.discovery','mesh.resident.describe@1.0.0','clareira.ingest','clareira.metrics','mesh.capability.resolve'],
+  publishedCapabilities: ['mesh.health','mesh.discovery','mesh.resident.describe@1.0.0','memory.identity.letta-code@1.0.0','clareira.ingest','clareira.metrics','mesh.capability.resolve'],
   authority: 'N01 owns the canonical gateway/Clareira boundary; it does not become the federation control plane.',
   evidence: 'soul-evidence/1',
 });
