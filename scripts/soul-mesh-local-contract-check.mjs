@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 
 function stablePort() {
-  const seed = `${process.env.GITHUB_RUN_ID || 'local'}:${process.env.GITHUB_JOB || 'mesh'}`;
+  const seed = `${process.env.GITHUB_RUN_ID || 'local'}:${process.env.GITHUB_WORKFLOW || 'workflow'}:${process.env.GITHUB_JOB || 'mesh'}:${process.env.GITHUB_RUN_ATTEMPT || '1'}`;
   let hash = 0;
   for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return 18080 + (hash % 900) * 2;
