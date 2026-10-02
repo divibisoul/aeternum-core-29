@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "component": {
+    "id": "N01",
+    "role": "coordenação, estado, identidade e memória"
+  },
+  "reason": "functional-complementation",
+  "upstream_capability_sources": [
+    "langgraph",
+    "letta-code",
+    "pydantic-ai"
+  ],
+  "canonical_control_plane": "divibisoul/Orquestrador-",
+  "integration": {
+    "agent_engineering": "superpowers.cortex-orbital-supergpu",
+    "routing": "canonical SOUL Mesh",
+    "execution": "N01 NeoCortex/SuperGPU/Mesh boundary",
+    "verification": "neocortex routing + capability resolution + regression CI",
+    "structural_state": "REAL",
+    "runtime_state": "PROJECTED"
+  },
+  "rule": "upstream source remains independent; runtime activation requires explicit adapter/configuration/evidence"
+}

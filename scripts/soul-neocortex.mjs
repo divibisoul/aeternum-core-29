@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { createSuperGPU } from './soul-supergpu.mjs';
+import { createSuperpowersCortexAgent } from './soul-superpowers-agent.mjs';
 
 const NUCLEI = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
 const SIGNALS = ['GOAL', 'CONTEXT', 'CAPABILITY', 'RESULT', 'ERROR', 'FEEDBACK'];
@@ -14,6 +15,7 @@ export function createNeoCortex({ resolveOwner, forward }) {
   const workingMemory = new Map();
   const signals = new Map();
   const superGPU = createSuperGPU({ resolveOwner, forward, self: 'N01' });
+  const superpowersAgent = createSuperpowersCortexAgent({ superGPU });
 
   for (const nucleus of NUCLEI) nodes.set(nucleus, { nucleus, capabilities: [], salience: 1, load: 0, available: true });
 
@@ -99,6 +101,7 @@ export function createNeoCortex({ resolveOwner, forward }) {
     feedback,
     execute: superGPU.execute,
     executeParallel: superGPU.executeParallel,
+    superpowersAgent,
     describe() {
       return {
         role: 'neocortex-prefrontal-executive-layer',
@@ -111,6 +114,7 @@ export function createNeoCortex({ resolveOwner, forward }) {
         signalKinds: SIGNALS,
         executiveFunctions: ['goal-management', 'working-memory', 'attention-routing', 'capability-selection', 'inhibition', 'parallel-task-scheduling', 'result-integration', 'feedback-propagation'],
         superGPU: superGPU.describe(),
+        superpowersAgent: superpowersAgent.describe(),
       };
     },
   };

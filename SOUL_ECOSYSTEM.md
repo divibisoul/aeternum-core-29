@@ -24,6 +24,14 @@ This repository is a public component of the **SOUL ecosystem**. External open-s
 
 See N07 for the canonical external capability manifest: https://github.com/divibisoul/Orquestrador-/blob/main/integrations/external-capabilities.json
 
+## Functional integration boundary
+
+The binding contract for this component is recorded in `integrations/capability-boundary.json`. It states why each upstream capability is present, the canonical routing boundary, the engineering agent responsible, and the evidence gate before runtime activation.
+
+## 25-repository capability upgrade
+
+This component participates in the shared SOUL 25-repository capability fabric. The local binding is recorded in `integrations/soul-25-augmentation.json`; external capabilities are consumed through the canonical N07 federation and remain evidence-gated.
+
 ## Runtime truth
 
 Submodule presence is structural integration. Runtime activation is not asserted unless the corresponding adapter, configuration, and end-to-end tests exist and pass.
