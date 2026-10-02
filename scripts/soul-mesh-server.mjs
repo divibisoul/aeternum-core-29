@@ -1,5 +1,6 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
+import { N01_RESIDENT_AGENT } from './soul-resident-agent.mjs';
 import { createSuperGPU } from './soul-supergpu.mjs';
 import { inferInitialIntent } from './n01-byok-gemini.mjs';
 import { buildCognitiveDelegationPayload } from './n01-cognitive-delegation.mjs';
