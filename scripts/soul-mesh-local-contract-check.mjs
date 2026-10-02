@@ -1,7 +1,13 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 
-const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
+function stablePort() {
+  const seed = `${process.env.GITHUB_RUN_ID || 'local'}:${process.env.GITHUB_JOB || 'mesh'}`;
+  let hash = 0;
+  for (const char of seed) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return 18080 + (hash % 900) * 2;
+}
+const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || stablePort());
 const baseUrl = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
