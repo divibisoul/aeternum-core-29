@@ -4,6 +4,7 @@ import { createSuperGPU } from './soul-supergpu.mjs';
 import { inferInitialIntent } from './n01-byok-gemini.mjs';
 import { buildCognitiveDelegationPayload } from './n01-cognitive-delegation.mjs';
 import { requestSara, saraConfigured, saraHealthConfigured, saraDescribe } from './sara-federation.mjs';
+import { N01_RESIDENT_AGENT } from './soul-resident-agent.mjs';
 
 const PORT = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const HOST = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
