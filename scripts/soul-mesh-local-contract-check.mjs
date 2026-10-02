@@ -1,7 +1,24 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
+import net from 'node:net';
 
-const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 18080);
+const configuredPort = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || 0);
+const reservePort = (port) => new Promise((resolve, reject) => {
+  const server = net.createServer();
+  server.once('error', reject);
+  server.listen(port, '127.0.0.1', () => server.close(() => resolve(server.address().port)));
+});
+const findPortPair = async () => {
+  if (configuredPort > 0) {
+    try { await reservePort(configuredPort); await reservePort(configuredPort + 1); return configuredPort; } catch {}
+  }
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const candidate = await reservePort(0);
+    try { await reservePort(candidate + 1); return candidate; } catch {}
+  }
+  throw new Error('N01_LOCAL_PORT_PAIR_UNAVAILABLE');
+};
+const port = await findPortPair();
 const baseUrl = `http://127.0.0.1:${port}`;
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
@@ -9,15 +26,21 @@ const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
 });
 
 const waitForHealth = async () => {
-  const deadline = Date.now() + 15_000;
+  const deadline = Date.now() + 30_000;
+  let lastStatus = 0;
+  let lastBody = '';
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(`${baseUrl}/api/soul-mesh/health`);
+      const response = await fetch(`${baseUrl}/api/soul-mesh/health`, { cache: 'no-store' });
+      lastStatus = response.status;
+      lastBody = await response.text();
       if (response.ok) return;
-    } catch {}
+    } catch (error) {
+      lastBody = error instanceof Error ? error.message : String(error);
+    }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error('N01_LOCAL_SERVER_START_TIMEOUT');
+  throw new Error(`N01_LOCAL_SERVER_START_TIMEOUT:port=${port}:status=${lastStatus}:body=${lastBody.slice(-1000)}`);
 };
 
 const json = async (response) => ({ status: response.status, body: await response.json().catch(() => ({})) });
