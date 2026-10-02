@@ -206,6 +206,11 @@ const server = http.createServer((req, res) => proxy(req, res).catch(error => {
   if (!res.headersSent) res.writeHead(400, { 'content-type': 'application/json' });
   res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'SOUL_MESH_INGRESS_ERROR' }));
 }));
+server.on('error', error => {
+  console.error(`Soul Mesh public ingress bind error on ${host}:${publicPort}:`, error);
+  child.kill('SIGTERM');
+  process.exitCode = 1;
+});
 server.listen(publicPort, host);
 
 function shutdown(signal) {
