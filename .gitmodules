@@ -1,0 +1,11 @@
+[submodule "integrations/soul-upstream/langgraph"]
+	path = integrations/soul-upstream/langgraph
+	url = https://github.com/langchain-ai/langgraph.git
+
+[submodule "integrations/soul-upstream/letta-code"]
+	path = integrations/soul-upstream/letta-code
+	url = https://github.com/letta-ai/letta-code.git
+
+[submodule "integrations/soul-upstream/pydantic-ai"]
+	path = integrations/soul-upstream/pydantic-ai
+	url = https://github.com/pydantic/pydantic-ai.git
