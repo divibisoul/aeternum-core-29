@@ -25,5 +25,7 @@ if (topology.executiveFunctions.length < 8) throw new Error('NEOCORTEX_EXECUTIVE
 if (topology.individualNucleiPreserved !== true) throw new Error('NUCLEUS_INDEPENDENCE_MUST_BE_PRESERVED');
 if (snapshot.nuclei.length !== 7) throw new Error('NEOCORTEX_NODE_REGISTRATION_INCOMPLETE');
 if (decision.inhibited || decision.selectedNucleus !== 'N06') throw new Error('NEOCORTEX_CAPABILITY_ROUTING_FAILED');
+if (snapshot.superpowersAgent?.id !== 'superpowers.cortex-orbital-supergpu') throw new Error('SUPERPOWERS_CORTEX_AGENT_MISSING');
+if (snapshot.superpowersAgent?.noFakeRuntimeSuccess !== true) throw new Error('SUPERPOWERS_CORTEX_AGENT_POLICY_INVALID');
 
 console.log(JSON.stringify({ ok: true, topology, decision, snapshot }, null, 2));
