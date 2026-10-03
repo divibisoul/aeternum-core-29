@@ -6,9 +6,31 @@
   },
   "reason": "functional-complementation",
   "upstream_capability_sources": [
+    "superpowers",
+    "superagi",
     "langgraph",
+    "crewai",
+    "microsoft-agent-framework",
+    "openhands",
+    "metagpt",
+    "agentscope",
     "letta-code",
-    "pydantic-ai"
+    "browser-use",
+    "smolagents",
+    "pydantic-ai",
+    "llama-index",
+    "dspy",
+    "whisper",
+    "kokoro",
+    "everything-claude-code",
+    "swarmclaw",
+    "mem0",
+    "letta",
+    "langfuse",
+    "vllm",
+    "sglang",
+    "ray",
+    "megatron-lm"
   ],
   "canonical_control_plane": "divibisoul/Orquestrador-",
   "integration": {
@@ -17,7 +39,9 @@
     "execution": "N01 NeoCortex/SuperGPU/Mesh boundary",
     "verification": "neocortex routing + capability resolution + regression CI",
     "structural_state": "REAL",
-    "runtime_state": "PROJECTED"
+    "runtime_state": "PROJECTED_UNTIL_PROVIDER_E2E",
+    "external_fabric": "N01ExternalCapabilityFabric"
   },
-  "rule": "upstream source remains independent; runtime activation requires explicit adapter/configuration/evidence"
+  "rule": "upstream source remains independent; runtime activation requires explicit adapter/configuration/evidence",
+  "upstream_capability_source_count": 25
 }

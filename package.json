@@ -19,7 +19,8 @@
     "byok:check": "node scripts/test-n01-byok.mjs",
     "vector-memory:check": "node scripts/test-supabase-vector-memory.mjs",
     "sara:federation:check": "node scripts/sara-federation.test.mjs",
-    "aeternum:authority:check": "node --experimental-strip-types scripts/n01-aeternum-functional-authority-check.mjs"
+    "aeternum:authority:check": "node --experimental-strip-types scripts/n01-aeternum-functional-authority-check.mjs",
+    "upstream:fabric:check": "node --experimental-strip-types src/core/fusion/N01ExternalCapabilityFabric.test.ts"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",

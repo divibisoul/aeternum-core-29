@@ -32,6 +32,8 @@ export const SOUL_MESH_CORE_CAPABILITIES: Record<SoulNucleus, SoulMeshCapability
     { id: 'aeternum.blueprint.create', version: '1.0.0', description: 'Recovered Aeternum blueprint derivation through N01', request: true, response: true, events: true, owner: 'N01', execution: 'cognitive' },
     { id: 'aeternum.neuralforge.create', version: '1.0.0', description: 'Recovered NeuralForge boundary; real executor required for completion', request: true, response: true, events: true, owner: 'N01', execution: 'cognitive' },
     { id: 'external.capability.execute@1.0.0', version: '1.0.0', description: 'Delegate an external capability to its canonical SOUL owner through the existing Mesh', request: true, response: true, events: false, owner: 'N01', execution: 'orchestration' },
+    { id: 'external.capability.resolve@1.0.0', version: '1.0.0', description: 'Resolve an upstream capability source and its canonical native owner', request: true, response: true, events: false, owner: 'N01', execution: 'orchestration' },
+    { id: 'external.capability.fabric.describe@1.0.0', version: '1.0.0', description: 'Describe the executable N01 25-source external capability fabric', request: true, response: true, events: false, owner: 'N01', execution: 'observability' },
   ],
   N02: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N02', execution: 'observability' }],
   N03: [{ id: 'mesh.handshake', version: '1.1', description: 'Mesh negotiation and capability discovery', request: true, response: true, events: false, owner: 'N03', execution: 'observability' }],

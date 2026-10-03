@@ -79,6 +79,7 @@ try {
     source: body.source === 'N01', target: body.target === 'N02', correlationId: body.correlationId === correlationId,
     kind: body.kind === 'response', capability: body.capability === 'mesh.ping',
   };
+
   const superGpuGuardResponse = await fetch(baseUrl + '/api/soul-mesh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
