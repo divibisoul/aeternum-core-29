@@ -13,8 +13,10 @@ export const N01_RESIDENT_AGENT = Object.freeze({
     runtimePolicyEngine: false,
   },
   skills: ['systematic-debugging','verification-before-completion','requesting-code-review'],
-  publishedCapabilities: ['mesh.health','mesh.discovery','mesh.resident.describe@1.0.0','memory.identity.letta-code@1.0.0','clareira.ingest','clareira.metrics','mesh.capability.resolve','mesh.supergpu.execute@1.0.0','superagi.fabric.execute@1.0.0'],
+  publishedCapabilities: ['mesh.health','mesh.discovery','mesh.resident.describe@1.0.0','memory.identity.letta-code@1.0.0','clareira.ingest','clareira.metrics','mesh.capability.resolve','external.capability.resolve@1.0.0','external.capability.fabric.describe@1.0.0','mesh.supergpu.execute@1.0.0','superagi.fabric.execute@1.0.0'],
   authority: 'N01 owns the canonical gateway/Clareira boundary; it does not become the federation control plane.',
+  upstreamProviderCount: 25,
+  externalFabric: 'N01ExternalCapabilityFabric',
   evidence: 'soul-evidence/1',
 });
 export function describeN01ResidentAgent() { return N01_RESIDENT_AGENT; }
