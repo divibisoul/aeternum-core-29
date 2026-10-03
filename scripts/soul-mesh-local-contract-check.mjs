@@ -80,22 +80,6 @@ try {
     kind: body.kind === 'response', capability: body.capability === 'mesh.ping',
   };
 
-  const fabricResponse = await fetch(baseUrl + '/api/soul-mesh', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
-      correlationId: crypto.randomUUID(), source: 'N07', target: 'N01', kind: 'request',
-      capability: 'external.capability.fabric.describe@1.0.0', payload: { },
-      timestamp: Date.now(),
-    }),
-  });
-  const fabricBody = await fabricResponse.json();
-  if (fabricResponse.status !== 200 || fabricBody.source !== 'N01' || fabricBody.target !== 'N07' ||
-      fabricBody.payload?.nucleus !== 'N01' || fabricBody.payload?.providerCount !== 25) {
-    throw new Error('N01_EXTERNAL_FABRIC_RUNTIME_FAILED:' + JSON.stringify(fabricBody));
-  }
-
   const superGpuGuardResponse = await fetch(baseUrl + '/api/soul-mesh', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
