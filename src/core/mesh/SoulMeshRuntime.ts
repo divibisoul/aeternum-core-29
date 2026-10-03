@@ -15,6 +15,7 @@ import { storeRgoStageInHortaCore, type RgoStagePayload } from '../rgo/RgoHortaC
 import { createSupabaseVectorMemory } from '../../soul-fusion/SupabaseVectorMemory';
 import { recoveredAeternumCapabilityBridge } from '../../../lib/aeternum/RecoveredAeternumCapabilityBridge';
 import { runLettaCode, type LettaRequest } from './LettaCodeAdapter';
+import { canonicalOwnerForExternalProvider, describeN01ExternalCapabilityFabric, resolveN01ExternalProvider } from '../fusion/N01ExternalCapabilityFabric';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -28,7 +29,7 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0', 'external.capability.resolve@1.0.0', 'external.capability.fabric.describe@1.0.0'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
 
@@ -36,25 +37,52 @@ export function startSoulMeshRuntime(): () => void {
         return recoveredAeternumCapabilityBridge.execute(message.capability, message.payload);
       }
 
+      if (message.capability === 'external.capability.resolve@1.0.0') {
+        const input = message.payload;
+        const provider = input && typeof input === 'object' && !Array.isArray(input)
+          ? String((input as { provider?: unknown }).provider ?? '').trim()
+          : '';
+        if (!provider) throw new Error('N01_EXTERNAL_PROVIDER_REQUIRED');
+        return { nucleus: 'N01', capability: message.capability, provider: resolveN01ExternalProvider(provider), correlationId: message.correlationId };
+      }
+
       if (message.capability === 'external.capability.execute' || message.capability === 'external.capability.execute@1.0.0') {
         const input = message.payload;
         if (!input || typeof input !== 'object' || Array.isArray(input)) {
           throw new Error('N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED');
         }
-        const value = input as { capability?: unknown; payload?: unknown; workloads?: unknown[]; candidate?: Record<string, unknown>; strategy?: unknown };
-        const capability = typeof value.capability === 'string' ? value.capability.trim() : '';
-        if (!capability) throw new Error('N01_EXTERNAL_CAPABILITY_REQUIRED');
+        const value = input as { provider?: unknown; capability?: unknown; payload?: unknown; workloads?: unknown[]; candidate?: Record<string, unknown>; strategy?: unknown; operation?: unknown };
+        const provider = typeof value.provider === 'string' ? value.provider.trim() : '';
+        if (!provider) throw new Error('N01_EXTERNAL_PROVIDER_REQUIRED');
+        const source = resolveN01ExternalProvider(provider);
+        const operation = typeof value.operation === 'string' ? value.operation.trim() : (typeof value.capability === 'string' ? value.capability.trim() : '');
+        if (!operation) throw new Error('N01_EXTERNAL_OPERATION_REQUIRED');
+
+        if (source.owner === 'N01' && provider === 'letta-code') {
+          return runLettaCode((value.payload ?? {}) as LettaRequest);
+        }
+
         const delegated = {
           payload: value.payload ?? {},
           metadata: {
+            external_provider: provider,
+            external_revision: source.revision,
+            external_source: source.source,
+            external_capabilities_json: JSON.stringify(source.capabilities),
             prefrontal_orbital: 'true',
             workloads_json: JSON.stringify(Array.isArray(value.workloads) ? value.workloads : []),
-            candidate_json: JSON.stringify(value.candidate ?? { capability }),
-            strategy: typeof value.strategy === 'string' ? value.strategy : 'n01-external-tool-preflight',
+            candidate_json: JSON.stringify(value.candidate ?? { capability: operation, provider }),
+            strategy: typeof value.strategy === 'string' ? value.strategy : 'n01-external-capability-federation',
           },
         };
-        const response = await sendTo('N02', capability, delegated, 30000, message.correlationId);
+        const owner = canonicalOwnerForExternalProvider(provider);
+        if (owner === 'N01') throw new Error('N01_EXTERNAL_OWNER_ADAPTER_REQUIRED:' + provider);
+        const response = await sendTo(owner as any, operation, delegated, 30000, message.correlationId);
         return response.payload;
+      }
+
+      if (message.capability === 'external.capability.fabric.describe@1.0.0') {
+        return describeN01ExternalCapabilityFabric();
       }
 
       if (message.capability === 'memory.identity.letta-code@1.0.0') {
@@ -176,7 +204,7 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('aeternum.blueprint.create', meshAgentHandler),
     router.onRequest('aeternum.neuralforge.create', meshAgentHandler),
     router.onRequest('external.capability.execute', meshAgentHandler),
-    router.onRequest('external.capability.execute@1.0.0', meshAgentHandler),
+    router.onRequest('external.capability.execute@1.0.0', 'external.capability.resolve@1.0.0', 'external.capability.fabric.describe@1.0.0', meshAgentHandler),
   ];
 
   const unsubscribe = EventBus.on('soul:mesh:message', async (message) => {
