@@ -1,7 +1,7 @@
 name: SOUL Integration CI - N01
 on:
   push:
-    branches: [main]
+    branches: [main, feat/n01-soul25-integration-20261003]
   pull_request:
 permissions:
   contents: read
@@ -21,16 +21,20 @@ jobs:
           if test -f .gitmodules; then
             git config -f .gitmodules --get-regexp '^submodule\..*\.path$' | awk '{print $2}' | while read p; do test -e "$p"; done
           fi
-      - name: Validate N07 registry
-        if: github.event.repository.name == 'Orquestrador-'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate N01 25-source fabric
+        run: bun run upstream:fabric:check
+      - name: Validate fusion contract
+        run: bun run fusion:check
+      - name: Validate SuperGPU contract
+        run: bun run supergpu:check
+      - name: Validate N01 authority
+        run: bun run aeternum:authority:check
+      - name: Validate resident agent contract
+        shell: bash
         run: |
-          python - <<'PY'
-          import json
-          d=json.load(open('integrations/external-capabilities.json'))
-          assert len(d['repositories']) == 16
-          for x in d['repositories']:
-              assert x['source'].startswith('https://github.com/')
-              assert x['revision']
-              assert x['targets']
-          print('16 external integrations: VALID')
-          PY
+          node --input-type=module -e "import('./scripts/soul-resident-agent.mjs').then(m=>{const a=m.describeN01ResidentAgent(); if(a.nucleus!=='N01'||a.lifecycle!=='BOUND'||a.upstreamProviderCount!==25) process.exit(1); console.log(JSON.stringify(a))})"
