@@ -13,11 +13,13 @@ export async function requestN07SuperGPU(
     throw new Error('SUPERGPU_VALUES_INVALID');
   }
   if (!operation.trim()) throw new Error('SUPERGPU_OPERATION_REQUIRED');
-  const payload = values.slice();
   return sendTo(
     'N07',
     N01_SUPERGPU_MESH_CAPABILITY,
-    payload,
+    {
+      values,
+      metadata: { operation, ...(device?.trim() ? { device: device.trim() } : {}) },
+    },
     timeoutMs,
     correlationId,
   );
