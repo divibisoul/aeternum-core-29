@@ -2,7 +2,7 @@ import { EventBus } from '../EventBus';
 import { SoulMeshRouter } from './SoulMeshRouter';
 import { SoulMeshSupabaseTransport } from './SoulMeshSupabaseTransport';
 import { N01AgentRegistry } from './N01AgentRegistry';
-import type { SoulMeshMessage } from './SoulMeshProtocol';
+import type { SoulMeshMessage, SoulNucleus } from './SoulMeshProtocol';
 import { executeSuperComputePlan, createSuperComputePlan, summarizeSuperCompute, type SuperComputeTask } from './SoulSuperCompute';
 import { sendTo } from '../soul-mesh/peerClient';
 import { createFusionEnvelope } from '../fusion/FusionEnvelope';
@@ -77,7 +77,7 @@ export function startSoulMeshRuntime(): () => void {
         };
         const owner = canonicalOwnerForExternalProvider(provider);
         if (owner === 'N01') throw new Error('N01_EXTERNAL_OWNER_ADAPTER_REQUIRED:' + provider);
-        const response = await sendTo(owner as any, operation, delegated, 30000, message.correlationId);
+        const response = await sendTo(owner as SoulNucleus, operation, delegated, 30000, message.correlationId);
         return response.payload;
       }
 
