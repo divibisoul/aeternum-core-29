@@ -27,6 +27,5 @@ jobs:
               assert p['access'] == 'N01 capability fabric'
               assert p['structural_state'] == 'REAL'
               assert p['requires_adapter'] is True
-              assert p['requires_adapter'] is True
           print('SOUL-34 / 25-UPSTREAM AUGMENTATION CONTRACT: PASS')
           PY
