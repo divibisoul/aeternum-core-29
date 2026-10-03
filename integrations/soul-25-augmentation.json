@@ -27,7 +27,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "superagi",
@@ -48,7 +49,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "langgraph",
@@ -68,7 +70,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "crewai",
@@ -87,7 +90,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "microsoft-agent-framework",
@@ -107,7 +111,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "openhands",
@@ -126,7 +131,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N06"
+      "execution_boundary": "native-owner:N06",
+      "requires_adapter": true
     },
     {
       "id": "metagpt",
@@ -145,7 +151,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N06"
+      "execution_boundary": "native-owner:N06",
+      "requires_adapter": true
     },
     {
       "id": "agentscope",
@@ -169,7 +176,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N03"
+      "execution_boundary": "native-owner:N03",
+      "requires_adapter": true
     },
     {
       "id": "letta-code",
@@ -188,7 +196,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "DEGRADED",
-      "execution_boundary": "native-owner:N01"
+      "execution_boundary": "native-owner:N01",
+      "requires_adapter": true
     },
     {
       "id": "browser-use",
@@ -206,7 +215,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N04"
+      "execution_boundary": "native-owner:N04",
+      "requires_adapter": true
     },
     {
       "id": "smolagents",
@@ -226,7 +236,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N06"
+      "execution_boundary": "native-owner:N06",
+      "requires_adapter": true
     },
     {
       "id": "pydantic-ai",
@@ -247,7 +258,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N01"
+      "execution_boundary": "native-owner:N01",
+      "requires_adapter": true
     },
     {
       "id": "llama-index",
@@ -267,7 +279,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N05"
+      "execution_boundary": "native-owner:N05",
+      "requires_adapter": true
     },
     {
       "id": "dspy",
@@ -286,7 +299,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N06"
+      "execution_boundary": "native-owner:N06",
+      "requires_adapter": true
     },
     {
       "id": "whisper",
@@ -303,7 +317,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N03"
+      "execution_boundary": "native-owner:N03",
+      "requires_adapter": true
     },
     {
       "id": "kokoro",
@@ -320,7 +335,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N03"
+      "execution_boundary": "native-owner:N03",
+      "requires_adapter": true
     },
     {
       "id": "everything-claude-code",
@@ -342,7 +358,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "swarmclaw",
@@ -363,7 +380,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "mem0",
@@ -382,7 +400,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N06"
+      "execution_boundary": "native-owner:N06",
+      "requires_adapter": true
     },
     {
       "id": "letta",
@@ -402,7 +421,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N06"
+      "execution_boundary": "native-owner:N06",
+      "requires_adapter": true
     },
     {
       "id": "langfuse",
@@ -423,7 +443,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "vllm",
@@ -441,7 +462,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "sglang",
@@ -459,7 +481,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "ray",
@@ -479,7 +502,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     },
     {
       "id": "megatron-lm",
@@ -497,7 +521,8 @@
       "access": "N01 capability fabric",
       "structural_state": "REAL",
       "runtime_state": "PROJECTED",
-      "execution_boundary": "native-owner:N07"
+      "execution_boundary": "native-owner:N07",
+      "requires_adapter": true
     }
   ],
   "soul_peer_count": 9,
