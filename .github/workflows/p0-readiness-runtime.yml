@@ -1,0 +1,43 @@
+name: P0 Readiness Runtime - N01
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Start N01 Mesh
+        env:
+          NODE_ENV: test
+          SOUL_MESH_SECRET: ci-readiness-secret-32-bytes-minimum
+          SOUL_MESH_N07_URL: http://127.0.0.1:9999
+          SOUL_MESH_N01_PORT: 8080
+        run: |
+          npm run mesh:n01 > /tmp/n01.log 2>&1 &
+          echo $! > /tmp/n01.pid
+      - name: Probe /ready
+        run: |
+          set -euo pipefail
+          trap 'kill $(cat /tmp/n01.pid) 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            code=$(curl -sS -o /tmp/n01-ready.json -w '%{http_code}' http://127.0.0.1:8080/ready || true)
+            if [ "$code" = "200" ]; then
+              cat /tmp/n01-ready.json
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/n01.log
+          cat /tmp/n01-ready.json || true
+          exit 1
