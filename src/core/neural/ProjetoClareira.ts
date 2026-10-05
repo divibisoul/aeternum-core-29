@@ -13,9 +13,15 @@ import { ProcessingNode } from './ProcessingNode';
 import { NucleoRaizAlma } from './NucleoRaizAlma';
 import { homeostasisManager, HomeostasisManager } from './HomeostasisManager';
 import { InformationChannel } from './InformationChannel';
+import { VagusNerve } from './VagusNerve';
+import { ClareiraSaraBridge } from './ClareiraSaraBridge';
+import { ClareiraAndroidBridge } from './ClareiraAndroidBridge';
+import { InputTransducer } from './InputTransducer';
 import {
   type SystemMetrics,
   type InformationPacket,
+  type ClareiraSnapshot,
+  type ClareiraDeviceState,
   createInformationPacket,
 } from './types';
 
@@ -29,6 +35,10 @@ class ProjetoClareiraSystem {
   private allNodes: ProcessingNode[] = [];
   private channels: InformationChannel[] = [];
   private homeostasis: HomeostasisManager;
+  private vagus: VagusNerve;
+  private saraBridge: ClareiraSaraBridge;
+  private readonly androidBridge = new ClareiraAndroidBridge();
+  private readonly inputTransducer = new InputTransducer();
   
   private _initialized = false;
   private _running = false;
@@ -54,6 +64,10 @@ class ProjetoClareiraSystem {
     
     // Referência ao HomeostasisManager
     this.homeostasis = homeostasisManager;
+    this.vagus = new VagusNerve(this.homeostasis);
+    this.saraBridge = new ClareiraSaraBridge();
+    this.homeostasis.attachVagus(this.vagus);
+    for (const node of this.allNodes) this.vagus.registerNode(node);
 
     EventBus.emit('module:registered', {
       id: 'projeto-clareira',
@@ -152,6 +166,7 @@ class ProjetoClareiraSystem {
 
     // Iniciar homeostase
     this.homeostasis.start();
+    this.vagus.start();
 
     this._running = true;
 
@@ -170,7 +185,8 @@ class ProjetoClareiraSystem {
 
     console.log('[ProjetoClareira] Parando sistema...');
 
-    // Parar homeostase
+    // Parar nervo vago e homeostase
+    this.vagus.stop();
     this.homeostasis.stop();
 
     // Parar todos os nós
@@ -324,6 +340,7 @@ class ProjetoClareiraSystem {
     const avgTemp = nodeMetrics.reduce((sum, m) => sum + m.temperature, 0) / nodeMetrics.length;
     const totalPackets = nodeMetrics.reduce((sum, m) => sum + m.packetsProcessed, 0);
 
+    const vagus = this.vagus.snapshot();
     return {
       totalNodes: this.allNodes.length,
       activeNodes: homeostasisMetrics.activeNodes,
@@ -333,6 +350,16 @@ class ProjetoClareiraSystem {
       turboActive: homeostasisMetrics.turboActive,
       packetsProcessed: totalPackets,
       tunelamentosRealizados: this.packetsInjected,
+      vagalTone: vagus.vagalTone,
+      activeVagusBranches: vagus.activeNodeBranches,
+      redundantVagusBranches: vagus.redundantBranches,
+      vagalSignalLatencyMs: vagus.observedLatencyMs ?? undefined,
+      droppedPackets: this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0),
+      dropRate: (() => {
+        const transmitted = this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsTransmitted, 0);
+        const dropped = this.channels.reduce((sum, channel) => sum + channel.getMetrics().packetsDropped, 0);
+        return transmitted + dropped > 0 ? dropped / (transmitted + dropped) : 0;
+      })(),
       timestamp: Date.now(),
     };
   }
@@ -359,6 +386,83 @@ class ProjetoClareiraSystem {
       core: this.nucleoRaiz.getCoreMetrics(),
     };
   }
+
+  async runForDuration(durationMs: number = 5000): Promise<SystemMetrics> {
+    if (durationMs < 0) throw new Error('CLAREIRA_DURATION_INVALID');
+    if (!this._running) this.start();
+    await new Promise(resolve => setTimeout(resolve, durationMs));
+    return this.getMetrics();
+  }
+
+  updateDeviceState(state: ClareiraDeviceState): void {
+    this.homeostasis.updateDeviceState(state);
+  }
+
+  getSnapshot(): ClareiraSnapshot {
+    const status = this.getStatus();
+    return {
+      schemaVersion: '1.1.0',
+      timestamp: Date.now(),
+      blueprintVersion: '1.1.0',
+      status: this._running ? 'RUNNING' : this._initialized ? 'INITIALIZED' : 'STOPPED',
+      metrics: this.getMetrics(),
+      nodes: status.nodes,
+      channels: status.channels,
+      homeostasis: status.homeostasis,
+      vagus: this.vagus.snapshot(),
+      deviceState: this.homeostasis.getDeviceState() ?? undefined,
+    };
+  }
+
+  persistSnapshot(): ClareiraSnapshot {
+    const snapshot = this.getSnapshot();
+    if (typeof localStorage === 'undefined') throw new Error('CLAREIRA_LOCAL_PERSISTENCE_UNAVAILABLE');
+    localStorage.setItem('clareira.snapshot.v1', JSON.stringify(snapshot));
+    EventBus.emit('memory:stored', { id: 'clareira-snapshot', type: 'clareira-state' });
+    return snapshot;
+  }
+
+  loadSnapshot(): ClareiraSnapshot | null {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem('clareira.snapshot.v1');
+    if (!raw) return null;
+    try { return JSON.parse(raw) as ClareiraSnapshot; } catch { throw new Error('CLAREIRA_SNAPSHOT_INVALID'); }
+  }
+
+  exportMetricsCSV(): string {
+    const snapshot = this.getSnapshot();
+    const header = ['timestamp','node_id','level','active','energy','temperature','processing_rate','queue_size','output_channels','input_channels'];
+    const rows = snapshot.nodes.map(node => [
+      snapshot.timestamp, node.nodeId, node.level, node.active, node.energy, node.temperature,
+      node.processingRate, node.queueSize, node.outputChannels, node.inputChannels,
+    ]);
+    return [header.join(','), ...rows.map(row => row.join(','))].join('\n');
+  }
+
+  async getAndroidSnapshot(timeoutMs = 5000) { return this.androidBridge.snapshot(timeoutMs); }
+  async setAndroidBrightness(percent: number, timeoutMs = 5000) { return this.androidBridge.setBrightness(percent, timeoutMs); }
+  async requestAndroidKillBackground(packageName: string, timeoutMs = 5000) { return this.androidBridge.killBackground(packageName, timeoutMs); }
+  async openAndroidWifiPanel(timeoutMs = 5000) { return this.androidBridge.openWifiPanel(timeoutMs); }
+  async requestAndroidBluetoothEnable(timeoutMs = 5000) { return this.androidBridge.requestBluetoothEnable(timeoutMs); }
+  async openAndroidAirplaneSettings(timeoutMs = 5000) { return this.androidBridge.openAirplaneSettings(timeoutMs); }
+
+  async syncStateToSara(correlationId?: string) { return this.saraBridge.syncState(this.getSnapshot(), correlationId); }
+  async pullVagalCommandsFromSara(limit = 16) {
+    return this.saraBridge.pullAndApplyVagalCommands(
+      (nodeId, command, payload) => {
+        const node = this.allNodes.find(item => item.id === nodeId);
+        if (!node) return false;
+        node.applyVagalCommand(command, payload);
+        return true;
+      },
+      limit,
+    );
+  }
+  async auditStateThroughSara(correlationId?: string) { return this.saraBridge.auditLatestState(correlationId); }
+  async dispatchVagalCommandToSara(nodeId: string, command: import('./types').VagalCommand['command'], payload: Record<string, unknown> = {}, priority = 0.5, correlationId?: string) {
+    return this.saraBridge.dispatchVagalCommand(nodeId, command, payload, priority, correlationId);
+  }
+
 
   get initialized(): boolean {
     return this._initialized;
