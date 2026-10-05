@@ -46,6 +46,8 @@ jobs:
         run: npm run build
       - name: Core unit test
         run: node scripts/core-test.mjs
+      - name: Digital Vagus Clareira verification
+        run: npm run vagus:clareira:check
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
