@@ -7,7 +7,7 @@ import {
   normalizeLegacyEnvelope,
   rankCompatible,
   verifyTransportEnvelope,
-} from './TransportRegistry';
+} from './TransportRegistry.ts';
 
 const SECRET = 'n01-canonical-transport-test-secret';
 
