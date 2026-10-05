@@ -1,0 +1,24 @@
+name: 29 modules recovery verification
+on:
+  push:
+    branches:
+      - "recovery/cycle3-29-modules-2026-09-28"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/29-MODULES-RECOVERY.md"
+      - "docs/MISSING-COMPONENTS.md"
+      - "scripts/verify-29-modules-recovery.mjs"
+      - ".github/workflows/29-modules-recovery.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/verify-29-modules-recovery.mjs
