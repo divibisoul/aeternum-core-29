@@ -16,7 +16,7 @@ import {
   type SoulNodeId,
   type MessageType,
   type EnvelopeValidationOptions,
-} from '../../../lib/soul-mesh/SoulMeshEnvelope';
+} from '../../../lib/soul-mesh/SoulMeshEnvelope.ts';
 import {
   NUCLEUS_ID,
   TRANSPORTS,
@@ -27,7 +27,7 @@ import {
   type TransportDescriptor,
   type TransportStatus,
   type EnvelopeTransport,
-} from '../../../lib/soul-mesh/HybridTransportRegistry';
+} from '../../../lib/soul-mesh/HybridTransportRegistry.ts';
 
 export {
   NUCLEUS_ID,
