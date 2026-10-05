@@ -103,6 +103,12 @@ export interface SystemMetrics {
   turboActive: boolean;
   packetsProcessed: number;
   tunelamentosRealizados: number;
+  vagalTone?: number;
+  activeVagusBranches?: number;
+  redundantVagusBranches?: number;
+  vagalSignalLatencyMs?: number;
+  droppedPackets?: number;
+  dropRate?: number;
   timestamp: number;
 }
 
