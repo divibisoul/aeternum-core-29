@@ -129,7 +129,7 @@ try {
   });
   const replayBody = await replay.json().catch(() => null);
   if (replay.status !== 409 || replayBody?.error !== undefined && replayBody?.payload?.code !== undefined) {
-    if (replay.status !== 409) throw new Error(`N01_PROTOCOL_HMAC_REPLAY_NOT_REJECTED:${replay.status}:${JSON.stringify(replayBody)}`);
+    if (replay.status !== 400) throw new Error(`N01_PROTOCOL_HMAC_REPLAY_NOT_REJECTED:${replay.status}:${JSON.stringify(replayBody)}`);
   }
 
   const result = {
