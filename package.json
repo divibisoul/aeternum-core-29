@@ -13,6 +13,7 @@
     "mesh:health": "node scripts/test-n01-n06.mjs",
     "mesh:health:unit": "node --experimental-strip-types lib/soul-mesh/SoulMeshHealth.test.ts",
     "mesh:async:unit": "node --experimental-strip-types src/core/mesh/SoulMeshAsyncExecutor.test.ts",
+    "mesh:transport:unit": "node --experimental-strip-types src/core/mesh/TransportRegistry.test.ts",
     "mesh:contract:check": "node scripts/soul-mesh-contract-check.mjs",
     "fusion:check": "node scripts/soul-fusion-contract-check.mjs",
     "supergpu:check": "node scripts/soul-supergpu-check.mjs",
