@@ -1,0 +1,40 @@
+name: N01 NeuralManagementCore verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  neural-management-core:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install runtime dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Execute NeuralManagementCore verification
+        run: node scripts/neural-management-core-check.mjs
+
+      - name: Build
+        run: npm run build
+
+      - name: Core unit test
+        run: node scripts/core-test.mjs
+
+      - name: Mesh contract check
+        run: npm run mesh:contract:check
