@@ -70,10 +70,10 @@ export class ContinuousAuditSystem {
   }
 
   getMetrics() {
-    if (this.auditHistory.length === 0) return { avgScore: 1, violations: 0, successRate: 1 };
+    if (this.auditHistory.length === 0) return { avgScore: 0, violations: 0, successRate: 0, observed: false };
     const successes = this.auditHistory.filter(a => a.success).length;
     const violations = this.auditHistory.reduce((s, a) => s + a.ethicalViolations.length, 0);
-    return { avgScore: successes / this.auditHistory.length, violations, successRate: successes / this.auditHistory.length };
+    return { avgScore: successes / this.auditHistory.length, violations, successRate: successes / this.auditHistory.length, observed: true };
   }
 }
 
