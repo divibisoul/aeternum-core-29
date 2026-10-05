@@ -431,10 +431,10 @@ class ProjetoClareiraSystem {
 
   exportMetricsCSV(): string {
     const snapshot = this.getSnapshot();
-    const header = ['timestamp','node_id','level','active','energy','temperature','processing_rate','queue_size','output_channels','input_channels'];
+    const header = ['timestamp','node_id','level','active','energy','temperature','processing_rate','queue_size','output_channels'];
     const rows = snapshot.nodes.map(node => [
       snapshot.timestamp, node.nodeId, node.level, node.active, node.energy, node.temperature,
-      node.processingRate, node.queueSize, node.outputChannels, node.inputChannels,
+      node.processingRate, node.queueSize, node.outputChannels,
     ]);
     return [header.join(','), ...rows.map(row => row.join(','))].join('\n');
   }
