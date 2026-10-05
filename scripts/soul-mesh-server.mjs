@@ -52,7 +52,7 @@ function hmacFor(e){ return crypto.createHmac('sha256',SECRET).update(canonical(
 function canonicalProtocol(e,nonce){ return JSON.stringify({
   protocol:e.protocol, contractVersion:e.contractVersion, id:e.id, correlationId:e.correlationId,
   source:e.source, target:e.target, kind:e.kind, capability:e.capability??null, payload:e.payload,
-  timestamp:e.timestamp, transport:e.meta?.transport??null, meta:e.meta??null, nonce
+  timestamp:e.timestamp, transport:e.meta?.transport, meta:e.meta??null, nonce
 }); }
 function canonicalLegacyResponse(body,nonce){ return JSON.stringify({
   version:'1.0', contractVersion:body.contractVersion, messageId:body.id, source:body.source,
