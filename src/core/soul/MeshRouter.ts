@@ -4,7 +4,7 @@ import {
   verifyTransportEnvelope,
   type CanonicalSoulMeshEnvelope,
   type TransportKind,
-} from '../mesh/TransportRegistry';
+} from '../mesh/TransportRegistry.ts';
 
 export interface MeshPeer {
   id: CanonicalSoulMeshEnvelope['source'];
