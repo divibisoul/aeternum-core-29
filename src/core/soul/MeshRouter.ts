@@ -1,8 +1,22 @@
-import { createEnvelope, verifyEnvelope, type SoulMeshEnvelope } from './SoulMeshEnvelope';
-import { rankCompatible, type TransportKind } from '../../../lib/soul-mesh/HybridTransportRegistry';
+import {
+  createTaskEnvelope,
+  rankCompatible,
+  verifyTransportEnvelope,
+  type CanonicalSoulMeshEnvelope,
+  type TransportKind,
+} from '../mesh/TransportRegistry.ts';
 
-export interface MeshPeer { id: SoulMeshEnvelope['source']; transports: readonly TransportKind[]; capabilities: readonly string[]; }
-export interface MeshRoute { source: SoulMeshEnvelope['source']; target: SoulMeshEnvelope['target']; transport: TransportKind; }
+export interface MeshPeer {
+  id: CanonicalSoulMeshEnvelope['source'];
+  transports: readonly TransportKind[];
+  capabilities: readonly string[];
+}
+
+export interface MeshRoute {
+  source: CanonicalSoulMeshEnvelope['source'];
+  target: CanonicalSoulMeshEnvelope['target'];
+  transport: TransportKind;
+}
 
 export class MeshRouter {
   constructor(private readonly secret: string) {}
@@ -13,11 +27,19 @@ export class MeshRouter {
     return selected;
   }
 
-  async createTask(source: SoulMeshEnvelope['source'], target: SoulMeshEnvelope['target'], payload: unknown, correlationId?: string) {
-    return createEnvelope({ version: '1.0', source, target, type: 'TASK', payload, correlationId }, this.secret);
+  async createTask(
+    source: CanonicalSoulMeshEnvelope['source'],
+    target: CanonicalSoulMeshEnvelope['target'],
+    payload: unknown,
+    correlationId?: string,
+  ) {
+    return createTaskEnvelope(source, target, payload, this.secret, correlationId);
   }
 
-  async verify(message: SoulMeshEnvelope, now = Date.now()): Promise<boolean> {
-    return verifyEnvelope(message, this.secret, now);
+  async verify(
+    message: CanonicalSoulMeshEnvelope,
+    now = Date.now(),
+  ): Promise<boolean> {
+    return verifyTransportEnvelope(message, this.secret, { nowMs: now });
   }
 }

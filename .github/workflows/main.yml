@@ -60,6 +60,9 @@ jobs:
       - name: Mesh async unit
         run: npm run mesh:async:unit
 
+      - name: Canonical transport registry unit
+        run: npm run mesh:transport:unit
+
       - name: BYOK behavioral check
         run: npm run byok:check
 

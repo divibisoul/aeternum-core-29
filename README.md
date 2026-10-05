@@ -57,3 +57,15 @@ This project is built with Vite, TypeScript, React, shadcn-ui and Tailwind CSS.
 ## How can I deploy this project?
 
 Open the Lovable project and publish it using the deployment controls provided there.
+
+## Canonical transport registry — additive integration (2026-10-05)
+
+The existing HybridTransportRegistry remains the compatibility authority for transport selection. The new `src/core/mesh/TransportRegistry.ts` is the N01 core integration facade: it preserves the legacy envelope, normalizes legacy messages when required, and creates/verifies the canonical Soul Mesh envelope (`contractVersion: 1.1.0`) for the core MeshRouter.
+
+This is an additive compatibility boundary. No existing transport, gateway, bridge, envelope file, or application capability is removed.
+
+Validation command:
+
+```sh
+npm run mesh:transport:unit
+```
