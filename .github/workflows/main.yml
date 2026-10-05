@@ -71,6 +71,8 @@ jobs:
 
       - name: Local Mesh runtime contract
         run: node scripts/soul-mesh-local-contract-check.mjs
+      - name: Protocol HMAC compatibility check
+        run: node scripts/test-n01-protocol-hmac.mjs
 
       - name: SuperGPU registry contract
         run: node scripts/soul-supergpu-check.mjs
