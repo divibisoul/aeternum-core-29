@@ -19,5 +19,5 @@ jobs:
       # MAIN currently has package.json/package-lock.json drift (npm ci fails on picomatch).
       # npm install is used only for this independent code-validation harness.
       - run: npm install --no-audit --no-fund
-      - run: node --experimental-strip-types --experimental-loader ./scripts/n01-ts-extension-loader.mjs scripts/n01-core-continuity-check.mjs
+      - run: npx --no-install tsx scripts/n01-core-continuity-check.mjs
       - run: npm run build
