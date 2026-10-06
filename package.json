@@ -22,7 +22,9 @@
     "sara:federation:check": "node scripts/sara-federation.test.mjs",
     "aeternum:authority:check": "node --experimental-strip-types scripts/n01-aeternum-functional-authority-check.mjs",
     "neural-management:check": "node scripts/neural-management-core-check.mjs",
-    "vagus:clareira:check": "node scripts/vagus-clareira-check.mjs"
+    "vagus:clareira:check": "node scripts/vagus-clareira-check.mjs",
+    "mesh:dual-runtime:check": "node --experimental-strip-types scripts/soul-mesh-dual-runtime-contract-check.mjs",
+    "mesh:dual-runtime:test": "node --experimental-strip-types --test src/core/mesh/SoulMeshDualRuntime.test.ts"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
