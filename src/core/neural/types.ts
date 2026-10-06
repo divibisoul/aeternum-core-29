@@ -166,3 +166,9 @@ export interface ClareiraSnapshot {
   vagus: ReturnType<import('./VagusNerve').VagusNerve['snapshot']>;
   deviceState?: ClareiraDeviceState;
 }
+
+
+/** Bounded queue capacity per Vagus branch; aligned with the 64-item tick batch and 16-way global ceiling. */
+export const VAGUS_BRANCH_QUEUE_SIZE = 32;
+/** Autonomic Vagus tick period; kept above the tone-control 100ms observation floor. */
+export const VAGUS_TICK_INTERVAL_MS = 100;
