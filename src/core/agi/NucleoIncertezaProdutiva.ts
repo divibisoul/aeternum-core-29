@@ -108,7 +108,7 @@ export class NucleoIncertezaProdutiva {
       this.registrarCrenca(
         inputHash,
         userInput.substring(0, 200),
-        0.5 + Math.random() * 0.3,
+        0.5,
         'interacao-usuario'
       );
     }
@@ -175,7 +175,7 @@ export class NucleoIncertezaProdutiva {
       }
 
       // Reduce belief certainty
-      const reducao = this.taxaIncertezaBase * (1 + Math.random() * 0.5);
+      const reducao = this.taxaIncertezaBase;
       crencaMaisForte.certeza = Math.max(0.1, crencaMaisForte.certeza * (1 - reducao));
 
       this.historicoRupturas.push({
@@ -252,7 +252,9 @@ export class NucleoIncertezaProdutiva {
       `Viés de confirmação pode estar inflando a certeza de "${crenca.texto.substring(0, 80)}".`,
       `Dados adversariais poderiam desafiar esta premissa de forma produtiva.`
     ];
-    return estrategias[Math.floor(Math.random() * estrategias.length)];
+    let hash = 0;
+    for (const char of crenca.id) hash = ((hash << 5) - hash) + char.charCodeAt(0);
+    return estrategias[Math.abs(hash) % estrategias.length];
   }
 
   private hashInput(input: string): string {

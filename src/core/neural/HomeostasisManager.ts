@@ -7,6 +7,8 @@
 
 import { EventBus } from '../EventBus';
 import type { ProcessingNode } from './ProcessingNode';
+import type { VagusNerve } from './VagusNerve';
+import type { VagalSignal, ClareiraDeviceState } from './types';
 import {
   type NodeState,
   type HomeostasisReport,
@@ -30,6 +32,9 @@ export class HomeostasisManager {
   private globalStress = 0;
   private turboActive = false;
   private lastTurboActivation = 0;
+  private vagus: VagusNerve | null = null;
+  private deviceState: ClareiraDeviceState | null = null;
+  private lastTurboEnd = 0;
   
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private _running = false;
@@ -62,6 +67,33 @@ export class HomeostasisManager {
     }
 
     console.log(`[HomeostasisManager] ${nodes.length} nós registrados`);
+  }
+
+  attachVagus(vagus: VagusNerve): void {
+    this.vagus = vagus;
+  }
+
+  updateDeviceState(state: ClareiraDeviceState): void {
+    this.deviceState = {
+      ...state,
+      batteryPercent: Math.max(0, Math.min(100, state.batteryPercent)),
+    };
+  }
+
+  getDeviceState(): ClareiraDeviceState | null {
+    return this.deviceState ? { ...this.deviceState } : null;
+  }
+
+  receiveVagalAfferent(signal: VagalSignal): void {
+    const node = this.allNodes.find(item => item.id === signal.sourceNodeId);
+    if (!node) return;
+    if (signal.signalType === 'thermal_critical') {
+      this.vagus?.sendEfferent(node.id, 'reduce_thermal', signal.payload, 0.95);
+    } else if (signal.signalType === 'overload' || signal.signalType === 'energy_low') {
+      this.vagus?.sendEfferent(node.id, 'calm', signal.payload, 0.85);
+    } else if (signal.signalType === 'fault') {
+      this.globalStress = Math.min(100, this.globalStress + signal.priority);
+    }
   }
 
   /**

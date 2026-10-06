@@ -103,6 +103,12 @@ export interface SystemMetrics {
   turboActive: boolean;
   packetsProcessed: number;
   tunelamentosRealizados: number;
+  vagalTone?: number;
+  activeVagusBranches?: number;
+  redundantVagusBranches?: number;
+  vagalSignalLatencyMs?: number;
+  droppedPackets?: number;
+  dropRate?: number;
   timestamp: number;
 }
 
@@ -130,3 +136,39 @@ export function createInformationPacket(
     metadata,
   };
 }
+
+
+export interface ClareiraDeviceState {
+  batteryPercent: number;
+  charging: boolean;
+  batteryTemperatureC: number | null;
+  screenOn: boolean;
+  network: string;
+  shizukuStatus: string;
+  timestamp: number;
+  cpuFreqMhz?: number | null;
+  ramUsedMb?: number | null;
+  ramTotalMb?: number | null;
+  foregroundPackage?: string | null;
+  wifiEnabled?: boolean;
+  bluetoothEnabled?: boolean;
+}
+
+export interface ClareiraSnapshot {
+  schemaVersion: '1.1.0';
+  timestamp: number;
+  blueprintVersion: string;
+  status: 'INITIALIZED' | 'RUNNING' | 'STOPPED';
+  metrics: SystemMetrics;
+  nodes: ReturnType<import('./ProcessingNode').ProcessingNode['getMetrics']>[];
+  channels: ReturnType<import('./InformationChannel').InformationChannel['getMetrics']>[];
+  homeostasis: ReturnType<import('./HomeostasisManager').HomeostasisManager['getMetrics']>;
+  vagus: ReturnType<import('./VagusNerve').VagusNerve['snapshot']>;
+  deviceState?: ClareiraDeviceState;
+}
+
+
+/** Bounded queue capacity per Vagus branch; aligned with the 64-item tick batch and 16-way global ceiling. */
+export const VAGUS_BRANCH_QUEUE_SIZE = 32;
+/** Autonomic Vagus tick period; kept above the tone-control 100ms observation floor. */
+export const VAGUS_TICK_INTERVAL_MS = 100;
