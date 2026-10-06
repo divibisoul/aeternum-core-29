@@ -129,6 +129,20 @@ async function relayToN07(message) {
 }
 
 async function proxy(req, res) {
+  if (req.method === 'GET' && req.url === '/ready') {
+    const secretReady = !['production','staging'].includes(process.env.NODE_ENV || '') || SECRET.length >= 16;
+    const n07Ready = Boolean(N07_URL);
+    const childReady = !child.killed && child.exitCode === null;
+    return writeDirect(res, secretReady && childReady && (n07Ready || process.env.NODE_ENV !== 'production') ? 200 : 503, {
+      nucleus: 'N01',
+      ready: secretReady && childReady && (n07Ready || process.env.NODE_ENV !== 'production'),
+      checks: { childProcess: childReady, meshSecretConfigured: secretReady, n07EndpointConfigured: n07Ready },
+      protocol: PROTOCOL,
+      contractVersion: CONTRACT_VERSION
+    });
+  }
+
+
   const rawBody = req.method === 'POST' ? await readRequestBody(req) : Buffer.alloc(0);
 
   if (req.method === 'POST' && req.url === '/api/soul-mesh/n07') {
