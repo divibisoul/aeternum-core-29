@@ -59,6 +59,22 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
  recordFailure(target);throw lastError instanceof Error?lastError:new Error(String(lastError));
 }
 
+export type PublicCapabilityProvider =
+  | 'bijux-dag-runtime' | 'ouro-loop' | 'recuris' | 'fedml' | 'hivemind'
+  | 'temporal' | 'hora-graph-core' | 'cognitive-workspace' | 'ravana' | 'ray' | 'nats-go';
+
+export async function executePublicCapability(
+ provider:PublicCapabilityProvider,
+ operation:string,
+ payload:unknown,
+ timeoutMs=60000,
+ correlationId=uuid(),
+):Promise<SoulMeshMessage>{
+ const normalizedOperation=operation.trim();
+ if(!normalizedOperation)throw new Error('PUBLIC_CAPABILITY_OPERATION_REQUIRED');
+ return sendTo('N07',`external.${provider}.execute@1.0.0`,{payload,metadata:{provider,external_operation:normalizedOperation}},timeoutMs,correlationId);
+}
+
 export async function pingAll(timeoutMs=5000){return Promise.all(ACTIVE_PEERS.map(async target=>{try{const response=await sendTo(target,'mesh.ping',{from:'N01',channel:`N01.OUT.${target}`},timeoutMs);return{target,status:'CONNECTED' as const,response};}catch(error){return{target,status:'FAILED' as const,error:String(error)};}}))}
 export const N01_OUT_CHANNELS=ACTIVE_PEERS.map(target=>`N01.OUT.${target}`);
 export const N01_IN_CHANNELS=ACTIVE_PEERS.map(source=>`N01.IN.${source}`);
