@@ -32,10 +32,12 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
  if(isN07&&!relayOrigin)throw new Error('N07_BROWSER_RELAY_ORIGIN_REQUIRED');
  if(!directUrl&&!isN07)throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);if(!capability.trim())throw new Error('SOUL_MESH_CAPABILITY_REQUIRED');
  if(!circuitAllows(target))throw new Error(`SOUL_MESH_CIRCUIT_OPEN:${target}`);
+ const messageId = uuid();
+ const baseMessage: Omit<SoulMeshMessage,'id'|'timestamp'|'meta'> = {protocol:'soul-mesh/1',contractVersion:'1.1.0',correlationId,source:'N01',target,kind:'request',capability,payload};
  let lastError:unknown;
  for(let attempt=1;attempt<=MAX_ATTEMPTS;attempt++){
-  const id=uuid();const n=nonce();
-  const message:SoulMeshMessage={protocol:'soul-mesh/1',contractVersion:'1.1.0',id,correlationId,source:'N01',target,kind:'request',capability,payload,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:'1.1.0',traceId:correlationId,nonce:n}};
+  const id=messageId;const n=nonce();
+  const message:SoulMeshMessage={...baseMessage,id,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:'1.1.0',traceId:correlationId,nonce:n}};
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
    const headers:Record<string,string>={'content-type':'application/json','x-soul-correlation-id':correlationId};
@@ -51,7 +53,7 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
     if(!isRetryableStatus(response.status))throw new Error(detail);throw new Error(detail);
    }
    recordSuccess(target);return body;
-  }catch(error){lastError=error;const text=error instanceof Error?error.message:String(error);const retryable=(error instanceof DOMException&&error.name==='AbortError')||text.includes('fetch failed')||text.includes('network')||text.startsWith('SOUL_MESH_REMOTE_ERROR:');if(!retryable||attempt===MAX_ATTEMPTS){recordFailure(target);throw error;}await sleep(RETRY_BASE_DELAY_MS*2**(attempt-1)+Math.floor(Math.random()*100));}
+  }catch(error){lastError=error;const text=error instanceof Error?error.message:String(error);const retryable=(error instanceof DOMException&&error.name==='AbortError')||text.includes('fetch failed')||text.includes('network')||text.startsWith('SOUL_MESH_REMOTE_ERROR:');if(!retryable||attempt===MAX_ATTEMPTS){recordFailure(target);throw error;}await sleep(RETRY_BASE_DELAY_MS*2**(attempt-1)+jitter(100));}
   finally{clearTimeout(timer);}
  }
  recordFailure(target);throw lastError instanceof Error?lastError:new Error(String(lastError));
