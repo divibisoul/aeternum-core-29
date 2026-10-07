@@ -8,7 +8,7 @@ object SoulCapabilityCatalog {
     val capabilities = listOf(
         SoulCapability("mesh.ping", "N01", Execution.LOCAL),
         SoulCapability("chat.orchestrate", "N02", Execution.WEB_SESSION),
-        SoulCapability("speech.process", "N03", Execution.LOCAL),
+        SoulCapability("speech.process", "N03", Execution.REMOTE_SERVICE),
         SoulCapability("chat.reason", "N04", Execution.WEB_SESSION),
         SoulCapability("chat.tools", "N05", Execution.WEB_SESSION),
         SoulCapability("ai.generate", "N06", Execution.WEB_SESSION),
