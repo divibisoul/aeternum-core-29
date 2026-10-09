@@ -24,7 +24,7 @@ class SoulHybridMeshTest {
     fun webSessionCapabilityIsDelegatedToHybridRuntime() {
         val mesh = SoulMeshBootstrap.create { SoulMeshBootstrap.delegateToWeb(it) }
         val response = mesh.send("N01", "N02", "chat.orchestrate", JSONObject().put("text", "ping"))
-        assertEquals("event", response.kind)
+        assertEquals("response", response.kind)
         assertEquals("WEB_SESSION", response.payload.getString("execution"))
         assertTrue(response.correlationId.isNotBlank())
     }
