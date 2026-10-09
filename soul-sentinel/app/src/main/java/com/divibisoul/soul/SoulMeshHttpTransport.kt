@@ -134,25 +134,26 @@ class SoulMeshHttpTransport(
             }
             if (read != length) { writeResponse(socket, 400, JSONObject().put("error", "Incomplete body")); return }
 
-            var message: SoulMeshMessage? = null
+            var received: SoulMeshMessage? = null
             try {
-                message = SoulMeshMessage.fromJson(JSONObject(String(body)))
-                require(message.target == sourceNucleus) {
-                    "Mesh request target ${message.target} does not match receiver $sourceNucleus"
+                val incoming = SoulMeshMessage.fromJson(JSONObject(String(body)))
+                received = incoming
+                require(incoming.target == sourceNucleus) {
+                    "Mesh request target ${incoming.target} does not match receiver $sourceNucleus"
                 }
-                onMessage(message)
-                val response = responseHandler?.invoke(message) ?: SoulMeshMessage(
+                onMessage(incoming)
+                val response = responseHandler?.invoke(incoming) ?: SoulMeshMessage(
                     id = UUID.randomUUID().toString(),
-                    correlationId = message.correlationId,
+                    correlationId = incoming.correlationId,
                     source = sourceNucleus,
-                    target = message.source,
+                    target = incoming.source,
                     kind = "response",
-                    capability = message.capability,
+                    capability = incoming.capability,
                     payload = JSONObject().put("accepted", true),
                     timestamp = System.currentTimeMillis(),
                 )
-                require(response.correlationId == message.correlationId) { "Mesh response correlation mismatch" }
-                require(response.source == sourceNucleus && response.target == message.source) {
+                require(response.correlationId == incoming.correlationId) { "Mesh response correlation mismatch" }
+                require(response.source == sourceNucleus && response.target == incoming.source) {
                     "Mesh response route does not match the received request"
                 }
                 require(response.kind == "response" || response.kind == "error") {
@@ -160,7 +161,7 @@ class SoulMeshHttpTransport(
                 }
                 writeResponse(socket, if (response.kind == "error") 400 else 200, response.toJson())
             } catch (failure: Exception) {
-                val failedMessage = message
+                val failedMessage = received
                 if (failedMessage == null) {
                     writeResponse(socket, 400, JSONObject().put("error", failure.message ?: "Invalid Mesh message"))
                 } else {
