@@ -28,7 +28,7 @@ assert.match(serverSource, /const NUCLEUS_IDS = \[SELF, \.\.\.PEER_IDS\]/,
   'N01 fusion snapshot: canonical seven-identity topology is absent');
 assert.match(serverSource, /function channelsFor\(id\)\{ const peersFor=NUCLEUS_IDS\.filter\(nucleus=>nucleus!==id\);/,
   'N01 channel matrix: every nucleus must include all six other identities');
-assert.match(serverSource, /directionalChannels:counts\.totalLogicalDirectedRoutes,endpointSurfaces:counts\.totalEndpointSurfaces,topologyCounts:counts/,
+assert.match(serverSource, /directionalChannels:counts\.totalEndpointSurfaces,directedRoutes:counts\.totalLogicalDirectedRoutes,endpointSurfaces:counts\.totalEndpointSurfaces,topologyCounts:counts/,
   'N01 fusion snapshot must distinguish directed links from endpoint surfaces');
 assert.match(serverSource, /if\(!PEER_IDS\.includes\(body\.nucleus\)\|\|!normalizeUrl\(body\.endpoint\)\)/,
   'N01 registration: structural peer validation is not based on the canonical peer set');
