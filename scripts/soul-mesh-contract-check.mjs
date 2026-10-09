@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { isPublicN07StructuralCapability, N07_PUBLIC_STRUCTURAL_CAPABILITIES } from './soul-mesh-relay-policy.mjs';
+import { stableJsonValue } from './soul-mesh-canonical-json.mjs';
 
 const EXPECTED = '1.1.0';
 const localEnvelopeSource = resolve(process.cwd(), 'lib/soul-mesh/SoulMeshEnvelope.ts');
@@ -47,6 +48,18 @@ assert.equal(allIdentityMessages, 42);
 assert.equal(allIdentitySurfaces, 84);
 
 assert.deepEqual([...N07_PUBLIC_STRUCTURAL_CAPABILITIES], ['mesh.ping']);
+assert.equal(
+  JSON.stringify(stableJsonValue({ from: 'N01', scope: 'STRUCTURAL_CONTROL_PLANE', channel: 'N01.OUT.N07' })),
+  '{"channel":"N01.OUT.N07","from":"N01","scope":"STRUCTURAL_CONTROL_PLANE"}',
+  'nested payload object keys must canonicalize like Go encoding/json',
+);
+assert.equal(
+  JSON.stringify(stableJsonValue({ z: [{ y: 2, x: 1 }], a: 0 })),
+  '{"a":0,"z":[{"x":1,"y":2}]}',
+  'canonicalization must recurse into object values without changing array order',
+);
+assert.match(relaySource, /payload: stableJsonValue\(message\.payload \|\| \{\}\)/);
+assert.match(relaySource, /meta: stableJsonValue\(message\.meta\)/);
 assert.equal(isPublicN07StructuralCapability('mesh.ping'), true);
 assert.equal(isPublicN07StructuralCapability('sara.cycle@1.0.0'), false);
 assert.equal(isPublicN07StructuralCapability('neural.forward@1.0.0'), false);

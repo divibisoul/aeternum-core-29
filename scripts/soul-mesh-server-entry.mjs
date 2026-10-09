@@ -2,6 +2,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { isPublicN07StructuralCapability } from './soul-mesh-relay-policy.mjs';
+import { stableJsonValue } from './soul-mesh-canonical-json.mjs';
 
 const publicPort = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const internalPort = publicPort + 1;
@@ -51,6 +52,8 @@ function writeDirect(res, status, body) {
 }
 
 function canonicalN07Relay(message, nonce) {
+  // Keep the outer wire field order identical to N07's Go canonical struct;
+  // sort all nested maps identically to encoding/json's map-key ordering.
   return JSON.stringify({
     protocol: message.protocol,
     contractVersion: message.contractVersion,
@@ -60,10 +63,10 @@ function canonicalN07Relay(message, nonce) {
     target: message.target,
     kind: message.kind,
     capability: message.capability,
-    payload: message.payload || {},
+    payload: stableJsonValue(message.payload || {}),
     timestamp: message.timestamp,
     transport: message.meta?.transport,
-    meta: message.meta,
+    meta: stableJsonValue(message.meta),
     nonce,
   });
 }
@@ -88,9 +91,9 @@ function verifyN07Response(message) {
     nonce: message.nonce,
     correlationId: message.correlationId,
     type: message.kind === 'error' ? 'ERROR' : 'TASK_RESULT',
-    payload: { capability: message.capability || '', payload: message.payload || {} },
+    payload: { capability: message.capability || '', payload: stableJsonValue(message.payload || {}) },
     operation: message.operation,
-    metadata: message.metadata,
+    metadata: stableJsonValue(message.metadata),
   };
   const canonical = JSON.stringify(unsigned);
   const expected = crypto.createHmac('sha256', SECRET).update(canonical).digest('hex');
