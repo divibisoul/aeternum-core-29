@@ -4,7 +4,9 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev --no-audit --no-fund
+# The tracked package-lock is currently inconsistent (picomatch 2.x vs 4.x); use the
+# same legacy-peer-compatible install policy as the repository CI without mutating source files.
+RUN npm install --omit=dev --legacy-peer-deps --no-audit --no-fund
 
 COPY . .
 
