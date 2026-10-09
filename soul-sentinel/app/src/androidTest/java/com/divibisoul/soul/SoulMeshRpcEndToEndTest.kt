@@ -25,7 +25,7 @@ class SoulMeshRpcEndToEndTest {
             val request = SoulMeshMessage(
                 id = UUID.randomUUID().toString(), correlationId = correlationId,
                 source = "N01", target = "N02", kind = "request", capability = "context.read",
-                payload = JSONObject().put("probe", true), timestamp = Instant.now().toString()
+                payload = JSONObject().put("probe", true), timestamp = System.currentTimeMillis()
             )
             val result = sender.send("http://127.0.0.1:18767/soul/mesh/v1", request)
             assertTrue(result.isSuccess)
