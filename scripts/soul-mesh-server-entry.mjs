@@ -1,6 +1,7 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { isPublicN07StructuralCapability } from './soul-mesh-relay-policy.mjs';
 
 const publicPort = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const internalPort = publicPort + 1;
@@ -74,6 +75,7 @@ function signN07Relay(message, nonce) {
 function verifyN07Response(message) {
   if (!message || message.protocol !== PROTOCOL || message.contractVersion !== CONTRACT_VERSION) throw new Error('INVALID_N07_RESPONSE_CONTRACT');
   if (message.source !== 'N07' || message.target !== 'N01') throw new Error('INVALID_N07_RESPONSE_ROUTE');
+  if (!message.id || !['response', 'error'].includes(message.kind) || typeof message.capability !== 'string' || !message.payload || typeof message.payload !== 'object' || Array.isArray(message.payload)) throw new Error('INVALID_N07_RESPONSE_ENVELOPE');
   if (!message.correlationId || !message.nonce || !message.hmac) throw new Error('INVALID_N07_RESPONSE_AUTH');
   if (!Number.isFinite(message.timestamp) || Math.abs(Date.now() - message.timestamp) > 30_000) throw new Error('N07_RESPONSE_TIMESTAMP_OUT_OF_RANGE');
   const unsigned = {
@@ -119,9 +121,11 @@ async function relayToN07(message) {
       cache: 'no-store',
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(`N07_HTTP_${response.status}`);
     if (body.correlationId !== message.correlationId) throw new Error('N07_CORRELATION_MISMATCH');
     verifyN07Response(body);
+    // Accept only authenticated, correlated Mesh envelopes. HTTP error status is
+    // interpreted after signature validation so N07's structured error is preserved.
+    if (!response.ok && body.kind !== 'error') throw new Error(`N07_HTTP_${response.status}`);
     return body;
   } finally {
     clearTimeout(timer);
@@ -136,6 +140,10 @@ async function proxy(req, res) {
       const message = JSON.parse(rawBody.toString('utf8'));
       if (message?.source !== 'N01' || message?.target !== 'N07') {
         writeDirect(res, 400, { error: 'N01_N07_ROUTE_REQUIRED' });
+        return;
+      }
+      if (!isPublicN07StructuralCapability(message?.capability)) {
+        writeDirect(res, 403, { error: 'N07_STRUCTURAL_CAPABILITY_ONLY' });
         return;
       }
       const body = await relayToN07(message);
