@@ -40,6 +40,12 @@ class SoulMeshHttpTransport(
         serverSocket = null
     }
 
+    /**
+     * Sends one Mesh message and validates the complete response envelope.
+     * A structured Mesh error may use a non-2xx HTTP status; it is returned as an error
+     * message after identity and correlation validation instead of being discarded as a
+     * generic transport failure.
+     */
     fun send(url: String, message: SoulMeshMessage): Result<SoulMeshMessage> = runCatching {
         require(message.source == sourceNucleus) { "Message source does not match transport nucleus" }
         message.validate().getOrThrow()
@@ -54,13 +60,33 @@ class SoulMeshHttpTransport(
             setRequestProperty("X-Soul-Mesh-Contract-Version", SoulMeshContract.CONTRACT_VERSION)
             setRequestProperty("X-Soul-Mesh-Correlation-Id", message.correlationId)
         }
-        connection.outputStream.use { it.write(message.toJson().toString().toByteArray(StandardCharsets.UTF_8)) }
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use(BufferedReader::readText).orEmpty()
-        connection.disconnect()
-        require(status in 200..299) { "Mesh transport HTTP $status" }
-        SoulMeshMessage.fromJson(JSONObject(body))
+
+        try {
+            connection.outputStream.use {
+                it.write(message.toJson().toString().toByteArray(StandardCharsets.UTF_8))
+            }
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use(BufferedReader::readText).orEmpty()
+            require(body.isNotBlank()) { "Empty Mesh response: HTTP $status" }
+
+            val response = SoulMeshMessage.fromJson(JSONObject(body))
+            require(response.correlationId == message.correlationId) {
+                "Mesh correlation mismatch: expected ${message.correlationId}, got ${response.correlationId}"
+            }
+            require(response.source == message.target && response.target == message.source) {
+                "Mesh response route mismatch: expected ${message.target}->${message.source}, got ${response.source}->${response.target}"
+            }
+            require(response.kind == "response" || response.kind == "error") {
+                "Mesh response must be a response or structured error envelope"
+            }
+            if (status !in 200..299 && response.kind != "error") {
+                error("Mesh HTTP $status returned a non-error envelope")
+            }
+            response
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun startInternal(onMessage: (SoulMeshMessage) -> Unit): Result<Unit> {
