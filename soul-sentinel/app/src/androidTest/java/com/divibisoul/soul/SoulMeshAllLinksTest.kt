@@ -15,7 +15,7 @@ class SoulMeshAllLinksTest {
                 nucleus,
                 SoulMeshEndpoint(
                     nucleusId = nucleus,
-                    handlers = mapOf("mesh.ping" to { payload ->
+                    handlers = mapOf("mesh.test.roundtrip" to { payload ->
                         JSONObject(payload.toString()).put("servedBy", nucleus)
                     }),
                 ),
@@ -30,13 +30,13 @@ class SoulMeshAllLinksTest {
             val response = runtime.send(
                 source = source,
                 target = target,
-                capability = "mesh.ping",
+                capability = "mesh.test.roundtrip",
                 payload = JSONObject().put("source", source),
             )
             assertEquals("response", response.kind)
             assertEquals(source, response.target)
             assertEquals(target, response.source)
-            assertEquals("mesh.ping", response.capability)
+            assertEquals("mesh.test.roundtrip", response.capability)
             assertEquals(target, response.payload.getString("servedBy"))
         }
     }
