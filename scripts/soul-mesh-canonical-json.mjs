@@ -1,15 +1,28 @@
 /**
- * Sort nested JSON object keys recursively for cross-language HMAC canonical
- * envelopes. Arrays retain order; the caller owns top-level protocol field order.
+ * Canonical JSON compatible with Go encoding/json for SOUL Mesh HMAC signing.
+ * The caller supplies the protocol-defined outer field order; every nested
+ * object's keys are serialized lexicographically, not via JS object enumeration.
  */
-export function stableJsonValue(value) {
-  if (Array.isArray(value)) return value.map(stableJsonValue);
-  if (value !== null && typeof value === 'object') {
-    const normalized = {};
-    for (const key of Object.keys(value).sort()) {
-      normalized[key] = stableJsonValue(value[key]);
-    }
-    return normalized;
+export function canonicalOrderedJson(entries) {
+  const fields = entries
+    .filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${JSON.stringify(key)}:${canonicalValue(value)}`);
+  return `{${fields.join(',')}}`;
+}
+
+function canonicalValue(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => item === undefined ? 'null' : canonicalValue(item)).join(',')}]`;
   }
-  return value;
+  if (typeof value === 'object') {
+    const fields = Object.keys(value)
+      .filter((key) => value[key] !== undefined)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalValue(value[key])}`);
+    return `{${fields.join(',')}}`;
+  }
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) throw new TypeError('Unsupported value in canonical Mesh JSON');
+  return encoded;
 }

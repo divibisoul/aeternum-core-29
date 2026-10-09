@@ -2,7 +2,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { isPublicN07StructuralCapability } from './soul-mesh-relay-policy.mjs';
-import { stableJsonValue } from './soul-mesh-canonical-json.mjs';
+import { canonicalOrderedJson } from './soul-mesh-canonical-json.mjs';
 
 const publicPort = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const internalPort = publicPort + 1;
@@ -52,23 +52,23 @@ function writeDirect(res, status, body) {
 }
 
 function canonicalN07Relay(message, nonce) {
-  // Keep the outer wire field order identical to N07's Go canonical struct;
-  // sort all nested maps identically to encoding/json's map-key ordering.
-  return JSON.stringify({
-    protocol: message.protocol,
-    contractVersion: message.contractVersion,
-    id: message.id,
-    correlationId: message.correlationId,
-    source: message.source,
-    target: message.target,
-    kind: message.kind,
-    capability: message.capability,
-    payload: stableJsonValue(message.payload || {}),
-    timestamp: message.timestamp,
-    transport: message.meta?.transport,
-    meta: stableJsonValue(message.meta),
-    nonce,
-  });
+  // Preserve the outer Go-struct field order; sort every nested map exactly
+  // like encoding/json. This also covers integer-like JSON keys deterministically.
+  return canonicalOrderedJson([
+    ['protocol', message.protocol],
+    ['contractVersion', message.contractVersion],
+    ['id', message.id],
+    ['correlationId', message.correlationId],
+    ['source', message.source],
+    ['target', message.target],
+    ['kind', message.kind],
+    ['capability', message.capability],
+    ['payload', message.payload ?? null],
+    ['timestamp', message.timestamp],
+    ['transport', message.meta?.transport ?? null],
+    ['meta', message.meta ?? null],
+    ['nonce', nonce],
+  ]);
 }
 
 function signN07Relay(message, nonce) {
@@ -81,21 +81,20 @@ function verifyN07Response(message) {
   if (!message.id || !['response', 'error'].includes(message.kind) || typeof message.capability !== 'string' || !message.payload || typeof message.payload !== 'object' || Array.isArray(message.payload)) throw new Error('INVALID_N07_RESPONSE_ENVELOPE');
   if (!message.correlationId || !message.nonce || !message.hmac) throw new Error('INVALID_N07_RESPONSE_AUTH');
   if (!Number.isFinite(message.timestamp) || Math.abs(Date.now() - message.timestamp) > 30_000) throw new Error('N07_RESPONSE_TIMESTAMP_OUT_OF_RANGE');
-  const unsigned = {
-    version: '1.0',
-    contractVersion: message.contractVersion,
-    messageId: message.id,
-    source: message.source,
-    target: message.target,
-    timestamp: message.timestamp,
-    nonce: message.nonce,
-    correlationId: message.correlationId,
-    type: message.kind === 'error' ? 'ERROR' : 'TASK_RESULT',
-    payload: { capability: message.capability || '', payload: stableJsonValue(message.payload || {}) },
-    operation: message.operation,
-    metadata: stableJsonValue(message.metadata),
-  };
-  const canonical = JSON.stringify(unsigned);
+  const canonical = canonicalOrderedJson([
+    ['version', '1.0'],
+    ['contractVersion', message.contractVersion],
+    ['messageId', message.id],
+    ['source', message.source],
+    ['target', message.target],
+    ['timestamp', message.timestamp],
+    ['nonce', message.nonce],
+    ['correlationId', message.correlationId],
+    ['type', message.kind === 'error' ? 'ERROR' : 'TASK_RESULT'],
+    ['payload', { capability: message.capability || '', payload: message.payload || {} }],
+    ['operation', message.operation],
+    ['metadata', message.metadata],
+  ]);
   const expected = crypto.createHmac('sha256', SECRET).update(canonical).digest('hex');
   const actual = String(message.hmac);
   if (expected.length !== actual.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new Error('N07_RESPONSE_HMAC_INVALID');
