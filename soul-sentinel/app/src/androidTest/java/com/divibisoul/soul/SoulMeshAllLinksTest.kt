@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Proves the complete six-nucleus directed matrix through the APK's in-process runtime. */
+/** Proves the active six-nucleus directed matrix through the APK's in-process runtime. */
 class SoulMeshAllLinksTest {
     @Test
     fun allThirtyDirectedLinksRoundTrip() {
@@ -39,5 +39,37 @@ class SoulMeshAllLinksTest {
             assertEquals("mesh.ping", response.capability)
             assertEquals(target, response.payload.getString("servedBy"))
         }
+    }
+
+    @Test
+    fun sixtySurfaceCatalogKeepsN07Structural() {
+        assertEquals(listOf("N01", "N02", "N03", "N04", "N05", "N06"), SoulMeshChannels.nuclei)
+        assertEquals(listOf("N07"), SoulMeshChannels.structuralNuclei)
+        assertTrue("The wire contract must retain the N07 identity", "N07" in SoulMeshContract.nucleusIds)
+        assertEquals(15, SoulMeshChannels.bidirectionalPairs().size)
+        assertEquals(30, SoulMeshChannels.directedLinks().size)
+
+        val channelIds = SoulMesh60ChannelAccess(emptyMap()).allChannelIds()
+        assertEquals(60, channelIds.size)
+        assertEquals(60, channelIds.toSet().size)
+        assertEquals(30, channelIds.count { it.split('.')[1] == "OUT" })
+        assertEquals(30, channelIds.count { it.split('.')[1] == "IN" })
+
+        SoulMeshChannels.directedLinks().forEach { (source, target) ->
+            val outSlot = SoulMeshChannels.out(source).indexOf(target) + 1
+            val inSlot = SoulMeshChannels.input(target).indexOf(source) + 1
+            assertTrue("$source OUT surface is missing", "$source.OUT.$outSlot.$target" in channelIds)
+            assertTrue("$target IN surface is missing", "$target.IN.$inSlot.$source" in channelIds)
+        }
+    }
+
+    @Test
+    fun localProbeNeverReportsUnownedSurfacesAsReachable() {
+        val results = SoulMesh60ChannelAccess(emptyMap(), sourceNucleus = "N01").probeAll()
+
+        assertEquals(60, results.size)
+        assertTrue("An unconfigured endpoint must never be reported reachable", results.all { !it.reachable })
+        assertTrue(results.any { it.error == "PEER_ENDPOINT_NOT_CONFIGURED" })
+        assertTrue(results.any { it.error == "SURFACE_NOT_PROBEABLE_FROM_N01" })
     }
 }
