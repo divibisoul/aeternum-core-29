@@ -5,7 +5,7 @@ import org.json.JSONObject
 /** Builds the six-nucleus runtime and preserves native ownership while enabling peer routing. */
 object SoulMeshBootstrap {
     fun create(
-        webDelegate: (SoulMeshMessage) -> SoulMeshMessage = { message -> delegateToWeb(message) },
+        webDelegate: (SoulMeshMessage) -> SoulMeshMessage,
         peerEndpoints: Map<String, String> = emptyMap(),
     ): SoulMeshRuntime {
         val runtime = SoulMeshRuntime()
