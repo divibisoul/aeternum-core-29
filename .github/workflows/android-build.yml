@@ -3,6 +3,11 @@ name: Soul N01 Full Build
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'soul-sentinel/**'
+      - '.github/workflows/android-build.yml'
   workflow_dispatch:
 
 permissions:
