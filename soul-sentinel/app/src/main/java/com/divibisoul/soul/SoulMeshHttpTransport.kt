@@ -40,6 +40,12 @@ class SoulMeshHttpTransport(
         serverSocket = null
     }
 
+    /**
+     * Sends one Mesh message and validates the complete response envelope.
+     * A structured Mesh error may use a non-2xx HTTP status; it is returned as an error
+     * message after identity and correlation validation instead of being discarded as a
+     * generic transport failure.
+     */
     fun send(url: String, message: SoulMeshMessage): Result<SoulMeshMessage> = runCatching {
         require(message.source == sourceNucleus) { "Message source does not match transport nucleus" }
         message.validate().getOrThrow()
@@ -54,13 +60,33 @@ class SoulMeshHttpTransport(
             setRequestProperty("X-Soul-Mesh-Contract-Version", SoulMeshContract.CONTRACT_VERSION)
             setRequestProperty("X-Soul-Mesh-Correlation-Id", message.correlationId)
         }
-        connection.outputStream.use { it.write(message.toJson().toString().toByteArray(StandardCharsets.UTF_8)) }
-        val status = connection.responseCode
-        val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-        val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use(BufferedReader::readText).orEmpty()
-        connection.disconnect()
-        require(status in 200..299) { "Mesh transport HTTP $status" }
-        SoulMeshMessage.fromJson(JSONObject(body))
+
+        try {
+            connection.outputStream.use {
+                it.write(message.toJson().toString().toByteArray(StandardCharsets.UTF_8))
+            }
+            val status = connection.responseCode
+            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+            val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use(BufferedReader::readText).orEmpty()
+            require(body.isNotBlank()) { "Empty Mesh response: HTTP $status" }
+
+            val response = SoulMeshMessage.fromJson(JSONObject(body))
+            require(response.correlationId == message.correlationId) {
+                "Mesh correlation mismatch: expected ${message.correlationId}, got ${response.correlationId}"
+            }
+            require(response.source == message.target && response.target == message.source) {
+                "Mesh response route mismatch: expected ${message.target}->${message.source}, got ${response.source}->${response.target}"
+            }
+            require(response.kind == "response" || response.kind == "error") {
+                "Mesh response must be a response or structured error envelope"
+            }
+            if (status !in 200..299 && response.kind != "error") {
+                error("Mesh HTTP $status returned a non-error envelope")
+            }
+            response
+        } finally {
+            connection.disconnect()
+        }
     }
 
     private fun startInternal(onMessage: (SoulMeshMessage) -> Unit): Result<Unit> {
@@ -107,29 +133,64 @@ class SoulMeshHttpTransport(
                 read += count
             }
             if (read != length) { writeResponse(socket, 400, JSONObject().put("error", "Incomplete body")); return }
+
+            var received: SoulMeshMessage? = null
             try {
-                val message = SoulMeshMessage.fromJson(JSONObject(String(body)))
-                onMessage(message)
-                val response = responseHandler?.invoke(message) ?: SoulMeshMessage(
+                val incoming = SoulMeshMessage.fromJson(JSONObject(String(body)))
+                received = incoming
+                require(incoming.target == sourceNucleus) {
+                    "Mesh request target ${incoming.target} does not match receiver $sourceNucleus"
+                }
+                onMessage(incoming)
+                val response = responseHandler?.invoke(incoming) ?: SoulMeshMessage(
                     id = UUID.randomUUID().toString(),
-                    correlationId = message.correlationId,
+                    correlationId = incoming.correlationId,
                     source = sourceNucleus,
-                    target = message.source,
+                    target = incoming.source,
                     kind = "response",
-                    capability = message.capability,
+                    capability = incoming.capability,
                     payload = JSONObject().put("accepted", true),
                     timestamp = System.currentTimeMillis(),
                 )
-                writeResponse(socket, 200, response.toJson())
-            } catch (error: Exception) {
-                writeResponse(socket, 400, JSONObject().put("error", error.message ?: "Invalid Mesh message"))
+                require(response.correlationId == incoming.correlationId) { "Mesh response correlation mismatch" }
+                require(response.source == sourceNucleus && response.target == incoming.source) {
+                    "Mesh response route does not match the received request"
+                }
+                require(response.kind == "response" || response.kind == "error") {
+                    "Mesh handler must return a response or structured error"
+                }
+                writeResponse(socket, if (response.kind == "error") 400 else 200, response.toJson())
+            } catch (failure: Exception) {
+                val failedMessage = received
+                if (failedMessage == null) {
+                    writeResponse(socket, 400, JSONObject().put("error", failure.message ?: "Invalid Mesh message"))
+                } else {
+                    val structuredError = SoulMeshMessage(
+                        id = UUID.randomUUID().toString(),
+                        correlationId = failedMessage.correlationId,
+                        source = sourceNucleus,
+                        target = failedMessage.source,
+                        kind = "error",
+                        capability = failedMessage.capability,
+                        payload = JSONObject()
+                            .put("code", "MESH_HANDLER_ERROR")
+                            .put("detail", failure.message ?: "Mesh handler failed"),
+                        timestamp = System.currentTimeMillis(),
+                    )
+                    writeResponse(socket, 500, structuredError.toJson())
+                }
             }
         }
     }
 
     private fun writeResponse(socket: java.net.Socket, status: Int, body: JSONObject) {
         val bytes = body.toString().toByteArray(StandardCharsets.UTF_8)
-        val reason = if (status == 200) "OK" else "Bad Request"
+        val reason = when (status) {
+            200 -> "OK"
+            400 -> "Bad Request"
+            500 -> "Internal Server Error"
+            else -> "Error"
+        }
         val headers = "HTTP/1.1 $status $reason\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n"
         socket.getOutputStream().use { output -> output.write(headers.toByteArray(StandardCharsets.UTF_8)); output.write(bytes); output.flush() }
     }

@@ -1,11 +1,17 @@
 package com.divibisoul.soul
 
-/** Canonical validation rules for Soul Mesh v1 across all seven independent nuclei. */
+/**
+ * Canonical wire validation for Soul Mesh v1.
+ * N01..N06 are the operational AI nuclei; N07 remains recognized as the structural/control-plane participant.
+ */
 object SoulMeshContract {
     const val PROTOCOL = "soul-mesh/1"
     const val CONTRACT_VERSION = "1.1.0"
 
-    val nucleusIds = setOf("N01", "N02", "N03", "N04", "N05", "N06", "N07")
+    val activeNucleusIds = setOf("N01", "N02", "N03", "N04", "N05", "N06")
+    val structuralNucleusIds = setOf("N07")
+    /** All identities permitted on the wire, including the structural control plane. */
+    val nucleusIds = activeNucleusIds + structuralNucleusIds
     val kinds = setOf("request", "response", "event", "error")
 
     fun validate(

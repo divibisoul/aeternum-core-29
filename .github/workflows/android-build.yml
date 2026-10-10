@@ -3,6 +3,11 @@ name: Soul N01 Full Build
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'soul-sentinel/**'
+      - '.github/workflows/android-build.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +20,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: N01 canonical route-resolution regressions
+        run: node --test scripts/soul-mesh-routing.test.mjs
+      - name: N01 Mesh contract checks
+        run: node scripts/soul-mesh-contract-check.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -53,16 +62,19 @@ jobs:
         run: |
           test -s soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
           test -s soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Stop Gradle daemons before emulator boot
+        working-directory: soul-sentinel
+        run: gradle --stop
       - name: Run Mesh instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
           target: google_apis
           arch: x86_64
-          profile: pixel_5
+          profile: pixel_2
           emulator-boot-timeout: 1200
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -wipe-data -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           disable-linux-hw-accel: auto
           working-directory: soul-sentinel

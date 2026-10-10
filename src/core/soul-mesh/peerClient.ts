@@ -2,9 +2,10 @@ export type NucleusId='N01'|'N02'|'N03'|'N04'|'N05'|'N06'|'N07';
 export type MeshKind='request'|'response'|'event'|'error';
 export type SoulMeshMessage={protocol:'soul-mesh/1';contractVersion:'1.1.0';id:string;correlationId:string;source:NucleusId;target:NucleusId;kind:MeshKind;capability:string;payload:unknown;timestamp:number;meta?:{runtime?:string;transport?:string;encoding?:string;version?:string;nonce?:string;traceId?:string}};
 
-/** N07 is now an active peer through the N01 server-side secure relay. */
-const ACTIVE_PEERS:Exclude<NucleusId,'N01'>[]=['N02','N03','N04','N05','N06','N07'];
-const STRUCTURAL_PEERS:Exclude<NucleusId,'N01'>[]=['N02','N03','N04','N05','N06','N07'];
+/** N02–N06 are operational AI peers; N07 remains structural/control-plane only. */
+const ACTIVE_PEERS:Exclude<NucleusId,'N01'|'N07'>[]=['N02','N03','N04','N05','N06'];
+const STRUCTURAL_PEERS:Extract<NucleusId,'N07'>[]=['N07'];
+const N07_STRUCTURAL_CAPABILITIES = new Set(['mesh.ping']);
 const MAX_ATTEMPTS=3;
 const RETRY_BASE_DELAY_MS=250;
 const CIRCUIT_FAILURE_THRESHOLD=3;
@@ -27,6 +28,7 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
  if(target==='N01')throw new Error('N01 inbound transport is owned by the Android runtime bridge');
  const directUrl=urls[target];
  const isN07=target==='N07';
+ if(isN07&&!N07_STRUCTURAL_CAPABILITIES.has(capability.trim()))throw new Error('N07_STRUCTURAL_CAPABILITY_ONLY');
  const relayOrigin=globalThis.location?.origin?.trim()??'';
  const requestUrl=isN07?`${relayOrigin}/api/soul-mesh/n07`:`${(directUrl??'').replace(/\/$/,'')}/api/soul-mesh`;
  if(isN07&&!relayOrigin)throw new Error('N07_BROWSER_RELAY_ORIGIN_REQUIRED');
@@ -58,6 +60,7 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
 }
 
 export async function pingAll(timeoutMs=5000){return Promise.all(ACTIVE_PEERS.map(async target=>{try{const response=await sendTo(target,'mesh.ping',{from:'N01',channel:`N01.OUT.${target}`},timeoutMs);return{target,status:'CONNECTED' as const,response};}catch(error){return{target,status:'FAILED' as const,error:String(error)};}}))}
+export async function pingStructuralControlPlane(timeoutMs=5000){try{const response=await sendTo('N07','mesh.ping',{from:'N01',scope:'STRUCTURAL_CONTROL_PLANE',channel:'N01.OUT.N07'},timeoutMs);return{target:'N07',scope:'STRUCTURAL_CONTROL_PLANE' as const,status:'CONNECTED' as const,response};}catch(error){return{target:'N07',scope:'STRUCTURAL_CONTROL_PLANE' as const,status:'FAILED' as const,error:String(error)};}}
 export const N01_OUT_CHANNELS=ACTIVE_PEERS.map(target=>`N01.OUT.${target}`);
 export const N01_IN_CHANNELS=ACTIVE_PEERS.map(source=>`N01.IN.${source}`);
 export const N01_LOGICAL_CHANNELS=[...N01_OUT_CHANNELS,...N01_IN_CHANNELS];
