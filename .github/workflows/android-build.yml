@@ -20,6 +20,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: N01 canonical route-resolution regressions
+        run: node --test scripts/soul-mesh-routing.test.mjs
+      - name: N01 Mesh contract checks
+        run: node scripts/soul-mesh-contract-check.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
