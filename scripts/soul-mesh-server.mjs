@@ -178,6 +178,17 @@ async function executeLocalCapability(task, correlationId) {
 const superGPU=createSuperGPU({self:SELF,resolveOwner,forward,localExecute:executeLocalCapability});
 async function executeUnified(capability,payload,correlationId){ if(capability==='inference.intent') return inferInitialIntent({...payload||{},correlationId}); if(capability.startsWith('sara.')) return (await requestSara(capability,payload,correlationId)).payload; const task={id:crypto.randomUUID(),capability,payload}; return superGPU.execute(task,correlationId); }
 async function handle(req,res){ const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
+  if(process.env.NODE_ENV==='test'&&req.method==='POST'&&url.pathname==='/mesh/test/execute'){
+    try{
+      const probe=await readBody(req);
+      if(probe.capability!=='mesh.peer.ping')return json(res,400,{ok:false,nucleus:SELF,error:'TEST_CAPABILITY_NOT_ALLOWED'});
+      const correlationId=typeof probe.correlationId==='string'&&probe.correlationId?probe.correlationId:crypto.randomUUID();
+      const result=await superGPU.execute({id:crypto.randomUUID(),capability:probe.capability,payload:probe.payload??{}},correlationId);
+      return json(res,200,{ok:true,nucleus:SELF,correlationId,result});
+    }catch(error){
+      return json(res,502,{ok:false,nucleus:SELF,error:error instanceof Error?error.message:'MESH_TEST_ROUTE_FAILED'});
+    }
+  }
   if(req.method==='GET'&&url.pathname==='/mesh/health')return json(res,200,{ok:true,nucleus:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,timestamp:Date.now(),capabilities:capabilityList(),residentAgent:N01_RESIDENT_AGENT,peers:[...peers.values()].map(p=>({id:p.id,url:p.url,status:p.status,lastSeen:p.lastSeen})),byokInference:{provider:'google-gemini',configured:Boolean(process.env.GEMINI_API_KEY?.trim())}});
   if(req.method==='GET'&&url.pathname==='/mesh/discovery')return json(res,200,{nucleus:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,capabilities:capabilityList(),peers:[...peers.values()],transports:TRANSPORTS,channels:channelsFor(SELF)});
   if(req.method==='GET'&&(url.pathname==='/mesh/fusion'||url.pathname==='/api/soul-fusion'))return json(res,200,localFusionSnapshot());
