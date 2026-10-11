@@ -10,7 +10,7 @@ test('N02-owned Lote 3 capabilities resolve to N02 without dynamic registration'
     ['N06', { id: 'N06', capabilities: [] }],
   ]);
 
-  for (const capability of ['ai.generate', 'ai.multimodal', 'cognitive-processing']) {
+  for (const capability of ['ai.generate', 'ai.multimodal', 'cognitive-processing', 'mesh.peer.ping']) {
     assert.equal(resolveCapabilityOwner(capability, peers), 'N02', capability);
   }
 });
