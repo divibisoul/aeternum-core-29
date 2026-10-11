@@ -10,6 +10,10 @@ const N07_URL = String(process.env.SOUL_MESH_N07_URL || '').trim().replace(/\/$/
 const SECRET = String(process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || '').trim();
 const PROTOCOL = 'soul-mesh/1';
 const CONTRACT_VERSION = '1.1.0';
+
+function assertHmacSecret() {
+  if (Buffer.byteLength(SECRET, 'utf8') < 32) throw new Error('MESH_HMAC_SECRET_TOO_SHORT');
+}
 const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(internalPort) },
   stdio: 'inherit',
@@ -69,10 +73,12 @@ function canonicalN07Relay(message, nonce) {
 }
 
 function signN07Relay(message, nonce) {
+  assertHmacSecret();
   return crypto.createHmac('sha256', SECRET).update(canonicalN07Relay(message, nonce)).digest('hex');
 }
 
 function verifyN07Response(message) {
+  assertHmacSecret();
   if (!message || message.protocol !== PROTOCOL || message.contractVersion !== CONTRACT_VERSION) throw new Error('INVALID_N07_RESPONSE_CONTRACT');
   if (message.source !== 'N07' || message.target !== 'N01') throw new Error('INVALID_N07_RESPONSE_ROUTE');
   if (!message.correlationId || !message.nonce || !message.hmac) throw new Error('INVALID_N07_RESPONSE_AUTH');
