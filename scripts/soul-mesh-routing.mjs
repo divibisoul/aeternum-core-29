@@ -2,6 +2,7 @@ const N02_OWNED_CAPABILITIES = new Set([
   'ai.generate',
   'ai.multimodal',
   'cognitive-processing',
+  'mesh.peer.ping',
 ]);
 
 /**
