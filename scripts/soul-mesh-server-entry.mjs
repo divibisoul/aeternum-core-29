@@ -5,10 +5,15 @@ import { spawn } from 'node:child_process';
 const publicPort = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const internalPort = publicPort + 1;
 const host = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
+const N01_ENDPOINT = String(process.env.SOUL_MESH_N01_ENDPOINT || '').trim().replace(/\/$/, '') || `http://127.0.0.1:${publicPort}`;
 const N07_URL = String(process.env.SOUL_MESH_N07_URL || '').trim().replace(/\/$/, '');
 const SECRET = String(process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || '').trim();
 const PROTOCOL = 'soul-mesh/1';
 const CONTRACT_VERSION = '1.1.0';
+
+function assertHmacSecret() {
+  if (Buffer.byteLength(SECRET, 'utf8') < 32) throw new Error('MESH_HMAC_SECRET_TOO_SHORT');
+}
 const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
   env: { ...process.env, SOUL_MESH_N01_PORT: String(internalPort) },
   stdio: 'inherit',
@@ -68,10 +73,12 @@ function canonicalN07Relay(message, nonce) {
 }
 
 function signN07Relay(message, nonce) {
+  assertHmacSecret();
   return crypto.createHmac('sha256', SECRET).update(canonicalN07Relay(message, nonce)).digest('hex');
 }
 
 function verifyN07Response(message) {
+  assertHmacSecret();
   if (!message || message.protocol !== PROTOCOL || message.contractVersion !== CONTRACT_VERSION) throw new Error('INVALID_N07_RESPONSE_CONTRACT');
   if (message.source !== 'N07' || message.target !== 'N01') throw new Error('INVALID_N07_RESPONSE_ROUTE');
   if (!message.correlationId || !message.nonce || !message.hmac) throw new Error('INVALID_N07_RESPONSE_AUTH');
@@ -94,6 +101,43 @@ function verifyN07Response(message) {
   const expected = crypto.createHmac('sha256', SECRET).update(canonical).digest('hex');
   const actual = String(message.hmac);
   if (expected.length !== actual.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new Error('N07_RESPONSE_HMAC_INVALID');
+}
+
+async function registerWithN07() {
+  if (!N07_URL) throw new Error('SOUL_MESH_N07_URL_NOT_CONFIGURED');
+  const message = {
+    protocol: PROTOCOL,
+    contractVersion: CONTRACT_VERSION,
+    id: crypto.randomUUID(),
+    correlationId: `n01-register-${crypto.randomUUID()}`,
+    source: 'N01',
+    target: 'N07',
+    kind: 'request',
+    capability: 'mesh.register@1.0.0',
+    payload: {
+      endpoint: N01_ENDPOINT,
+      role: 'host-reference-gateway',
+      capabilities: [
+        'mesh.ping',
+        'mesh.health',
+        'mesh.discovery',
+        'mesh.register',
+        'grce.cycle.execute@1.0.0'
+      ]
+    },
+    timestamp: Date.now(),
+    meta: { transport: 'HTTP', runtime: 'aeternum-core-29' }
+  };
+  for (let attempt = 1; attempt <= 20; attempt += 1) {
+    try {
+      const response = await relayToN07(message);
+      if (response?.kind !== 'error') return response;
+    } catch (error) {
+      if (attempt === 20) throw error;
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  throw new Error('N01_N07_REGISTRATION_FAILED');
 }
 
 async function relayToN07(message) {
@@ -211,7 +255,11 @@ server.on('error', error => {
   child.kill('SIGTERM');
   process.exitCode = 1;
 });
-server.listen(publicPort, host);
+server.listen(publicPort, host, () => {
+  registerWithN07()
+    .then(() => console.log(`SOUL N01 registered in N07 via canonical Mesh endpoint ${N07_URL}`))
+    .catch(error => console.error('SOUL N01 registration in N07 blocked:', error));
+});
 
 function shutdown(signal) {
   server.close(() => child.kill('SIGTERM'));

@@ -219,6 +219,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Mesh contract check
         run: npm run mesh:contract:check
+      - name: Dual Mesh runtime contract check
+        run: npm run mesh:dual-runtime:test
       - name: Protocol HMAC compatibility check
         run: node scripts/test-n01-protocol-hmac.mjs
       - name: Local Mesh runtime contract proof
