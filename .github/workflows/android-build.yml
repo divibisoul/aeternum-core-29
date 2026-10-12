@@ -4,10 +4,27 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    # Run for stacked PRs too, not only PRs targeting main. N01 work is deliberately
+    # split into dependent frontiers, so each descendant must receive the full gate.
     paths:
       - 'soul-sentinel/**'
+      - 'src/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'integrations/**'
+      - 'config/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'bun.lockb'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'tsconfig*.json'
+      - 'index.html'
+      - 'Dockerfile'
+      - '.dockerignore'
       - '.github/workflows/android-build.yml'
+      - '.github/workflows/soul-mesh-regression.yml'
+      - '.github/workflows/soul-n01-validation.yml'
   workflow_dispatch:
 
 permissions:
