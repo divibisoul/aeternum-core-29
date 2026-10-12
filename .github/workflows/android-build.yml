@@ -4,10 +4,26 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    branches: [ main ]
+    # Also validate stacked N01 PRs whose base is another working branch.
     paths:
       - 'soul-sentinel/**'
+      - 'src/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'integrations/**'
+      - 'config/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'bun.lockb'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'tsconfig*.json'
+      - 'index.html'
+      - 'Dockerfile'
+      - '.dockerignore'
       - '.github/workflows/android-build.yml'
+      - '.github/workflows/soul-mesh-regression.yml'
+      - '.github/workflows/soul-n01-validation.yml'
   workflow_dispatch:
 
 permissions:
