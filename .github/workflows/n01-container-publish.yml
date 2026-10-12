@@ -60,15 +60,6 @@ jobs:
           echo "N01_CONTAINER_HEALTH: FAILED"
           exit 1
 
-      - name: Verify the container advertises the canonical external fabric safely
-        run: |
-          set -eu
-          node --input-type=module <<'NODE'
-          const response = await fetch('http://127.0.0.1:18080/api/soul-mesh/health');
-          if (!response.ok) throw new Error('unexpected optional health route response: ' + response.status);
-          NODE
-        continue-on-error: true
-
       - name: Capture container logs on failure
         if: failure()
         run: docker logs soul-n01-mesh-smoke || true
