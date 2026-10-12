@@ -5,7 +5,7 @@ export type SoulMeshMessage={protocol:'soul-mesh/1';contractVersion:'1.1.0';id:s
 /** N02–N06 are operational AI peers; N07 remains structural/control-plane only. */
 const ACTIVE_PEERS:Exclude<NucleusId,'N01'|'N07'>[]=['N02','N03','N04','N05','N06'];
 const STRUCTURAL_PEERS:Extract<NucleusId,'N07'>[]=['N07'];
-const N07_STRUCTURAL_CAPABILITIES = new Set(['mesh.ping']);
+const N07_STRUCTURAL_CAPABILITIES = new Set(['mesh.ping', 'external.federation.describe@1.0.0', 'external.federation.execute@1.0.0']);
 const MAX_ATTEMPTS=3;
 const RETRY_BASE_DELAY_MS=250;
 const CIRCUIT_FAILURE_THRESHOLD=3;
