@@ -4,9 +4,10 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-# Preserve the currently validated repository install policy. Build/test dependencies
-# are not needed by the runtime image; the lockfile is not rewritten in the image.
-RUN npm install --omit=dev --legacy-peer-deps --no-audit --no-fund
+# Use the checked-in npm lockfile deterministically; build/test dependencies
+# remain excluded from the production image. Legacy peer handling is retained
+# for the repository's existing peer graph without mutating package-lock.json.
+RUN npm ci --omit=dev --legacy-peer-deps --no-audit --no-fund
 
 COPY . .
 
