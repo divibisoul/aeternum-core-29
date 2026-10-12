@@ -9,10 +9,18 @@ const localEnvelopeSource = resolve(process.cwd(), 'lib/soul-mesh/SoulMeshEnvelo
 const localServerSource = resolve(process.cwd(), 'scripts/soul-mesh-server.mjs');
 const relaySourcePath = resolve(process.cwd(), 'scripts/soul-mesh-server-entry.mjs');
 const peerClientPath = resolve(process.cwd(), 'src/core/soul-mesh/peerClient.ts');
+const runtimePath = resolve(process.cwd(), 'src/core/mesh/SoulMeshRuntime.ts');
+const externalFabricPath = resolve(process.cwd(), 'src/core/fusion/N01ExternalCapabilityFabric.ts');
+const externalFabricTestPath = resolve(process.cwd(), 'src/core/fusion/N01ExternalCapabilityFabric.test.ts');
+const externalManifestPath = resolve(process.cwd(), 'integrations/soul-25-augmentation.json');
 const envelopeSource = await readFile(localEnvelopeSource, 'utf8');
 const serverSource = await readFile(localServerSource, 'utf8');
 const relaySource = await readFile(relaySourcePath, 'utf8');
 const peerClientSource = await readFile(peerClientPath, 'utf8');
+const runtimeSource = await readFile(runtimePath, 'utf8');
+const externalFabricSource = await readFile(externalFabricPath, 'utf8');
+const externalFabricTestSource = await readFile(externalFabricTestPath, 'utf8');
+const externalManifest = JSON.parse(await readFile(externalManifestPath, 'utf8'));
 
 assert.match(envelopeSource, /contractVersion/, 'N01 envelope: canonical contractVersion is absent');
 assert.ok(
@@ -86,6 +94,50 @@ const responseHmacCheckIndex = relaySource.indexOf('verifyN07Response(body)', co
 const responseStatusCheckIndex = relaySource.indexOf('if (!response.ok && body.kind !== \'error\')', responseHmacCheckIndex);
 assert.ok(correlationCheckIndex >= 0 && responseHmacCheckIndex > correlationCheckIndex && responseStatusCheckIndex > responseHmacCheckIndex,
   'N01→N07 relay must verify correlation and HMAC before interpreting HTTP error status');
+
+const manifestProviders = externalManifest.external_providers;
+assert.equal(externalManifest.external_provider_count, 25, 'N01 canonical manifest must declare 25 public sources');
+assert.equal(manifestProviders.length, 25, 'N01 manifest source count must match its declaration');
+assert.equal(new Set(manifestProviders.map((provider) => provider.id)).size, 25, 'N01 manifest provider IDs must be unique');
+assert.equal(externalManifest.soul_peer_count, 9, 'N01 must preserve the nine native SOUL peers');
+assert.equal(externalManifest.soul_peers.length, 9, 'N01 native peer identity list must remain intact');
+assert.equal(externalManifest.native_authority, 'preserved', 'external adapters must not replace native capability ownership');
+
+const adapterStateCounts = { REGISTERED: 0, EXPANSION_ONLY: 0, UNREGISTERED: 0 };
+for (const provider of manifestProviders) {
+  assert.match(provider.source, /^https:\/\/github\.com\//, `${provider.id} must use its public source URL`);
+  assert.match(provider.revision, /^[0-9a-f]{40}$/i, `${provider.id} must be pinned to an exact Git revision`);
+  assert.ok(provider.owner && provider.targets?.length, `${provider.id} must keep native ownership and targets`);
+  assert.equal(provider.runtime_state, 'PROJECTED', `${provider.id} cannot be declared runtime-ready without provider E2E`);
+  assert.equal(provider.requires_adapter, true, `${provider.id} must require an explicit adapter`);
+  assert.equal(provider.execution_boundary, `native-owner:${provider.owner}`, `${provider.id} must retain its native-owner boundary`);
+  assert.ok(Object.hasOwn(adapterStateCounts, provider.runtime_adapter_status), `${provider.id} has unknown adapter status`);
+  adapterStateCounts[provider.runtime_adapter_status] += 1;
+  assert.ok(Array.isArray(provider.adapter_operations), `${provider.id} must declare an operation list`);
+  if (provider.runtime_adapter_status === 'REGISTERED') {
+    assert.ok(provider.adapter_operations.length > 0, `${provider.id} is registered but has no operations`);
+  } else {
+    assert.equal(provider.runtime_state, 'PROJECTED', `${provider.id} is not executable yet`);
+  }
+}
+assert.deepEqual(adapterStateCounts, { REGISTERED: 16, EXPANSION_ONLY: 1, UNREGISTERED: 8 });
+assert.match(externalFabricSource, /runtimeAdapterStatus/);
+assert.match(externalFabricSource, /adapterOperations/);
+assert.match(externalFabricTestSource, /adapter registration drift/);
+assert.match(externalFabricTestSource, /runtimeAdapterStatus/);
+assert.match(runtimeSource, /external\.capability\.resolve@1\.0\.0/);
+assert.match(runtimeSource, /external\.capability\.fabric\.describe@1\.0\.0/);
+assert.match(runtimeSource, /provider\.runtimeAdapterStatus !== 'REGISTERED'/);
+assert.match(runtimeSource, /provider\.adapterOperations\.includes\(operation\)/);
+assert.match(runtimeSource, /provider_revision: provider\.revision/);
+assert.match(runtimeSource, /external_result_json/);
+assert.match(runtimeSource, /externalResult\.state !== 'PASS'/);
+assert.match(serverSource, /external\.capability\.resolve@1\.0\.0/);
+assert.match(serverSource, /external\.capability\.fabric\.describe@1\.0\.0/);
+assert.match(serverSource, /runtime_adapter_status !== 'REGISTERED'/);
+assert.match(serverSource, /adapter_operations\.includes\(operation\)/);
+assert.match(serverSource, /provider_revision: provider\.revision/);
+assert.match(serverSource, /result\.state !== 'PASS'/);
 
 console.log(`SOUL_MESH_CONTRACT: ok=true local=N01 version=${EXPECTED}`);
 console.log(`SOUL_MESH_TOPOLOGY: ok=true operationalAIRequests=${activeAIMessages} operationalAISurfaces=${activeAISurfaces} structuralN07Requests=${structuralN07Messages} structuralN07Surfaces=${structuralN07Surfaces} totalIdentityRequests=${allIdentityMessages} totalEndpointSurfaces=${allIdentitySurfaces} liveE2E=unproven`);
