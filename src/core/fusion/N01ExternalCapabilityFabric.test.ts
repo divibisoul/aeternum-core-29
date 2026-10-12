@@ -24,13 +24,15 @@ const manifest = JSON.parse(
     direct_affinity: boolean;
     runtime_state: string;
     requires_adapter: boolean;
+    adapter_operations: string[];
+    runtime_adapter_status: 'REGISTERED' | 'EXPANSION_ONLY' | 'UNREGISTERED';
   }>;
   soul_peer_count: number;
   soul_peers: string[];
   native_authority: string;
 };
 
-test('N01 fabric matches all 25 public providers pinned in the canonical manifest', () => {
+test('N01 fabric exactly matches all 25 manifest-pinned public sources and adapter states', () => {
   assert.equal(manifest.external_provider_count, 25);
   assert.equal(manifest.external_providers.length, 25);
   assert.equal(N01_EXTERNAL_PROVIDERS.length, 25);
@@ -49,19 +51,25 @@ test('N01 fabric matches all 25 public providers pinned in the canonical manifes
     assert.deepEqual(actual.targets, expected.targets, `${expected.id} target drift`);
     assert.deepEqual(actual.capabilities, expected.capabilities, `${expected.id} capability drift`);
     assert.equal(actual.directAffinity, expected.direct_affinity, `${expected.id} direct-affinity drift`);
+    assert.deepEqual(actual.adapterOperations, expected.adapter_operations, `${expected.id} adapter operation drift`);
+    assert.equal(actual.runtimeAdapterStatus, expected.runtime_adapter_status, `${expected.id} adapter registration drift`);
     assert.equal(expected.runtime_state, 'PROJECTED', `${expected.id} must not claim runtime success without provider E2E`);
     assert.equal(expected.requires_adapter, true, `${expected.id} requires an explicit adapter`);
     assert.match(actual.source, /^https:\/\/github\.com\//);
     assert.match(actual.revision, /^[0-9a-f]{40}$/i);
+    assert.ok(actual.owner && actual.targets.length, `${expected.id} lacks native ownership/targets`);
     assert.equal(actual.state, 'PROJECTED');
+    if (actual.runtimeAdapterStatus === 'REGISTERED') assert.ok(actual.adapterOperations.length > 0, `${expected.id} has no registered operations`);
+    if (actual.runtimeAdapterStatus !== 'REGISTERED') assert.equal(actual.adapterOperations.length > 0, actual.runtimeAdapterStatus === 'EXPANSION_ONLY');
   }
 });
 
-test('N01 capability lookup preserves canonical native ownership and direct affinity', () => {
+test('N01 resolver preserves canonical owners for the native routing examples', () => {
   assert.equal(canonicalOwnerForExternalProvider('LETTA-CODE'), 'N01');
   assert.equal(resolveN01ExternalProvider('langgraph').owner, 'N07');
   assert.equal(resolveN01ExternalProvider('whisper').owner, 'N03');
   assert.equal(resolveN01ExternalProvider('llama-index').owner, 'N05');
+  assert.equal(resolveN01ExternalProvider('metagpt').owner, 'N07');
   assert.deepEqual(
     findN01ExternalProvidersByCapability('speech').map((provider) => provider.id),
     ['whisper', 'kokoro'],
@@ -69,7 +77,7 @@ test('N01 capability lookup preserves canonical native ownership and direct affi
   assert.equal(findN01ExternalProvidersByCapability('').length, 25);
 });
 
-test('N01 reports provider metadata separately from runtime execution evidence', () => {
+test('N01 describes static source state separately from execution evidence', () => {
   const description = describeN01ExternalCapabilityFabric();
   assert.equal(description.structuralState, 'REAL');
   assert.equal(description.runtimeState, 'PROJECTED_UNTIL_PROVIDER_E2E');
@@ -77,9 +85,12 @@ test('N01 reports provider metadata separately from runtime execution evidence',
   assert.equal(description.runtimeVerifiedProviderCount, 0);
   assert.equal(description.byState.PROJECTED, 25);
   assert.equal(description.byState.READY, 0);
+  assert.equal(description.byAdapterStatus.REGISTERED, 16);
+  assert.equal(description.byAdapterStatus.EXPANSION_ONLY, 1);
+  assert.equal(description.byAdapterStatus.UNREGISTERED, 8);
 });
 
-test('unknown external provider is blocked before routing', () => {
+test('unknown provider fails closed before routing', () => {
   assert.throws(
     () => resolveN01ExternalProvider('provider-that-does-not-exist'),
     /N01_EXTERNAL_PROVIDER_UNKNOWN/,
