@@ -58,6 +58,8 @@ export function startSoulMeshRuntime(): () => void {
           targets: resolved.targets,
           capabilities: resolved.capabilities,
           directAffinity: resolved.directAffinity,
+          adapterOperations: resolved.adapterOperations,
+          runtimeAdapterStatus: resolved.runtimeAdapterStatus,
           structuralState: 'REAL',
           runtimeState: 'PROJECTED',
           executionProven: false,
