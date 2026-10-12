@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import crypto from 'node:crypto';
 import { createSuperGPU } from './soul-supergpu.mjs';
 import { inferInitialIntent } from './n01-byok-gemini.mjs';
@@ -93,7 +94,7 @@ function envelope({target,correlationId,type='TASK_RESULT',payload}) { const bas
 function canonicalMessage(target, capability, payload, correlationId){ return {protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,id:crypto.randomUUID(),correlationId:correlationId||crypto.randomUUID(),source:SELF,target,kind:'request',capability,payload,timestamp:Date.now()}; }
 function channelsFor(id){ const peersFor=NUCLEUS_IDS.filter(nucleus=>nucleus!==id); return {in:peersFor.map(peer=>`${id}.IN.${peer}`),out:peersFor.map(peer=>`${id}.OUT.${peer}`)}; }
 function topologyCounts(){ const activeAIDirectedRoutes=ACTIVE_AI_IDS.length*(ACTIVE_AI_IDS.length-1); const totalLogicalDirectedRoutes=NUCLEUS_IDS.length*(NUCLEUS_IDS.length-1); const structuralN07AdditionalDirectedRoutes=totalLogicalDirectedRoutes-activeAIDirectedRoutes; return {activeAINuclei:ACTIVE_AI_IDS.length,activeAIDirectedRoutes,activeAIEndpointSurfaces:activeAIDirectedRoutes*2,structuralN07AdditionalDirectedRoutes,structuralN07AdditionalEndpointSurfaces:structuralN07AdditionalDirectedRoutes*2,totalIdentityNuclei:NUCLEUS_IDS.length,totalLogicalDirectedRoutes,totalEndpointSurfaces:totalLogicalDirectedRoutes*2,topologyState:'LOGICAL_UNVERIFIED'}; }
-function capabilityList(){ return ['clareira.ingest','clareira.metrics','inference.intent','mesh.ping','mesh.health','mesh.discovery','mesh.register','mesh.heartbeat','mesh.delegate','mesh.capabilities','mesh.resident.describe@1.0.0','mesh.fusion.describe','mesh.capability.resolve','mesh.fusion.execute','mesh.supergpu.describe','mesh.supergpu.execute','mesh.supergpu.parallel','sara.health','sara.capabilities','sara.state','sara.cycle','sara.audit','sara.regenerate','sara.trace']; }
+function capabilityList(){ return ['clareira.ingest','clareira.metrics','inference.intent','mesh.ping','mesh.health','mesh.discovery','mesh.register','mesh.heartbeat','mesh.delegate','mesh.capabilities','mesh.resident.describe@1.0.0','mesh.fusion.describe','mesh.capability.resolve','mesh.fusion.execute','mesh.supergpu.describe','mesh.supergpu.execute','mesh.supergpu.parallel','external.capability.resolve@1.0.0','external.capability.fabric.describe@1.0.0','external.capability.execute','external.capability.execute@1.0.0','sara.health','sara.capabilities','sara.state','sara.cycle','sara.audit','sara.regenerate','sara.trace']; }
 function localFusionSnapshot(){ const counts=topologyCounts(); return {system:'SOUL',fusionVersion:FUSION_VERSION,reference:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,nuclei:NUCLEUS_IDS.map(id=>({id,role:id===SELF?'host-reference-gateway':(peers.get(id)?.role||'independent-ai'),status:id===SELF?'online':(peers.get(id)?.status||'unknown'),endpoint:id===SELF?`http://${HOST}:${PORT}`:(peers.get(id)?.url||null),capabilities:id===SELF?capabilityList():(peers.get(id)?.capabilities||[]),channels:channelsFor(id)})),transports:TRANSPORTS,directionalChannels:counts.totalEndpointSurfaces,directedRoutes:counts.totalLogicalDirectedRoutes,endpointSurfaces:counts.totalEndpointSurfaces,topologyCounts:counts,ownership:'native-per-nucleus',fusion:'federated-independent-runtimes',superGPU:superGPU.describe(),byokInference:{provider:'google-gemini',configured:Boolean(process.env.GEMINI_API_KEY?.trim())},sara:saraDescribe(),federatedProviders:{SARA:{owner:'SARA',transport:'HTTP',configured:saraConfigured(),operations:saraDescribe().operations}}}; }
 function resolveOwner(capability){ return resolveCapabilityOwner(capability, peers); }
 function resolveCapability(capability){ if(typeof capability!=='string'||!capability.trim()) throw new Error('CAPABILITY_REQUIRED'); if(capability.startsWith('sara.')) return {capability,owner:null,provider:'SARA',available:capability==='sara.health'?saraHealthConfigured():saraConfigured(),transport:'HTTP',nativeOwnership:false}; const owner=resolveOwner(capability); if(!owner) return {capability,owner:null,available:false,transport:null}; return {capability,owner,available:owner===SELF||Boolean(peers.get(owner)?.url),transport:owner===SELF?'IN_PROCESS':'REMOTE_MESH',nativeOwnership:true}; }
@@ -168,6 +169,73 @@ async function forward(target,message){
     throw error;
   }finally{clearTimeout(timer);}
 }
+const N01_EXTERNAL_FABRIC = JSON.parse(
+  readFileSync(new URL('../integrations/soul-25-augmentation.json', import.meta.url), 'utf8'),
+);
+const N01_EXTERNAL_PROVIDERS = Array.isArray(N01_EXTERNAL_FABRIC.external_providers)
+  ? N01_EXTERNAL_FABRIC.external_providers
+  : [];
+
+function resolveN01ExternalProvider(provider) {
+  const requested = typeof provider === 'string' ? provider.trim().toLowerCase() : '';
+  if (!requested) throw new Error('N01_EXTERNAL_PROVIDER_REQUIRED');
+  const found = N01_EXTERNAL_PROVIDERS.find((item) => String(item.id).toLowerCase() === requested);
+  if (!found) throw new Error('N01_EXTERNAL_PROVIDER_UNKNOWN:' + String(provider));
+  if (!/^[0-9a-f]{40}$/i.test(String(found.revision || '')) ||
+      !String(found.source || '').startsWith('https://github.com/') ||
+      !String(found.owner || '').trim()) {
+    throw new Error('N01_EXTERNAL_PROVIDER_REGISTRY_INVALID:' + String(found.id));
+  }
+  return found;
+}
+
+function describeN01ExternalCapabilityFabric() {
+  const providers = N01_EXTERNAL_PROVIDERS.map((p) => ({
+    id: p.id, source: p.source, revision: p.revision, owner: p.owner,
+    targets: p.targets, capabilities: p.capabilities,
+    directAffinity: Boolean(p.direct_affinity),
+    structuralState: 'REAL', runtimeState: 'PROJECTED', executionProven: false,
+  }));
+  return {
+    nucleus: SELF, graph: N01_EXTERNAL_FABRIC.graph,
+    providerCount: providers.length, nativePeerCount: Number(N01_EXTERNAL_FABRIC.soul_peer_count || 0),
+    runtimeVerifiedProviderCount: 0, providers, structuralState: 'REAL',
+    runtimeState: 'PROJECTED_UNTIL_PROVIDER_E2E', liveExecutionProven: false,
+  };
+}
+
+async function executeN01ExternalProvider(value, correlationId) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED');
+  const provider = resolveN01ExternalProvider(value.provider);
+  const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
+  if (!operation) throw new Error('N01_EXTERNAL_OPERATION_REQUIRED');
+  const userPayload = value.payload && typeof value.payload === 'object' && !Array.isArray(value.payload) ? value.payload : {};
+  const gatewayResult = await forward('N07', canonicalMessage(
+    'N07', 'external.federation.execute@1.0.0',
+    { payload: userPayload, metadata: {
+      provider: provider.id, external_operation: operation, native_owner: provider.owner,
+      provider_revision: provider.revision, timeout_seconds: String(
+        typeof value.timeout_seconds === 'number' && Number.isFinite(value.timeout_seconds)
+          ? Math.max(1, Math.min(170, Math.floor(value.timeout_seconds))) : 60
+      ),
+    } }, correlationId,
+  ));
+  if (!gatewayResult || gatewayResult.status !== 'ok') {
+    const code = gatewayResult && typeof gatewayResult.error === 'string' ? gatewayResult.error : 'N01_EXTERNAL_GATEWAY_DID_NOT_CONFIRM_SUCCESS';
+    throw new Error('N01_EXTERNAL_EXECUTION_BLOCKED:' + provider.id + ':' + code);
+  }
+  const raw = gatewayResult.metadata && gatewayResult.metadata.external_result_json;
+  let result;
+  try { result = typeof raw === 'string' ? JSON.parse(raw) : raw; }
+  catch { throw new Error('N01_EXTERNAL_RESULT_INVALID_JSON:' + provider.id); }
+  if (!result || result.state !== 'PASS') {
+    throw new Error('N01_EXTERNAL_EXECUTION_BLOCKED:' + provider.id + ':' + String(result && result.code || 'EXTERNAL_EXECUTION_NOT_PROVEN'));
+  }
+  return { nucleus: SELF, capability: 'external.capability.execute@1.0.0', correlationId,
+    provider: provider.id, owner: provider.owner, revision: provider.revision,
+    state: 'PASS', runtimeState: 'PASS_OBSERVED', executionProven: true, result };
+}
+
 function bootstrapPeers(){ for(const id of PEER_IDS){ const endpoint=normalizeUrl(process.env[`SOUL_MESH_${id}_URL`]); if(endpoint) peers.set(id,{id,url:endpoint,capabilities:[],role:'independent-ai',lastSeen:Date.now(),status:'configured'}); } }
 async function executeLocalCapability(task, correlationId) {
   if (task.capability === 'inference.intent') {
