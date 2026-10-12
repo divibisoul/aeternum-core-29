@@ -1,0 +1,40 @@
+{
+  "schema": "aeternum.forensic-audit.evidence.v1",
+  "workflow_run": {
+    "id": 36468875819,
+    "number": 15,
+    "name": "N01 forensic archaeological audit",
+    "conclusion": "success",
+    "head_sha": "1e14df3a985c50a951bb94f01d8c908aaec9616b",
+    "artifact_id": 10990267863,
+    "artifact_name": "n01-forensic-audit-report",
+    "artifact_digest": "sha256:a55518b7fca92223ef6cf8513e14283141465d8e3967c3822d4ea21eb98d216d",
+    "artifact_zip": "https://api.github.com/repos/divibisoul/aeternum-core-29/actions/artifacts/10990267863/zip"
+  },
+  "measured": {
+    "total_scanned": 73,
+    "confirmed_components": 46,
+    "additional_components": 27,
+    "status_counts": {
+      "ACTIVE": 12,
+      "INACTIVE": 6,
+      "FOUND_IN_BRANCH": 11,
+      "FOUND_IN_HISTORY": 3,
+      "NOT_FOUND_ANYWHERE": 41
+    },
+    "module_counts": {
+      "total": 29,
+      "ACTIVE": 1,
+      "INACTIVE": 5,
+      "FOUND_IN_BRANCH": 1,
+      "FOUND_IN_HISTORY": 1,
+      "NOT_FOUND_ANYWHERE": 21
+    }
+  },
+  "interpretation": {
+    "static_presence_is_not_runtime_proof": true,
+    "branch_or_history_evidence_requires_recovery": true,
+    "not_found_is_scoped_to_runner_available_sources": true,
+    "private_external_stash_and_external_backups_not_exposed_by_github_connector": true
+  }
+}
