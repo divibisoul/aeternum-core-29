@@ -96,6 +96,12 @@ export function startSoulMeshRuntime(): () => void {
           const provider = resolveN01ExternalProvider(value.provider);
           const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
           if (!operation) throw new Error('N01_EXTERNAL_OPERATION_REQUIRED');
+          if (provider.runtimeAdapterStatus !== 'REGISTERED') {
+            throw new Error(`N01_EXTERNAL_ADAPTER_NOT_REGISTERED:${provider.id}:${provider.runtimeAdapterStatus}`);
+          }
+          if (!provider.adapterOperations.includes(operation)) {
+            throw new Error(`N01_EXTERNAL_OPERATION_NOT_REGISTERED:${provider.id}:${operation}`);
+          }
           const userPayload = value.payload && typeof value.payload === 'object' && !Array.isArray(value.payload)
             ? value.payload as Record<string, unknown>
             : {};
