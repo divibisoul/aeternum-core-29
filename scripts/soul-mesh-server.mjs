@@ -209,6 +209,12 @@ async function executeN01ExternalProvider(value, correlationId) {
   const provider = resolveN01ExternalProvider(value.provider);
   const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
   if (!operation) throw new Error('N01_EXTERNAL_OPERATION_REQUIRED');
+  if (provider.runtime_adapter_status !== 'REGISTERED') {
+    throw new Error('N01_EXTERNAL_ADAPTER_NOT_REGISTERED:' + provider.id + ':' + String(provider.runtime_adapter_status || 'UNREGISTERED'));
+  }
+  if (!Array.isArray(provider.adapter_operations) || !provider.adapter_operations.includes(operation)) {
+    throw new Error('N01_EXTERNAL_OPERATION_NOT_REGISTERED:' + provider.id + ':' + operation);
+  }
   const userPayload = value.payload && typeof value.payload === 'object' && !Array.isArray(value.payload) ? value.payload : {};
   const gatewayResult = await forward('N07', canonicalMessage(
     'N07', 'external.federation.execute@1.0.0',
