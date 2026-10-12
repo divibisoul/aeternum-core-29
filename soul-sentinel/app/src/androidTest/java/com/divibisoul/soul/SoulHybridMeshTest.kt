@@ -8,7 +8,7 @@ import org.junit.Test
 class SoulHybridMeshTest {
     @Test
     fun allThirtyDirectedLinksRespondToPing() {
-        val mesh = SoulMeshBootstrap.create { SoulMeshBootstrap.delegateToWeb(it) }
+        val mesh = SoulMeshBootstrap.create(webDelegate = { message -> SoulMeshBootstrap.delegateToWeb(message) })
         for (source in SoulMeshChannels.nuclei) {
             for (target in SoulMeshChannels.out(source)) {
                 val response = mesh.send(source, target, "mesh.ping", JSONObject())
@@ -22,7 +22,7 @@ class SoulHybridMeshTest {
 
     @Test
     fun webSessionCapabilityIsDelegatedToHybridRuntime() {
-        val mesh = SoulMeshBootstrap.create { SoulMeshBootstrap.delegateToWeb(it) }
+        val mesh = SoulMeshBootstrap.create(webDelegate = { message -> SoulMeshBootstrap.delegateToWeb(message) })
         val response = mesh.send("N01", "N02", "chat.orchestrate", JSONObject().put("text", "ping"))
         assertEquals("response", response.kind)
         assertEquals("WEB_SESSION", response.payload.getString("execution"))
