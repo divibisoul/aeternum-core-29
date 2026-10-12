@@ -54,7 +54,7 @@ assert.equal(allIdentityMessages - activeAIMessages, 12, 'the N07 structural lay
 assert.equal(allIdentitySurfaces - activeAISurfaces, 24, 'the N07 structural layer adds 24 endpoint surfaces');
 assert.match(serverSource, /topologyState:'LOGICAL_UNVERIFIED'/, 'logical channel counts must not claim live endpoint proof');
 
-assert.deepEqual([...N07_PUBLIC_STRUCTURAL_CAPABILITIES], ['mesh.ping']);
+assert.deepEqual([...N07_PUBLIC_STRUCTURAL_CAPABILITIES], ['mesh.ping', 'external.federation.describe@1.0.0', 'external.federation.execute@1.0.0']);
 assert.equal(
   canonicalOrderedJson([
     ['protocol', 'soul-mesh/1'],
@@ -72,8 +72,11 @@ assert.match(relaySource, /canonicalOrderedJson\(\[/);
 assert.match(relaySource, /\['payload', message\.payload \?\? null\]/);
 assert.match(relaySource, /\['meta', message\.meta \?\? null\]/);
 assert.equal(isPublicN07StructuralCapability('mesh.ping'), true);
+assert.equal(isPublicN07StructuralCapability('external.federation.describe@1.0.0'), true);
+assert.equal(isPublicN07StructuralCapability('external.federation.execute@1.0.0'), true);
 assert.equal(isPublicN07StructuralCapability('sara.cycle@1.0.0'), false);
 assert.equal(isPublicN07StructuralCapability('neural.forward@1.0.0'), false);
+assert.equal(isPublicN07StructuralCapability('mesh.supergpu.execute@1.0.0'), false);
 assert.match(peerClientSource, /ACTIVE_PEERS:Exclude<NucleusId,'N01'\|'N07'>\[\]=\['N02','N03','N04','N05','N06'\]/);
 assert.match(peerClientSource, /STRUCTURAL_PEERS:Extract<NucleusId,'N07'>\[\]=\['N07'\]/);
 assert.match(peerClientSource, /N07_STRUCTURAL_CAPABILITIES\.has\(capability\.trim\(\)\)/);
@@ -86,4 +89,4 @@ assert.ok(correlationCheckIndex >= 0 && responseHmacCheckIndex > correlationChec
 
 console.log(`SOUL_MESH_CONTRACT: ok=true local=N01 version=${EXPECTED}`);
 console.log(`SOUL_MESH_TOPOLOGY: ok=true operationalAIRequests=${activeAIMessages} operationalAISurfaces=${activeAISurfaces} structuralN07Requests=${structuralN07Messages} structuralN07Surfaces=${structuralN07Surfaces} totalIdentityRequests=${allIdentityMessages} totalEndpointSurfaces=${allIdentitySurfaces} liveE2E=unproven`);
-console.log('N07 anonymous relay policy: mesh.ping only; capability execution requires a separately authenticated commissioning path.');
+console.log('N07 relay policy: mesh.ping plus explicit external federation operations only; server HMAC relay, native-owner boundary, provider opt-in and fail-closed execution remain required.');
