@@ -34,6 +34,7 @@ jobs:
           assert len(set(peers)) == 9, 'duplicate native peer identities'
           assert d['native_authority'] == 'preserved'
           assert d['graph'] == 'SOUL-34-capability-fabric'
+          adapter_states = {'REGISTERED': 0, 'EXPANSION_ONLY': 0, 'UNREGISTERED': 0}
           for p in providers:
               assert p['id'] and p['capabilities'], f"missing identity/capabilities: {p.get('id')}"
               assert p['access'] == 'N01 capability fabric', f"access drift: {p['id']}"
@@ -43,7 +44,19 @@ jobs:
               assert p['source'].startswith('https://github.com/'), f"non-public source: {p['id']}"
               assert re.fullmatch(r'[0-9a-fA-F]{40}', p['revision']), f"unpinned source: {p['id']}"
               assert p['owner'] and p['targets'], f"native ownership/targets missing: {p['id']}"
-          print('N01 FABRIC: 25/25 pinned public sources; native peer topology: 9/9 preserved; runtime success: not claimed.')
+              assert p['execution_boundary'] == f"native-owner:{p['owner']}", f"owner boundary drift: {p['id']}"
+              status = p['runtime_adapter_status']
+              assert status in adapter_states, f"invalid adapter status: {p['id']}"
+              adapter_states[status] += 1
+              assert isinstance(p['adapter_operations'], list), f"adapter operation list missing: {p['id']}"
+              if status == 'REGISTERED':
+                  assert p['adapter_operations'], f"registered provider has no operations: {p['id']}"
+              elif status == 'EXPANSION_ONLY':
+                  assert p['id'] == 'ray' and p['adapter_operations'], f"unexpected expansion-only provider: {p['id']}"
+              else:
+                  assert p['adapter_operations'] == [], f"unregistered provider claims operations: {p['id']}"
+          assert adapter_states == {'REGISTERED': 16, 'EXPANSION_ONLY': 1, 'UNREGISTERED': 8}, adapter_states
+          print('N01 FABRIC: 25 pinned sources; 9 native peers preserved; 16 adapter registrations, 1 expansion-only, 8 unregistered; unproven runtime remains PROJECTED.')
           PY
       - name: Test N01 manifest-backed upstream capability fabric
         run: bun run upstream:fabric:check
