@@ -15,6 +15,7 @@ import { storeRgoStageInHortaCore, type RgoStagePayload } from '../rgo/RgoHortaC
 import { createSupabaseVectorMemory } from '../../soul-fusion/SupabaseVectorMemory';
 import { recoveredAeternumCapabilityBridge } from '../../../lib/aeternum/RecoveredAeternumCapabilityBridge';
 import { runLettaCode, type LettaRequest } from './LettaCodeAdapter';
+import { describeN01ExternalCapabilityFabric, resolveN01ExternalProvider } from '../fusion/N01ExternalCapabilityFabric';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
 export function startSoulMeshRuntime(): () => void {
@@ -28,7 +29,7 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.resolve@1.0.0', 'external.capability.fabric.describe@1.0.0', 'external.capability.execute', 'external.capability.execute@1.0.0'],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
 
@@ -36,12 +37,130 @@ export function startSoulMeshRuntime(): () => void {
         return recoveredAeternumCapabilityBridge.execute(message.capability, message.payload);
       }
 
+      if (message.capability === 'external.capability.resolve@1.0.0') {
+        const input = message.payload;
+        if (!input || typeof input !== 'object' || Array.isArray(input)) {
+          throw new Error('N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED');
+        }
+        const provider = (input as { provider?: unknown }).provider;
+        if (typeof provider !== 'string' || !provider.trim()) {
+          throw new Error('N01_EXTERNAL_PROVIDER_REQUIRED');
+        }
+        const resolved = resolveN01ExternalProvider(provider);
+        return {
+          nucleus: 'N01',
+          capability: message.capability,
+          correlationId: message.correlationId,
+          provider: resolved.id,
+          source: resolved.source,
+          revision: resolved.revision,
+          owner: resolved.owner,
+          targets: resolved.targets,
+          capabilities: resolved.capabilities,
+          directAffinity: resolved.directAffinity,
+          structuralState: 'REAL',
+          runtimeState: 'PROJECTED',
+          executionProven: false,
+        };
+      }
+
+      if (message.capability === 'external.capability.fabric.describe@1.0.0') {
+        const fabric = describeN01ExternalCapabilityFabric();
+        return {
+          ...fabric,
+          correlationId: message.correlationId,
+          executionProven: false,
+        };
+      }
+
       if (message.capability === 'external.capability.execute' || message.capability === 'external.capability.execute@1.0.0') {
         const input = message.payload;
         if (!input || typeof input !== 'object' || Array.isArray(input)) {
           throw new Error('N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED');
         }
-        const value = input as { capability?: unknown; payload?: unknown; workloads?: unknown[]; candidate?: Record<string, unknown>; strategy?: unknown };
+        const value = input as {
+          capability?: unknown;
+          provider?: unknown;
+          operation?: unknown;
+          payload?: unknown;
+          workloads?: unknown[];
+          candidate?: Record<string, unknown>;
+          strategy?: unknown;
+          timeout_seconds?: number;
+        };
+
+        // Provider-aware requests are routed only through N07's existing
+        // canonical external adapter registry. Legacy N02 delegation remains
+        // intact for requests that don't specify a provider.
+        if (typeof value.provider === 'string' && value.provider.trim()) {
+          const provider = resolveN01ExternalProvider(value.provider);
+          const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
+          if (!operation) throw new Error('N01_EXTERNAL_OPERATION_REQUIRED');
+          const userPayload = value.payload && typeof value.payload === 'object' && !Array.isArray(value.payload)
+            ? value.payload as Record<string, unknown>
+            : {};
+          const response = await sendTo(
+            'N07',
+            'external.federation.execute@1.0.0',
+            {
+              payload: userPayload,
+              metadata: {
+                provider: provider.id,
+                external_operation: operation,
+                native_owner: provider.owner,
+                provider_revision: provider.revision,
+                timeout_seconds: String(
+                  typeof value.timeout_seconds === 'number' && Number.isFinite(value.timeout_seconds)
+                    ? Math.max(1, Math.min(170, Math.floor(value.timeout_seconds)))
+                    : 60,
+                ),
+              },
+            },
+            30000,
+            message.correlationId,
+          );
+          const gatewayResult = response.payload as {
+            status?: unknown;
+            error?: unknown;
+            metadata?: Record<string, unknown>;
+          } | null;
+          if (!gatewayResult || typeof gatewayResult !== 'object' || gatewayResult.status !== 'ok') {
+            const code = gatewayResult && typeof gatewayResult.error === 'string'
+              ? gatewayResult.error
+              : 'N01_EXTERNAL_GATEWAY_DID_NOT_CONFIRM_SUCCESS';
+            throw new Error(`N01_EXTERNAL_EXECUTION_BLOCKED:${provider.id}:${code}`);
+          }
+          const externalJSON = gatewayResult.metadata?.external_result_json;
+          let externalResult: Record<string, unknown>;
+          try {
+            externalResult = typeof externalJSON === 'string'
+              ? JSON.parse(externalJSON) as Record<string, unknown>
+              : (externalJSON && typeof externalJSON === 'object'
+                ? externalJSON as Record<string, unknown>
+                : {});
+          } catch {
+            throw new Error(`N01_EXTERNAL_RESULT_INVALID_JSON:${provider.id}`);
+          }
+          if (externalResult.state !== 'PASS') {
+            const code = typeof externalResult.code === 'string'
+              ? externalResult.code
+              : 'EXTERNAL_EXECUTION_NOT_PROVEN';
+            throw new Error(`N01_EXTERNAL_EXECUTION_BLOCKED:${provider.id}:${code}`);
+          }
+          return {
+            nucleus: 'N01',
+            capability: message.capability,
+            correlationId: message.correlationId,
+            provider: provider.id,
+            owner: provider.owner,
+            revision: provider.revision,
+            state: 'PASS',
+            runtimeState: 'PASS_OBSERVED',
+            executionProven: true,
+            result: externalResult,
+          };
+        }
+
         const capability = typeof value.capability === 'string' ? value.capability.trim() : '';
         if (!capability) throw new Error('N01_EXTERNAL_CAPABILITY_REQUIRED');
         const delegated = {
@@ -53,8 +172,8 @@ export function startSoulMeshRuntime(): () => void {
             strategy: typeof value.strategy === 'string' ? value.strategy : 'n01-external-tool-preflight',
           },
         };
-        const response = await sendTo('N02', capability, delegated, 30000, message.correlationId);
-        return response.payload;
+        const legacyResponse = await sendTo('N02', capability, delegated, 30000, message.correlationId);
+        return legacyResponse.payload;
       }
 
       if (message.capability === 'memory.identity.letta-code@1.0.0') {
@@ -127,7 +246,7 @@ export function startSoulMeshRuntime(): () => void {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0'],
+        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.resolve@1.0.0', 'external.capability.fabric.describe@1.0.0', 'external.capability.execute', 'external.capability.execute@1.0.0'],
         peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
@@ -175,6 +294,8 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('aeternum.architecture.guide', meshAgentHandler),
     router.onRequest('aeternum.blueprint.create', meshAgentHandler),
     router.onRequest('aeternum.neuralforge.create', meshAgentHandler),
+    router.onRequest('external.capability.resolve@1.0.0', meshAgentHandler),
+    router.onRequest('external.capability.fabric.describe@1.0.0', meshAgentHandler),
     router.onRequest('external.capability.execute', meshAgentHandler),
     router.onRequest('external.capability.execute@1.0.0', meshAgentHandler),
   ];
