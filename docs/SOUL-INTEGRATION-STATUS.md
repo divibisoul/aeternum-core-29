@@ -1,13 +1,18 @@
 # Soul / Aeternum Integration Status
 
-This document tracks the recovery and integration work toward an Android APK.
+This document tracks the recovery and integration work toward a hybrid SOUL web + app system; Android remains one supported native surface.
 
 ## Current baseline
 - Repository: `divibisoul/aeternum-core-29`
 - Stack: Vite + React + TypeScript
-- Android project: not present in the current repository baseline
+- Web surface: Vite + React + TypeScript (first-class)
+- Android project: present under `soul-sentinel/` in the current repository baseline; this is a native adapter, not the SOUL core
 - Capacitor: not present in the current repository baseline
 - Native Android bridge: not present in the current repository baseline
+
+## Platform model
+
+SOUL uses one platform-neutral core with multiple delivery adapters. Web, Android and future app platforms consume the same contracts; Android-specific bridges remain adapter-local.
 
 ## Integration targets
 1. Consolidate reusable Aeternum/Nexus/Eternium capabilities.
