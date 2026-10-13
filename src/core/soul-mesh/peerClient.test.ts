@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { sendTo } from './peerClient';
+import { sendTo } from './peerClient.ts';
 
 test('N01 keeps operation identity stable across retries and rotates nonce', async () => {
   const previousFetch = globalThis.fetch;
