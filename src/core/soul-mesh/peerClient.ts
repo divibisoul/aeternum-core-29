@@ -16,7 +16,22 @@ const circuitOpenedAt=new Map<NucleusId,number>();
 const env=(import.meta as ImportMeta & {env?:Record<string,string>}).env??{};
 const urls:Partial<Record<NucleusId,string>>={N02:env.VITE_SOUL_MESH_N02_URL,N03:env.VITE_SOUL_MESH_N03_URL,N04:env.VITE_SOUL_MESH_N04_URL,N05:env.VITE_SOUL_MESH_N05_URL,N06:env.VITE_SOUL_MESH_N06_URL,N07:env.VITE_SOUL_MESH_N07_URL};
 const token=env.VITE_SOUL_MESH_TOKEN?.trim()??'';
-function uuid(){return globalThis.crypto?.randomUUID?.()??`${Date.now()}-${Math.random().toString(36).slice(2,12)}`;}
+function uuid(){
+ const crypto=globalThis.crypto;
+ if(crypto?.randomUUID)return crypto.randomUUID();
+ if(!crypto?.getRandomValues)throw new Error('SOUL_MESH_SECURE_RANDOM_UNAVAILABLE');
+ const bytes=new Uint8Array(16);crypto.getRandomValues(bytes);
+ bytes[6]=(bytes[6]&0x0f)|0x40;bytes[8]=(bytes[8]&0x3f)|0x80;
+ const hex=Array.from(bytes,value=>value.toString(16).padStart(2,'0')).join('');
+ return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
+}
+function jitter(maxMs:number){
+ if(maxMs<=0)return 0;
+ const crypto=globalThis.crypto;
+ if(!crypto?.getRandomValues)throw new Error('SOUL_MESH_SECURE_RANDOM_UNAVAILABLE');
+ const bytes=new Uint32Array(1);crypto.getRandomValues(bytes);
+ return bytes[0]%maxMs;
+}
 function nonce(){return uuid().replaceAll('-','').padEnd(32,'0').slice(0,32);}
 function sleep(ms:number){return new Promise<void>(resolve=>setTimeout(resolve,ms));}
 function isRetryableStatus(status:number){return status===408||status===429||status>=500;}
@@ -34,10 +49,12 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
  if(isN07&&!relayOrigin)throw new Error('N07_BROWSER_RELAY_ORIGIN_REQUIRED');
  if(!directUrl&&!isN07)throw new Error(`SOUL_MESH_PEER_URL_NOT_CONFIGURED:${target}`);if(!capability.trim())throw new Error('SOUL_MESH_CAPABILITY_REQUIRED');
  if(!circuitAllows(target))throw new Error(`SOUL_MESH_CIRCUIT_OPEN:${target}`);
+ const messageId=uuid();
+ const baseMessage:Omit<SoulMeshMessage,'id'|'timestamp'|'meta'>={protocol:'soul-mesh/1',contractVersion:'1.1.0',correlationId,source:'N01',target,kind:'request',capability,payload};
  let lastError:unknown;
  for(let attempt=1;attempt<=MAX_ATTEMPTS;attempt++){
-  const id=uuid();const n=nonce();
-  const message:SoulMeshMessage={protocol:'soul-mesh/1',contractVersion:'1.1.0',id,correlationId,source:'N01',target,kind:'request',capability,payload,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:'1.1.0',traceId:correlationId,nonce:n}};
+  const id=messageId;const n=nonce();
+  const message:SoulMeshMessage={...baseMessage,id,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:'1.1.0',traceId:correlationId,nonce:n}};
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
    const headers:Record<string,string>={'content-type':'application/json','x-soul-correlation-id':correlationId};
@@ -53,7 +70,7 @@ export async function sendTo(target:NucleusId,capability:string,payload:unknown,
     if(!isRetryableStatus(response.status))throw new Error(detail);throw new Error(detail);
    }
    recordSuccess(target);return body;
-  }catch(error){lastError=error;const text=error instanceof Error?error.message:String(error);const retryable=(error instanceof DOMException&&error.name==='AbortError')||text.includes('fetch failed')||text.includes('network')||text.startsWith('SOUL_MESH_REMOTE_ERROR:');if(!retryable||attempt===MAX_ATTEMPTS){recordFailure(target);throw error;}await sleep(RETRY_BASE_DELAY_MS*2**(attempt-1)+Math.floor(Math.random()*100));}
+  }catch(error){lastError=error;const text=error instanceof Error?error.message:String(error);const retryable=(error instanceof DOMException&&error.name==='AbortError')||text.includes('fetch failed')||text.includes('network')||text.startsWith('SOUL_MESH_REMOTE_ERROR:');if(!retryable||attempt===MAX_ATTEMPTS){recordFailure(target);throw error;}await sleep(RETRY_BASE_DELAY_MS*2**(attempt-1)+jitter(100));}
   finally{clearTimeout(timer);}
  }
  recordFailure(target);throw lastError instanceof Error?lastError:new Error(String(lastError));
