@@ -84,15 +84,16 @@ jobs:
       - name: Run Mesh instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          # API 30 satisfies the app minSdk (26) and exercises the same Mesh contract
+          # while keeping the no-KVM hosted Linux emulator substantially lighter.
+          api-level: 30
           target: google_apis
           arch: x86_64
           profile: pixel_2
-          # Fail fast on a boot fault. 600 seconds matches the action's current default.
           emulator-boot-timeout: 600
           force-avd-creation: true
-          # swiftshader_indirect is deprecated; use the supported SwiftShader software renderer.
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -wipe-data -noaudio -no-boot-anim -camera-back none -camera-front none
+          # A fresh AVD has no prior snapshot/data to wipe. Avoid redundant cold-boot flags.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           disable-linux-hw-accel: auto
           working-directory: soul-sentinel
