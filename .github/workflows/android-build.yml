@@ -3,6 +3,27 @@ name: Soul N01 Full Build
 on:
   push:
     branches: [ main ]
+  pull_request:
+    # Also validate stacked N01 PRs whose base is another working branch.
+    paths:
+      - 'soul-sentinel/**'
+      - 'src/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'integrations/**'
+      - 'config/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'bun.lockb'
+      - 'package-lock.json'
+      - 'vite.config.*'
+      - 'tsconfig*.json'
+      - 'index.html'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - '.github/workflows/android-build.yml'
+      - '.github/workflows/soul-mesh-regression.yml'
+      - '.github/workflows/soul-n01-validation.yml'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +36,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - name: N01 canonical route-resolution regressions
+        run: node --test scripts/soul-mesh-routing.test.mjs
+      - name: N01 Mesh contract checks
+        run: node scripts/soul-mesh-contract-check.mjs
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -53,25 +78,35 @@ jobs:
         run: |
           test -s soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
           test -s soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: Stop Gradle daemons before emulator boot
+        working-directory: soul-sentinel
+        run: gradle --stop
       - name: Run Mesh instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          # API 30 satisfies the app minSdk (26) and exercises the same Mesh contract
+          # while keeping the no-KVM hosted Linux emulator substantially lighter.
+          api-level: 30
           target: google_apis
           arch: x86_64
-          profile: pixel_5
-          emulator-boot-timeout: 1200
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          force-avd-creation: true
+          # A fresh AVD has no prior snapshot/data to wipe. Avoid redundant cold-boot flags.
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           disable-linux-hw-accel: auto
           working-directory: soul-sentinel
           script: gradle :app:connectedDebugAndroidTest --stacktrace
-      - name: Upload APKs
+      - name: Upload APKs and instrumentation evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: soul-apks
+          name: soul-android-evidence
           path: |
             soul-sentinel/app/build/outputs/apk/debug/app-debug.apk
             soul-sentinel/app/build/outputs/apk/release/app-release-unsigned.apk
-          if-no-files-found: error
+            soul-sentinel/app/build/reports/androidTests/connected/**
+            soul-sentinel/app/build/outputs/androidTest-results/connected/**
+            soul-sentinel/app/build/test-results/connectedAndroidTest/**
+          if-no-files-found: warn
