@@ -1,0 +1,32 @@
+name: N01 Correlation Continuity
+on:
+  push:
+    branches:
+      - fusion/n01-correlation-continuity-mesh-20261016
+      - fusion/n01-hortacore-clareira-mesh-20261016
+  pull_request:
+    paths:
+      - 'src/core/mesh/SoulMeshRouter.ts'
+      - 'src/core/mesh/N01N02HybridLink.ts'
+      - 'src/core/mesh/SoulMeshHttpTransport.ts'
+      - 'lib/aeternum/RecoveredAeternumExternalCapabilityBridge.ts'
+      - 'lib/aeternum/RecoveredAeternumExternalCapabilityBridge.test.ts'
+      - 'scripts/soul-mesh-correlation-continuity-check.mjs'
+      - 'src/core/mesh/SoulMeshRouter.correlation.test.ts'
+      - 'package.json'
+      - 'package-lock.json'
+jobs:
+  verify-correlation-continuity:
+    name: Real HTTP correlation continuity
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install from committed lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Verify N01 caller correlation continuity
+        run: npm run mesh:correlation:check
