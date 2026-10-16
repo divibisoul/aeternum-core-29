@@ -1,0 +1,34 @@
+name: Real resource telemetry verification
+
+on:
+  push:
+    branches:
+      - "fix/real-resource-telemetry-2026-09-28"
+      - "fusion/n01-resource-telemetry-neural-management-20261016"
+      - "fusion/n01-hortacore-clareira-mesh-20261016"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/core/agi/ResourceManager.ts"
+      - "src/core/agi/RecursiveNeuralLattice.ts"
+      - "src/core/agi/NeuralManagementCore.ts"
+      - "scripts/neural-management-core-check.mjs"
+      - "scripts/real-resource-telemetry-check.mjs"
+      - ".github/workflows/real-resource-telemetry.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Execute real telemetry regression
+        run: node scripts/real-resource-telemetry-check.mjs
