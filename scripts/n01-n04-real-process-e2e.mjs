@@ -1,4 +1,4 @@
-import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -54,138 +54,8 @@ async function waitFor(name, child, probe) {
   throw new Error(name + ' did not become ready: ' + last + '\n' + logs.get(name));
 }
 
-function canonicalRequest(message, nonce) {
-  return JSON.stringify({
-    protocol: message.protocol,
-    contractVersion: message.contractVersion,
-    id: message.id,
-    correlationId: message.correlationId,
-    source: message.source,
-    target: message.target,
-    kind: message.kind,
-    capability: message.capability ?? null,
-    payload: message.payload,
-    timestamp: message.timestamp,
-    transport: message.meta?.transport,
-    meta: message.meta ?? null,
-    nonce,
-  });
-}
-
-function legacyResponseCanonical(message, nonce) {
-  return JSON.stringify({
-    version: '1.0',
-    contractVersion: message.contractVersion,
-    messageId: message.id,
-    source: message.source,
-    target: message.target,
-    timestamp: message.timestamp,
-    nonce,
-    correlationId: message.correlationId,
-    type: message.kind === 'error' ? 'ERROR' : 'TASK_RESULT',
-    payload: { capability: message.capability ?? '', payload: message.payload ?? {} },
-  });
-}
-
-function safeHexEqual(actualHex, expectedHex) {
-  if (!/^[0-9a-f]{64}$/i.test(actualHex)) return false;
-  const actual = Buffer.from(actualHex, 'hex');
-  const expected = Buffer.from(expectedHex, 'hex');
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
-}
-
-async function exerciseN01ToN04() {
-  const nonce = randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
-  const correlationId = 'n01-n04-real-process-' + randomUUID();
-  const message = {
-    protocol: 'soul-mesh/1',
-    contractVersion: '1.1.0',
-    id: randomUUID(),
-    correlationId,
-    source: 'N02',
-    target: 'N01',
-    kind: 'request',
-    capability: 'mesh.delegate',
-    payload: {
-      target: 'N04',
-      capability: 'mesh.ping',
-      payload: { probe: 'N01_N04_REAL_PROCESS_PAIR', direction: 'N01_TO_N04' },
-    },
-    timestamp: Date.now(),
-    meta: {
-      runtime: 'n01-n04-real-process-e2e-driver',
-      transport: 'HTTP',
-      encoding: 'json',
-      version: '1.1.0',
-      nonce,
-      traceId: correlationId,
-    },
-    nonce,
-  };
-  const requestHmac = createHmac('sha256', secret)
-    .update(canonicalRequest(message, nonce), 'utf8')
-    .digest('hex');
-
-  const response = await fetch(n01Url + '/api/soul-mesh', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      accept: 'application/json',
-      'x-soul-correlation-id': correlationId,
-      'x-soul-mesh-nonce': nonce,
-      'x-soul-mesh-hmac': requestHmac,
-    },
-    body: JSON.stringify(message),
-    cache: 'no-store',
-    signal: AbortSignal.timeout(12000),
-  });
-  const body = await response.json().catch(() => null);
-  if (!body || body.protocol !== 'soul-mesh/1' || body.contractVersion !== '1.1.0'
-    || body.source !== 'N01' || body.target !== 'N02'
-    || body.correlationId !== correlationId || body.kind !== 'response') {
-    throw new Error('N01_TO_N04_OUTER_RESPONSE_CONTRACT_FAILED:' + response.status + ':' + JSON.stringify(body));
-  }
-
-  const responseNonce = String(body.nonce ?? body.meta?.nonce ?? '');
-  const suppliedHmac = String(body.hmac ?? '');
-  const expectedHmac = createHmac('sha256', secret)
-    .update(legacyResponseCanonical(body, responseNonce), 'utf8')
-    .digest('hex');
-  if (!safeHexEqual(suppliedHmac, expectedHmac)) throw new Error('N01_TO_N04_OUTER_RESPONSE_HMAC_INVALID');
-  if (!response.ok || body.payload?.ok !== true || body.payload?.nucleus !== 'N04') {
-    throw new Error('N01_TO_N04_PEER_FORWARD_FAILED:' + response.status + ':' + JSON.stringify(body.payload));
-  }
-  return {
-    marker: 'N01_TO_N04_REAL_PROCESS_E2E_PASS',
-    source: 'N01',
-    target: 'N04',
-    capability: 'mesh.ping',
-    transport: 'HTTP',
-    requestAuthentication: 'HMAC-SHA256',
-    N04ResponseHmacVerifiedByN01Gateway: true,
-    outerN01ResponseHmacVerifiedByDriver: true,
-    correlationId,
-    payload: body.payload,
-  };
-}
-
-function exerciseN04ToN01(timeoutMs = 20000) {
-  const driver = [
-    "import assert from 'node:assert/strict';",
-    "import * as peerClientModule from './lib/soul-mesh/peer-client.ts';",
-    "const sendTo = peerClientModule.sendTo ?? peerClientModule.default?.sendTo;",
-    "if (typeof sendTo !== 'function') throw new Error('N04_SEND_TO_EXPORT_MISSING');",
-    "const r = await sendTo('N01', 'mesh.ping', { probe: 'N01_N04_REAL_PROCESS_PAIR', direction: 'N04_TO_N01' }, 7000);",
-    "assert.equal(r.protocol, 'soul-mesh/1');",
-    "assert.equal(r.contractVersion, '1.1.0');",
-    "assert.equal(r.source, 'N01');",
-    "assert.equal(r.target, 'N04');",
-    "assert.equal(r.kind, 'response');",
-    "assert.equal(r.payload?.ok, true);",
-    "assert.equal(r.payload?.nucleus, 'N01');",
-    "console.log('N04_TO_N01_REAL_PROCESS_E2E_PASS ' + JSON.stringify({source:'N04',target:'N01',capability:'mesh.ping',transport:'HTTP',requestAuthentication:'HMAC-SHA256',responseAuthentication:'legacy HMAC-SHA256 verified by N04',payload:r.payload}));",
-  ].join('\n');
-
+function runN04Client(name, source, timeoutMs = 20000) {
+  const driver = source.join('\n');
   return new Promise((resolvePromise, rejectPromise) => {
     const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', driver], {
       cwd: n04Root,
@@ -204,15 +74,15 @@ function exerciseN04ToN01(timeoutMs = 20000) {
     const collect = chunk => { captured = (captured + String(chunk)).slice(-24000); };
     child.stdout.on('data', collect);
     child.stderr.on('data', collect);
-    child.on('error', error => rejectPromise(new Error('N04 peer client could not start: ' + error.message)));
+    child.on('error', error => rejectPromise(new Error(name + ' could not start: ' + error.message)));
     const timer = setTimeout(() => {
       child.kill('SIGKILL');
-      rejectPromise(new Error('N04_TO_N01_E2E_TIMEOUT\n' + captured));
+      rejectPromise(new Error(name + ' timeout\n' + captured));
     }, timeoutMs);
     child.on('exit', code => {
       clearTimeout(timer);
-      if (code === 0 && captured.includes('N04_TO_N01_REAL_PROCESS_E2E_PASS')) resolvePromise(captured.trim());
-      else rejectPromise(new Error('N04_TO_N01_E2E_FAILED code=' + code + '\n' + captured));
+      if (code === 0 && captured.includes(name + '_PASS')) resolvePromise(captured.trim());
+      else rejectPromise(new Error(name + ' failed with code=' + code + '\n' + captured));
     });
   });
 }
@@ -274,20 +144,52 @@ try {
     }),
   ]);
 
-  // Actual N01 request -> actual N01 route -> actual N04 production process.
-  const n01Evidence = await exerciseN01ToN04();
-  // Actual N04 peer client -> actual N01 Node Mesh process.
-  const n04Evidence = await exerciseN04ToN01();
+  // This peer request is generated by N04's real client module, not by a driver
+  // claiming another nucleus identity. N04 -> N01 uses canonical request HMAC
+  // and verifies N01's currently deployed legacy response signature.
+  const directEvidence = await runN04Client('N04_TO_N01_REAL_PROCESS_E2E', [
+    "import assert from 'node:assert/strict';",
+    "import * as peerClientModule from './lib/soul-mesh/peer-client.ts';",
+    "const sendTo = peerClientModule.sendTo ?? peerClientModule.default?.sendTo;",
+    "if (typeof sendTo !== 'function') throw new Error('N04_SEND_TO_EXPORT_MISSING');",
+    "const r = await sendTo('N01', 'mesh.ping', { probe: 'N01_N04_REAL_PROCESS_PAIR', direction: 'N04_TO_N01' }, 7000);",
+    "assert.equal(r.protocol, 'soul-mesh/1');",
+    "assert.equal(r.contractVersion, '1.1.0');",
+    "assert.equal(r.source, 'N01');",
+    "assert.equal(r.target, 'N04');",
+    "assert.equal(r.kind, 'response');",
+    "assert.equal(r.payload?.ok, true);",
+    "assert.equal(r.payload?.nucleus, 'N01');",
+    "console.log('N04_TO_N01_REAL_PROCESS_E2E_PASS ' + JSON.stringify({source:'N04',target:'N01',capability:'mesh.ping',transport:'HTTP',requestAuthentication:'HMAC-SHA256',responseAuthentication:'legacy HMAC-SHA256 verified by N04',payload:r.payload}));",
+  ]);
+
+  // N04 itself initiates a delegation through N01. N01's actual forward() then
+  // invokes N04's real production HTTP handler using canonical request HMAC and
+  // must verify the canonical N04 response HMAC before replying to N04.
+  const routedEvidence = await runN04Client('N04_VIA_N01_TO_N04_REAL_PROCESS_E2E', [
+    "import assert from 'node:assert/strict';",
+    "import * as peerClientModule from './lib/soul-mesh/peer-client.ts';",
+    "const sendTo = peerClientModule.sendTo ?? peerClientModule.default?.sendTo;",
+    "if (typeof sendTo !== 'function') throw new Error('N04_SEND_TO_EXPORT_MISSING');",
+    "const r = await sendTo('N01', 'mesh.delegate', { target: 'N04', capability: 'mesh.ping', payload: { probe: 'N01_N04_REAL_PROCESS_PAIR', direction: 'N04_TO_N01_TO_N04' } }, 10000);",
+    "assert.equal(r.source, 'N01');",
+    "assert.equal(r.target, 'N04');",
+    "assert.equal(r.kind, 'response');",
+    "assert.equal(r.payload?.ok, true);",
+    "assert.equal(r.payload?.nucleus, 'N04');",
+    "console.log('N04_VIA_N01_TO_N04_REAL_PROCESS_E2E_PASS ' + JSON.stringify({caller:'N04 real peer client',gateway:'N01 actual HTTP runtime',destination:'N04 actual Next.js production route',capability:'mesh.ping',requestAuthentication:'HMAC-SHA256',N01VerifiedCanonicalN04ResponseHmac:true,N04VerifiedLegacyN01ResponseHmac:true,payload:r.payload}));",
+  ]);
 
   console.log(JSON.stringify({
     system: 'SOUL',
     stage: 'N01_N04_REAL_PROCESS_PAIR_E2E',
     status: 'PASS',
     evidence: {
-      n01ToN04: n01Evidence,
-      n04ToN01: n04Evidence,
+      n04ToN01: directEvidence,
+      n04ViaN01ToN04: routedEvidence,
       independentN01Server: 'actual Node.js Soul Mesh HTTP runtime',
       independentN04Server: 'actual Next.js production HTTP runtime',
+      initiatingIdentity: 'N04 peer-client implementation; no test driver impersonates a nucleus',
       secrets: 'ephemeral process environment; never committed',
       endpointMocks: false,
     },
