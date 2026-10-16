@@ -10,6 +10,9 @@ const host = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
 const N01_ENDPOINT = String(process.env.SOUL_MESH_N01_ENDPOINT || '').trim().replace(/\/$/, '') || `http://127.0.0.1:${publicPort}`;
 const N07_URL = String(process.env.SOUL_MESH_N07_URL || '').trim().replace(/\/$/, '');
 const SECRET = String(process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || '').trim();
+const INTERNAL_RELAY_TOKEN = String(process.env.SOUL_MESH_INTERNAL_RELAY_TOKEN || crypto.randomBytes(32).toString('hex'));
+const SUPABASE_URL = String(process.env.SOUL_MESH_SUPABASE_URL || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '').trim().replace(/\\/$/, '');
+const SUPABASE_PUBLISHABLE_KEY = String(process.env.SOUL_MESH_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '').trim();
 const PROTOCOL = 'soul-mesh/1';
 const CONTRACT_VERSION = '1.1.0';
 const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
@@ -20,6 +23,7 @@ const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
     ...process.env,
     SOUL_MESH_N01_PORT: String(internalPort),
     SOUL_MESH_N01_HOST: '127.0.0.1',
+    SOUL_MESH_INTERNAL_RELAY_TOKEN: INTERNAL_RELAY_TOKEN,
   },
   stdio: 'inherit',
 });
@@ -57,6 +61,177 @@ function writeDirect(res, status, body) {
     'content-length': String(output.length),
   });
   res.end(output);
+}
+
+function browserOriginAllowed(req) {
+  const origin = String(req.headers.origin || '').trim();
+  if (!origin || origin === 'null') return false;
+  try {
+    if (new URL(origin).origin !== origin) return false;
+  } catch {
+    return false;
+  }
+  const configuredOrigins = String(process.env.SOUL_MESH_BROWSER_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+  if (configuredOrigins.includes(origin)) return true;
+  // Browsers set this forbidden request header themselves. Cross-origin deployments
+  // must explicitly list their frontend origin in SOUL_MESH_BROWSER_ALLOWED_ORIGINS.
+  return String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'same-origin';
+}
+
+async function requireBrowserAuthentication(req) {
+  const authorization = String(req.headers.authorization || '');
+  const match = /^Bearer\\s+([^\\s]+)$/i.exec(authorization);
+  if (!match || match[1].length < 20) return { ok: false, status: 401, code: 'SOUL_MESH_BROWSER_SESSION_REQUIRED' };
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    return { ok: false, status: 503, code: 'SOUL_MESH_SUPABASE_AUTH_NOT_CONFIGURED' };
+  }
+  let authEndpoint;
+  try {
+    const base = new URL(SUPABASE_URL);
+    if (base.protocol !== 'https:' && process.env.NODE_ENV === 'production') {
+      return { ok: false, status: 503, code: 'SOUL_MESH_SUPABASE_HTTPS_REQUIRED' };
+    }
+    authEndpoint = new URL('/auth/v1/user', base).toString();
+  } catch {
+    return { ok: false, status: 503, code: 'SOUL_MESH_SUPABASE_URL_INVALID' };
+  }
+  try {
+    const response = await fetch(authEndpoint, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        authorization: `Bearer ${match[1]}`,
+        accept: 'application/json',
+      },
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, status: 401, code: 'SOUL_MESH_BROWSER_SESSION_INVALID' };
+    }
+    if (!response.ok) return { ok: false, status: 503, code: 'SOUL_MESH_SUPABASE_AUTH_UNAVAILABLE' };
+    const user = await response.json().catch(() => null);
+    if (!user || typeof user.id !== 'string' || !user.id.trim()) {
+      return { ok: false, status: 401, code: 'SOUL_MESH_BROWSER_SESSION_INVALID' };
+    }
+    return { ok: true, userId: user.id };
+  } catch {
+    return { ok: false, status: 503, code: 'SOUL_MESH_SUPABASE_AUTH_UNAVAILABLE' };
+  }
+}
+
+function createBrowserMeshRequest(target, capability, payload, correlationId) {
+  return {
+    protocol: PROTOCOL,
+    contractVersion: CONTRACT_VERSION,
+    id: crypto.randomUUID(),
+    correlationId,
+    source: 'N01',
+    target,
+    kind: 'request',
+    capability,
+    payload,
+    timestamp: Date.now(),
+    meta: {
+      runtime: 'aeternum-core-29',
+      transport: 'HTTP',
+      encoding: 'json',
+      version: CONTRACT_VERSION,
+      traceId: correlationId,
+    },
+  };
+}
+
+function validBrowserRelayResponse(body, target, capability, correlationId) {
+  return Boolean(body && typeof body === 'object'
+    && body.protocol === PROTOCOL
+    && body.contractVersion === CONTRACT_VERSION
+    && typeof body.id === 'string' && body.id
+    && body.source === target && body.target === 'N01'
+    && body.capability === capability
+    && body.correlationId === correlationId
+    && Number.isFinite(body.timestamp)
+    && (body.kind === 'response' || body.kind === 'error'));
+}
+
+async function handleBrowserRelay(req, res, rawBody, legacyN07Route = false) {
+  if (!browserOriginAllowed(req)) {
+    writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_ORIGIN_REJECTED' });
+    return;
+  }
+  const authorization = await requireBrowserAuthentication(req);
+  if (!authorization.ok) {
+    writeDirect(res, authorization.status, { error: authorization.code });
+    return;
+  }
+  if (!SECRET || Buffer.byteLength(SECRET, 'utf8') < 32) {
+    writeDirect(res, 503, { error: 'SOUL_MESH_HMAC_SECRET_NOT_CONFIGURED' });
+    return;
+  }
+
+  let input;
+  try {
+    input = JSON.parse(rawBody.toString('utf8'));
+  } catch {
+    writeDirect(res, 400, { error: 'INVALID_JSON' });
+    return;
+  }
+  const target = legacyN07Route ? 'N07' : input?.target;
+  const capability = typeof input?.capability === 'string' ? input.capability.trim() : '';
+  const correlationId = typeof input?.correlationId === 'string' ? input.correlationId.trim() : '';
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/.test(capability)) {
+    writeDirect(res, 400, { error: 'BROWSER_RELAY_CAPABILITY_INVALID' });
+    return;
+  }
+  if (!/^[A-Za-z0-9._:/-]{1,128}$/.test(correlationId)) {
+    writeDirect(res, 400, { error: 'BROWSER_RELAY_CORRELATION_INVALID' });
+    return;
+  }
+  if (target === 'N07') {
+    if (!isPublicN07StructuralCapability(capability)) {
+      writeDirect(res, 403, { error: 'N07_STRUCTURAL_CAPABILITY_ONLY' });
+      return;
+    }
+    try {
+      const result = await relayToN07(createBrowserMeshRequest('N07', capability, input.payload ?? {}, correlationId));
+      if (!validBrowserRelayResponse(result, 'N07', capability, correlationId)) {
+        writeDirect(res, 502, { error: 'SOUL_MESH_N07_RESPONSE_CONTRACT_INVALID' });
+        return;
+      }
+      writeDirect(res, result.kind === 'error' ? 502 : 200, result);
+    } catch (error) {
+      writeDirect(res, 502, { error: error instanceof Error ? error.message : 'SOUL_MESH_N07_RELAY_FAILED' });
+    }
+    return;
+  }
+  if (!['N02', 'N03', 'N04', 'N05', 'N06'].includes(target)) {
+    writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_RELAY_TARGET_NOT_ALLOWED' });
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${internalPort}/mesh/browser-relay`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-soul-mesh-internal-token': INTERNAL_RELAY_TOKEN,
+      },
+      body: JSON.stringify({ target, capability, payload: input.payload ?? {}, correlationId }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(35_000),
+    });
+    const result = await response.json().catch(() => null);
+    if (!validBrowserRelayResponse(result, target, capability, correlationId)) {
+      writeDirect(res, 502, { error: 'SOUL_MESH_PEER_RESPONSE_CONTRACT_INVALID' });
+      return;
+    }
+    writeDirect(res, result.kind === 'error' ? 502 : (response.ok ? 200 : response.status), result);
+  } catch {
+    writeDirect(res, 502, { error: 'SOUL_MESH_PEER_RELAY_UNAVAILABLE' });
+  }
 }
 
 function canonicalN07Relay(message, nonce) {
@@ -145,24 +320,10 @@ async function relayToN07(message) {
 async function proxy(req, res) {
   const rawBody = req.method === 'POST' ? await readRequestBody(req) : Buffer.alloc(0);
 
-  if (req.method === 'POST' && req.url === '/api/soul-mesh/n07') {
-    try {
-      const message = JSON.parse(rawBody.toString('utf8'));
-      if (message?.source !== 'N01' || message?.target !== 'N07') {
-        writeDirect(res, 400, { error: 'N01_N07_ROUTE_REQUIRED' });
-        return;
-      }
-      if (!isPublicN07StructuralCapability(message?.capability)) {
-        writeDirect(res, 403, { error: 'N07_STRUCTURAL_CAPABILITY_ONLY' });
-        return;
-      }
-      const body = await relayToN07(message);
-      writeDirect(res, body.kind === 'error' ? 502 : 200, body);
-      return;
-    } catch (error) {
-      writeDirect(res, 502, { error: error instanceof Error ? error.message : 'N07_RELAY_ERROR' });
-      return;
-    }
+  const requestPath = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
+  if (req.method === 'POST' && (requestPath === '/api/soul-mesh/relay' || requestPath === '/api/soul-mesh/n07')) {
+    await handleBrowserRelay(req, res, rawBody, requestPath === '/api/soul-mesh/n07');
+    return;
   }
 
   if (req.method === 'POST' && req.url === '/api/soul-mesh') {
@@ -178,7 +339,11 @@ async function proxy(req, res) {
           });
           return;
         }
-        if (SECRET && SECRET.length >= 16) verifyN07Response(message);
+        if (process.env.NODE_ENV === 'production' && Buffer.byteLength(SECRET, 'utf8') < 32) {
+          writeDirect(res, 503, { error: 'SOUL_MESH_HMAC_SECRET_NOT_CONFIGURED' });
+          return;
+        }
+        if (SECRET) verifyN07Response(message);
         writeDirect(res, message.kind === 'error' ? 502 : 200, message);
         return;
       }
