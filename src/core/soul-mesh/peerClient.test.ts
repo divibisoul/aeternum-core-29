@@ -87,8 +87,47 @@ test('N01 browser peer requests preserve the N07 structural-only boundary', asyn
   let calls = 0;
   globalThis.fetch = async () => { calls += 1; return new Response('{}', { status: 200 }); };
   try {
-    await assert.rejects(sendTo('N07', 'mesh.supergpu.execute@1.0.0', { values: [1] }), /N07_STRUCTURAL_CAPABILITY_ONLY/);
+    await assert.rejects(sendTo('N07', 'mesh.supergpu.parallel@1.0.0', { inputs: [[1]] }), /N07_STRUCTURAL_CAPABILITY_ONLY/);
     assert.equal(calls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    setSoulMeshSessionAccessTokenProvider(null);
+    restoreLocation();
+  }
+});
+
+test('N01 routes authenticated SuperGPU execute through its dedicated N07 gateway path', async () => {
+  const previousFetch = globalThis.fetch;
+  const restoreLocation = setTestLocation();
+  const calls: Array<{ url: string; body: Record<string, unknown> }> = [];
+  setSoulMeshSessionAccessTokenProvider(async () => 'supabase-session-token-for-test');
+  globalThis.fetch = async (input, init) => {
+    const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+    calls.push({ url: String(input), body });
+    return new Response(JSON.stringify({
+      protocol: 'soul-mesh/1',
+      contractVersion: '1.1.0',
+      id: 'n07-supergpu-response',
+      correlationId: String(body.correlationId),
+      source: 'N07',
+      target: 'N01',
+      kind: 'response',
+      capability: 'mesh.supergpu.execute@1.0.0',
+      payload: { status: 'ok', values: [4, 9] },
+      timestamp: Date.now(),
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    const result = await sendTo('N07', 'mesh.supergpu.execute@1.0.0', {
+      values: [2, 3],
+      metadata: { operation: 'square' },
+    }, 5000, 'n01-supergpu-authenticated-call');
+    assert.equal(result.kind, 'response');
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].url, 'https://n01-fusion.test/api/soul-mesh/supergpu');
+    assert.equal(calls[0].body.target, 'N07');
+    assert.equal(calls[0].body.capability, 'mesh.supergpu.execute@1.0.0');
+    assert.equal(calls[0].body.source, undefined);
   } finally {
     globalThis.fetch = previousFetch;
     setSoulMeshSessionAccessTokenProvider(null);
