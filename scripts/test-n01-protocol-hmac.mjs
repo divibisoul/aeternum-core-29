@@ -25,7 +25,39 @@ function canonical(message, nonce) {
   });
 }
 
-function responseCanonical(body, nonce) {
+function goCanonicalValue(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return '[' + value.map(item => item === undefined ? 'null' : goCanonicalValue(item)).join(',') + ']';
+  if (value && typeof value === 'object') {
+    return '{' + Object.keys(value).filter(key => value[key] !== undefined).sort()
+      .map(key => JSON.stringify(key) + ':' + goCanonicalValue(value[key])).join(',') + '}';
+  }
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) throw new TypeError('Unsupported value in Go canonical JSON');
+  return encoded;
+}
+
+function n07LegacyResponseCanonical(body, nonce) {
+  const entries = [
+    ['version', '1.0'],
+    ['contractVersion', body.contractVersion],
+    ['messageId', body.id],
+    ['source', body.source],
+    ['target', body.target],
+    ['timestamp', body.timestamp],
+    ['nonce', nonce],
+    ['correlationId', body.correlationId],
+    ['type', body.kind === 'error' ? 'ERROR' : 'TASK_RESULT'],
+    ['payload', { capability: body.capability ?? '', payload: body.payload ?? {} }],
+    ['operation', body.operation],
+    ['metadata', body.metadata],
+  ];
+  return '{' + entries.filter(([, value]) => value !== undefined)
+    .map(([key, value]) => JSON.stringify(key) + ':' + goCanonicalValue(value)).join(',') + '}';
+}
+
+function responseCanonical(body, nonce, target) {
+  if (target === 'N07') return n07LegacyResponseCanonical(body, nonce);
   return JSON.stringify({
     version: '1.0',
     contractVersion: body.contractVersion,
@@ -148,7 +180,7 @@ try {
       target: 'N01',
       kind: 'response',
       capability: 'mesh.ping',
-      payload: { ok: true, nucleus: target },
+      payload: { ok: true, nucleus: target, nested: { '10': 'ten', '2': 'two', alpha: 'a' } },
       timestamp: Date.now(),
       nonce,
       meta: {
@@ -162,7 +194,7 @@ try {
     };
     const canonicalValue = scheme === 'canonical'
       ? canonical(message, nonce)
-      : responseCanonical(message, nonce);
+      : responseCanonical(message, nonce, target);
     const hmac = crypto.createHmac('sha256', secret).update(canonicalValue, 'utf8').digest('hex');
     return { message, nonce, hmac };
   }
