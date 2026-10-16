@@ -77,6 +77,8 @@ assert.equal(
   'nested keys sort lexicographically, including numeric-looking keys, without changing array order',
 );
 assert.match(relaySource, /canonicalOrderedJson\(\[/);
+assert.match(relaySource, /SOUL_MESH_N01_HOST:\s*'127\\.0\\.0\\.1'/,
+  'N01 internal Mesh child must bind loopback only; the public wrapper owns the external listener');
 assert.match(relaySource, /\['payload', message\.payload \?\? null\]/);
 assert.match(relaySource, /\['meta', message\.meta \?\? null\]/);
 assert.match(relaySource, /async function registerWithN07\(\) \{/,
