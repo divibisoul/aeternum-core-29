@@ -169,10 +169,30 @@ try {
   if (unauthenticatedBrowserRelay.status !== 401 || unauthenticatedBody?.error !== 'SOUL_MESH_BROWSER_SESSION_REQUIRED') {
     throw new Error('N01_BROWSER_RELAY_AUTH_BOUNDARY_FAILED: the real public gateway did not reject an unauthenticated browser request.');
   }
+  const unauthenticatedSuperGPU = await fetch(n01Url + '/api/soul-mesh/supergpu', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: n01Url,
+      'sec-fetch-site': 'same-origin',
+    },
+    body: JSON.stringify({
+      target: 'N07',
+      capability: 'mesh.supergpu.execute@1.0.0',
+      payload: { values: [1], metadata: { operation: 'identity' } },
+      correlationId: 'n01-supergpu-browser-auth-boundary',
+    }),
+    signal: AbortSignal.timeout(3000),
+  });
+  const unauthenticatedSuperGPUBody = await unauthenticatedSuperGPU.json().catch(() => null);
+  if (unauthenticatedSuperGPU.status !== 401 || unauthenticatedSuperGPUBody?.error !== 'SOUL_MESH_BROWSER_SESSION_REQUIRED') {
+    throw new Error('N01_SUPERGPU_BROWSER_AUTH_BOUNDARY_FAILED: the real public gateway did not reject unauthenticated SuperGPU execution.');
+  }
   const browserRelayAuthEvidence = 'N01_BROWSER_RELAY_AUTH_BOUNDARY_PASS ' + JSON.stringify({
     gateway: 'N01 actual public HTTP gateway',
-    route: '/api/soul-mesh/relay',
+    routes: ['/api/soul-mesh/relay', '/api/soul-mesh/supergpu'],
     unauthenticatedStatus: unauthenticatedBrowserRelay.status,
+    unauthenticatedSuperGPUStatus: unauthenticatedSuperGPU.status,
     accepted: false,
     targetReached: false,
   });
