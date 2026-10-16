@@ -1,8 +1,7 @@
 package com.divibisoul.soul
 
 import org.json.JSONObject
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -21,6 +20,11 @@ class SoulMeshHttpTransport(
     private val connectTimeoutMs: Int = 5_000,
     private val readTimeoutMs: Int = 10_000,
 ) {
+    private companion object {
+        const val MAX_HTTP_HEADER_BYTES = 16 * 1024
+        const val MAX_HTTP_BODY_BYTES = 1_048_576
+    }
+
     private val executor: ExecutorService = Executors.newCachedThreadPool()
     @Volatile private var serverSocket: ServerSocket? = null
     @Volatile private var running = false
@@ -110,36 +114,94 @@ class SoulMeshHttpTransport(
 
     private fun handle(client: java.net.Socket, onMessage: (SoulMeshMessage) -> Unit) {
         client.use { socket ->
-            val reader = BufferedReader(InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))
-            val requestLine = reader.readLine() ?: return
+            socket.soTimeout = readTimeoutMs
+            val input = socket.getInputStream()
+            val headerBuffer = ByteArrayOutputStream()
+            var delimiterState = 0
+            var headerComplete = false
+
+            // HTTP Content-Length is measured in bytes, never Unicode characters.
+            // Read headers as bytes so UTF-8 body decoding cannot truncate a message.
+            while (headerBuffer.size() < MAX_HTTP_HEADER_BYTES) {
+                val next = input.read()
+                if (next < 0) return
+                headerBuffer.write(next)
+                delimiterState = when {
+                    delimiterState == 0 && next == 13 -> 1
+                    delimiterState == 1 && next == 10 -> 2
+                    delimiterState == 2 && next == 13 -> 3
+                    delimiterState == 3 && next == 10 -> 4
+                    next == 13 -> 1
+                    else -> 0
+                }
+                if (delimiterState == 4) {
+                    headerComplete = true
+                    break
+                }
+            }
+
+            if (!headerComplete) {
+                writeResponse(socket, 431, JSONObject().put("error", "HTTP headers too large or incomplete"))
+                return
+            }
+
+            val headerText = String(headerBuffer.toByteArray(), StandardCharsets.ISO_8859_1)
+            val lines = headerText.split("\r\n")
+            val requestLine = lines.firstOrNull().orEmpty()
             val headers = mutableMapOf<String, String>()
-            while (true) {
-                val line = reader.readLine() ?: return
-                if (line.isEmpty()) break
+            var invalidHeaders = false
+            for (line in lines.drop(1).filter { it.isNotEmpty() }) {
                 val separator = line.indexOf(':')
-                if (separator > 0) headers[line.substring(0, separator).trim().lowercase()] = line.substring(separator + 1).trim()
+                if (separator <= 0) {
+                    invalidHeaders = true
+                    break
+                }
+                val name = line.substring(0, separator).trim().lowercase()
+                val value = line.substring(separator + 1).trim()
+                if (name.isBlank() || headers.put(name, value) != null) {
+                    invalidHeaders = true
+                    break
+                }
             }
+
+            if (invalidHeaders) {
+                writeResponse(socket, 400, JSONObject().put("error", "Invalid or duplicate HTTP header"))
+                return
+            }
+
             val method = requestLine.substringBefore(' ')
-            val requestPath = requestLine.substringAfter(' ').substringBefore(' ')
-            val length = headers["content-length"]?.toIntOrNull() ?: 0
-            if (method != "POST" || requestPath != path || length <= 0 || length > 1_048_576) {
-                writeResponse(socket, 400, JSONObject().put("error", "Invalid Mesh HTTP request")); return
+            val requestPath = requestLine.substringAfter(' ', "").substringBefore(' ')
+            val rawLength = headers["content-length"]
+            val length = rawLength?.toIntOrNull()
+            if (method != "POST" || requestPath != path || length == null || length <= 0 ||
+                headers.containsKey("transfer-encoding")
+            ) {
+                writeResponse(socket, 400, JSONObject().put("error", "Invalid Mesh HTTP request"))
+                return
             }
-            val body = CharArray(length)
+            if (length > MAX_HTTP_BODY_BYTES) {
+                writeResponse(socket, 413, JSONObject().put("error", "Mesh HTTP body too large"))
+                return
+            }
+
+            val body = ByteArray(length)
             var read = 0
             while (read < length) {
-                val count = reader.read(body, read, length - read)
+                val count = input.read(body, read, length - read)
                 if (count < 0) break
                 read += count
             }
-            if (read != length) { writeResponse(socket, 400, JSONObject().put("error", "Incomplete body")); return }
+            if (read != length) {
+                writeResponse(socket, 400, JSONObject().put("error", "Incomplete body"))
+                return
+            }
 
             var received: SoulMeshMessage? = null
             try {
-                val incoming = SoulMeshMessage.fromJson(JSONObject(String(body)))
+                val incoming = SoulMeshMessage.fromJson(JSONObject(String(body, StandardCharsets.UTF_8)))
                 received = incoming
                 require(incoming.target == sourceNucleus) {
-                    "Mesh request target ${incoming.target} does not match receiver $sourceNucleus"
+                    "Mesh request target " + incoming.target + " does not match receiver " + sourceNucleus
                 }
                 onMessage(incoming)
                 val response = responseHandler?.invoke(incoming) ?: SoulMeshMessage(
@@ -189,6 +251,8 @@ class SoulMeshHttpTransport(
             200 -> "OK"
             400 -> "Bad Request"
             500 -> "Internal Server Error"
+            413 -> "Payload Too Large"
+            431 -> "Request Header Fields Too Large"
             else -> "Error"
         }
         val headers = "HTTP/1.1 $status $reason\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: ${bytes.size}\r\nConnection: close\r\n\r\n"
