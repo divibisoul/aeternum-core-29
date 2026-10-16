@@ -11,7 +11,8 @@ import { verifyPeerResponseHmac } from './soul-mesh-peer-response-auth.mjs';
 
 const PORT = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const HOST = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
-const SECRET = process.env.SOUL_MESH_SECRET || '';
+const SECRET = process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || '';
+const INTERNAL_RELAY_TOKEN = process.env.SOUL_MESH_INTERNAL_RELAY_TOKEN || '';
 const VERSION = '1.0';
 const PROTOCOL = 'soul-mesh/1';
 const CONTRACT_VERSION = '1.1.0';
@@ -71,7 +72,11 @@ function protocolResponse(body,nonce=body.nonce??body.meta?.nonce){
   return {...body,nonce,hmac:crypto.createHmac('sha256',SECRET).update(canonicalLegacyResponse(body,nonce),'utf8').digest('hex')};
 }
 function verifyProtocolEnvelope(e,req){
-  if(!SECRET)return;
+  if(!SECRET){
+    if(process.env.NODE_ENV==='production')throw new Error('MESH_HMAC_SECRET_NOT_CONFIGURED');
+    return;
+  }
+  if(process.env.NODE_ENV==='production'&&Buffer.byteLength(SECRET,'utf8')<32)throw new Error('MESH_HMAC_SECRET_TOO_SHORT');
   const nonce=String(req.headers['x-soul-mesh-nonce']||e.nonce||e.meta?.nonce||'').trim();
   const headerNonce=String(req.headers['x-soul-mesh-nonce']||'').trim();
   const supplied=String(req.headers['x-soul-mesh-hmac']||'').trim();
@@ -85,6 +90,7 @@ function verifyProtocolEnvelope(e,req){
 }
 function verifyEnvelope(e){
   if(!e || e.version!==VERSION || !e.messageId || !e.correlationId || !e.nonce || !e.source || !e.target || !e.type) throw new Error('INVALID_MESH_ENVELOPE');
+  if(process.env.NODE_ENV==='production'&&(!SECRET||Buffer.byteLength(SECRET,'utf8')<32))throw new Error('MESH_HMAC_SECRET_NOT_CONFIGURED');
   if(e.target!==SELF && e.target!=='BROADCAST') throw new Error('MESH_TARGET_MISMATCH');
   if(!Number.isFinite(e.timestamp) || Math.abs(Date.now()-e.timestamp)>30_000) throw new Error('MESH_TIMESTAMP_OUT_OF_RANGE');
   nonceCleanup(); if(seenNonces.has(e.nonce)) throw new Error('MESH_REPLAY_DETECTED');
@@ -250,7 +256,32 @@ async function executeLocalCapability(task, correlationId) {
 }
 const superGPU=createSuperGPU({self:SELF,resolveOwner,forward,localExecute:executeLocalCapability});
 async function executeUnified(capability,payload,correlationId){ if(capability==='inference.intent') return inferInitialIntent({...payload||{},correlationId}); if(capability.startsWith('sara.')) return (await requestSara(capability,payload,correlationId)).payload; const task={id:crypto.randomUUID(),capability,payload}; return superGPU.execute(task,correlationId); }
+function isInternalRelayRequest(req){
+  const remote=String(req.socket.remoteAddress||'');
+  const loopback=remote==='127.0.0.1'||remote==='::1'||remote==='::ffff:127.0.0.1';
+  const supplied=Buffer.from(String(req.headers['x-soul-mesh-internal-token']||''),'utf8');
+  const expected=Buffer.from(INTERNAL_RELAY_TOKEN,'utf8');
+  return loopback&&expected.length>=32&&supplied.length===expected.length&&crypto.timingSafeEqual(supplied,expected);
+}
+
 async function handle(req,res){ const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
+  if(req.method==='POST'&&url.pathname==='/mesh/browser-relay'){
+    try{
+      if(!isInternalRelayRequest(req))return json(res,403,{ok:false,error:'INTERNAL_RELAY_UNAUTHORIZED'});
+      if(!SECRET||Buffer.byteLength(SECRET,'utf8')<32)return json(res,503,{ok:false,error:'MESH_HMAC_SECRET_NOT_CONFIGURED'});
+      const input=await readBody(req);
+      const target=input?.target;
+      const capability=typeof input?.capability==='string'?input.capability.trim():'';
+      const correlationId=typeof input?.correlationId==='string'?input.correlationId.trim():'';
+      if(!['N02','N03','N04','N05','N06'].includes(target))return json(res,403,{ok:false,error:'BROWSER_RELAY_TARGET_NOT_ALLOWED'});
+      if(!/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/.test(capability))return json(res,400,{ok:false,error:'BROWSER_RELAY_CAPABILITY_INVALID'});
+      if(!/^[A-Za-z0-9._:/-]{1,128}$/.test(correlationId))return json(res,400,{ok:false,error:'BROWSER_RELAY_CORRELATION_INVALID'});
+      const result=await forward(target,canonicalMessage(target,capability,input.payload??{},correlationId));
+      return json(res,result.kind==='error'?502:200,result);
+    }catch(error){
+      return json(res,502,{ok:false,error:error instanceof Error?error.message:'BROWSER_RELAY_FAILED'});
+    }
+  }
   if(process.env.NODE_ENV==='test'&&req.method==='POST'&&url.pathname==='/mesh/test/execute'){
     try{
       const probe=await readBody(req);
