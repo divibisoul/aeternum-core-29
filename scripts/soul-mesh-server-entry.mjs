@@ -327,7 +327,7 @@ function verifyN07Response(message) {
 
 async function relayToN07(message) {
   if (!N07_URL) throw new Error('SOUL_MESH_N07_URL_NOT_CONFIGURED');
-  if (!SECRET || SECRET.length < 16) throw new Error('SOUL_MESH_SECRET_NOT_CONFIGURED');
+  if (!SECRET || Buffer.byteLength(SECRET, 'utf8') < 32) throw new Error('SOUL_MESH_HMAC_SECRET_TOO_SHORT_OR_MISSING');
   if (!message || message.protocol !== PROTOCOL || message.contractVersion !== CONTRACT_VERSION || message.source !== 'N01' || message.target !== 'N07') throw new Error('INVALID_N01_TO_N07_REQUEST');
   if (!message.id || !message.correlationId || message.kind !== 'request' || !message.capability || !Number.isFinite(message.timestamp)) throw new Error('INVALID_N01_TO_N07_REQUEST');
   const nonce = crypto.randomUUID();
