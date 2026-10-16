@@ -68,14 +68,20 @@ jobs:
         run: |
           hmac_secret="$(openssl rand -hex 48)"
           bearer_token="$(openssl rand -hex 32)"
+          registration_n04="$(openssl rand -hex 32)"
+          registration_n05="$(openssl rand -hex 32)"
           auth_secret="$(openssl rand -hex 32)"
           echo "::add-mask::$hmac_secret"
           echo "::add-mask::$bearer_token"
+          echo "::add-mask::$registration_n04"
+          echo "::add-mask::$registration_n05"
           echo "::add-mask::$auth_secret"
           {
             echo "SOUL_MESH_SECRET=$hmac_secret"
             echo "SOUL_MESH_HMAC_SECRET=$hmac_secret"
             echo "SOUL_MESH_TOKEN=$bearer_token"
+            echo "SOUL_MESH_N04_REGISTRATION_TOKEN=$registration_n04"
+            echo "SOUL_MESH_N05_REGISTRATION_TOKEN=$registration_n05"
             echo "AUTH_SECRET=$auth_secret"
           } >> "$GITHUB_ENV"
       - name: Build N01 web runtime
