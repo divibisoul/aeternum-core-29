@@ -1,6 +1,8 @@
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { isPublicN07StructuralCapability } from './soul-mesh-relay-policy.mjs';
+import { canonicalOrderedJson } from './soul-mesh-canonical-json.mjs';
 
 const publicPort = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const internalPort = publicPort + 1;
@@ -50,21 +52,23 @@ function writeDirect(res, status, body) {
 }
 
 function canonicalN07Relay(message, nonce) {
-  return JSON.stringify({
-    protocol: message.protocol,
-    contractVersion: message.contractVersion,
-    id: message.id,
-    correlationId: message.correlationId,
-    source: message.source,
-    target: message.target,
-    kind: message.kind,
-    capability: message.capability,
-    payload: message.payload || {},
-    timestamp: message.timestamp,
-    transport: message.meta?.transport,
-    meta: message.meta,
-    nonce,
-  });
+  // Preserve the outer Go-struct field order; sort every nested map exactly
+  // like encoding/json. This also covers integer-like JSON keys deterministically.
+  return canonicalOrderedJson([
+    ['protocol', message.protocol],
+    ['contractVersion', message.contractVersion],
+    ['id', message.id],
+    ['correlationId', message.correlationId],
+    ['source', message.source],
+    ['target', message.target],
+    ['kind', message.kind],
+    ['capability', message.capability],
+    ['payload', message.payload ?? null],
+    ['timestamp', message.timestamp],
+    ['transport', message.meta?.transport ?? null],
+    ['meta', message.meta ?? null],
+    ['nonce', nonce],
+  ]);
 }
 
 function signN07Relay(message, nonce) {
@@ -74,23 +78,23 @@ function signN07Relay(message, nonce) {
 function verifyN07Response(message) {
   if (!message || message.protocol !== PROTOCOL || message.contractVersion !== CONTRACT_VERSION) throw new Error('INVALID_N07_RESPONSE_CONTRACT');
   if (message.source !== 'N07' || message.target !== 'N01') throw new Error('INVALID_N07_RESPONSE_ROUTE');
+  if (!message.id || !['response', 'error'].includes(message.kind) || typeof message.capability !== 'string' || !message.payload || typeof message.payload !== 'object' || Array.isArray(message.payload)) throw new Error('INVALID_N07_RESPONSE_ENVELOPE');
   if (!message.correlationId || !message.nonce || !message.hmac) throw new Error('INVALID_N07_RESPONSE_AUTH');
   if (!Number.isFinite(message.timestamp) || Math.abs(Date.now() - message.timestamp) > 30_000) throw new Error('N07_RESPONSE_TIMESTAMP_OUT_OF_RANGE');
-  const unsigned = {
-    version: '1.0',
-    contractVersion: message.contractVersion,
-    messageId: message.id,
-    source: message.source,
-    target: message.target,
-    timestamp: message.timestamp,
-    nonce: message.nonce,
-    correlationId: message.correlationId,
-    type: message.kind === 'error' ? 'ERROR' : 'TASK_RESULT',
-    payload: { capability: message.capability || '', payload: message.payload || {} },
-    operation: message.operation,
-    metadata: message.metadata,
-  };
-  const canonical = JSON.stringify(unsigned);
+  const canonical = canonicalOrderedJson([
+    ['version', '1.0'],
+    ['contractVersion', message.contractVersion],
+    ['messageId', message.id],
+    ['source', message.source],
+    ['target', message.target],
+    ['timestamp', message.timestamp],
+    ['nonce', message.nonce],
+    ['correlationId', message.correlationId],
+    ['type', message.kind === 'error' ? 'ERROR' : 'TASK_RESULT'],
+    ['payload', { capability: message.capability || '', payload: message.payload || {} }],
+    ['operation', message.operation],
+    ['metadata', message.metadata],
+  ]);
   const expected = crypto.createHmac('sha256', SECRET).update(canonical).digest('hex');
   const actual = String(message.hmac);
   if (expected.length !== actual.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(actual))) throw new Error('N07_RESPONSE_HMAC_INVALID');
@@ -119,9 +123,11 @@ async function relayToN07(message) {
       cache: 'no-store',
     });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(`N07_HTTP_${response.status}`);
     if (body.correlationId !== message.correlationId) throw new Error('N07_CORRELATION_MISMATCH');
     verifyN07Response(body);
+    // Accept only authenticated, correlated Mesh envelopes. HTTP error status is
+    // interpreted after signature validation so N07's structured error is preserved.
+    if (!response.ok && body.kind !== 'error') throw new Error(`N07_HTTP_${response.status}`);
     return body;
   } finally {
     clearTimeout(timer);
@@ -136,6 +142,10 @@ async function proxy(req, res) {
       const message = JSON.parse(rawBody.toString('utf8'));
       if (message?.source !== 'N01' || message?.target !== 'N07') {
         writeDirect(res, 400, { error: 'N01_N07_ROUTE_REQUIRED' });
+        return;
+      }
+      if (!isPublicN07StructuralCapability(message?.capability)) {
+        writeDirect(res, 403, { error: 'N07_STRUCTURAL_CAPABILITY_ONLY' });
         return;
       }
       const body = await relayToN07(message);

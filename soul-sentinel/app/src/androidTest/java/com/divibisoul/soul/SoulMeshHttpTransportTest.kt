@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -14,7 +13,7 @@ import java.util.concurrent.TimeUnit
 @RunWith(AndroidJUnit4::class)
 class SoulMeshHttpTransportTest {
     @Test
-    fun loopbackRequestReachesReceiverAndReturnsAck() {
+    fun loopbackRequestReachesReceiverAndReturnsCanonicalResponse() {
         val received = CountDownLatch(1)
         var receivedMessage: SoulMeshMessage? = null
         val receiver = SoulMeshHttpTransport(sourceNucleus = "N02", port = 18765)
@@ -34,16 +33,16 @@ class SoulMeshHttpTransportTest {
                 kind = "request",
                 capability = "context.read",
                 payload = JSONObject().put("probe", true),
-                timestamp = Instant.now().toString(),
+                timestamp = System.currentTimeMillis(),
             )
 
             val result = sender.send("http://127.0.0.1:18765/soul/mesh/v1", message)
-            assertTrue(result.isSuccess)
-            val ack = result.getOrThrow()
-            assertEquals("ack", ack.kind)
-            assertEquals(correlationId, ack.correlationId)
-            assertEquals("N02", ack.source)
-            assertEquals("N01", ack.target)
+            assertTrue("Loopback Mesh HTTP failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
+            val response = result.getOrThrow()
+            assertEquals("response", response.kind)
+            assertEquals(correlationId, response.correlationId)
+            assertEquals("N02", response.source)
+            assertEquals("N01", response.target)
             assertTrue(received.await(2, TimeUnit.SECONDS))
             assertEquals(correlationId, receivedMessage?.correlationId)
             assertEquals("N01", receivedMessage?.source)
@@ -68,7 +67,7 @@ class SoulMeshHttpTransportTest {
                 kind = "request",
                 capability = "context.read",
                 payload = JSONObject(),
-                timestamp = Instant.now().toString(),
+                timestamp = System.currentTimeMillis(),
             )
             val result = sender.send("http://127.0.0.1:18766/soul/mesh/v1", malformed)
             assertTrue(result.isFailure)
