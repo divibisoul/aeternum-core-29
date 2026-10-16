@@ -32,7 +32,7 @@ class SoulMeshHttpTransportTest {
                 target = "N02",
                 kind = "request",
                 capability = "context.read",
-                payload = JSONObject().put("probe", true),
+                payload = JSONObject().put("probe", true).put("message", "consciência 🧠"),
                 timestamp = System.currentTimeMillis(),
             )
 
@@ -45,6 +45,7 @@ class SoulMeshHttpTransportTest {
             assertEquals("N01", response.target)
             assertTrue(received.await(2, TimeUnit.SECONDS))
             assertEquals(correlationId, receivedMessage?.correlationId)
+            assertEquals("consciência 🧠", receivedMessage?.payload?.optString("message"))
             assertEquals("N01", receivedMessage?.source)
             assertEquals("N02", receivedMessage?.target)
         } finally {
