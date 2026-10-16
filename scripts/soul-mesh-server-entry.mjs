@@ -63,6 +63,13 @@ function writeDirect(res, status, body) {
   res.end(output);
 }
 
+function configuredBrowserOrigins() {
+  return String(process.env.SOUL_MESH_BROWSER_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
+}
+
 function browserOriginAllowed(req) {
   const origin = String(req.headers.origin || '').trim();
   if (!origin || origin === 'null') return false;
@@ -71,14 +78,18 @@ function browserOriginAllowed(req) {
   } catch {
     return false;
   }
-  const configuredOrigins = String(process.env.SOUL_MESH_BROWSER_ALLOWED_ORIGINS || '')
-    .split(',')
-    .map(value => value.trim())
-    .filter(Boolean);
-  if (configuredOrigins.includes(origin)) return true;
+  if (configuredBrowserOrigins().includes(origin)) return true;
   // Browsers set this forbidden request header themselves. Cross-origin deployments
   // must explicitly list their frontend origin in SOUL_MESH_BROWSER_ALLOWED_ORIGINS.
   return String(req.headers['sec-fetch-site'] || '').toLowerCase() === 'same-origin';
+}
+
+function applyBrowserCors(req, res) {
+  const origin = String(req.headers.origin || '').trim();
+  if (origin && configuredBrowserOrigins().includes(origin)) {
+    res.setHeader('access-control-allow-origin', origin);
+    res.setHeader('vary', 'Origin');
+  }
 }
 
 async function requireBrowserAuthentication(req) {
@@ -162,6 +173,7 @@ async function handleBrowserRelay(req, res, rawBody, legacyN07Route = false) {
     writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_ORIGIN_REJECTED' });
     return;
   }
+  applyBrowserCors(req, res);
   const authorization = await requireBrowserAuthentication(req);
   if (!authorization.ok) {
     writeDirect(res, authorization.status, { error: authorization.code });
@@ -321,6 +333,21 @@ async function proxy(req, res) {
   const rawBody = req.method === 'POST' ? await readRequestBody(req) : Buffer.alloc(0);
 
   const browserRoutePath = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
+  if (req.method === 'OPTIONS' && (browserRoutePath === '/api/soul-mesh/relay' || browserRoutePath === '/api/soul-mesh/n07')) {
+    if (!browserOriginAllowed(req)) {
+      writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_ORIGIN_REJECTED' });
+      return;
+    }
+    applyBrowserCors(req, res);
+    res.writeHead(204, {
+      'access-control-allow-methods': 'POST, OPTIONS',
+      'access-control-allow-headers': 'authorization, content-type, x-soul-correlation-id',
+      'access-control-max-age': '600',
+      'content-length': '0',
+    });
+    res.end();
+    return;
+  }
   if (req.method === 'POST' && (browserRoutePath === '/api/soul-mesh/relay' || browserRoutePath === '/api/soul-mesh/n07')) {
     await handleBrowserRelay(req, res, rawBody, browserRoutePath === '/api/soul-mesh/n07');
     return;
