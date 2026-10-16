@@ -3,6 +3,7 @@ export type MeshKind='request'|'response'|'event'|'error';
 export type SoulMeshMessage={protocol:'soul-mesh/1';contractVersion:'1.1.0';id:string;correlationId:string;source:NucleusId;target:NucleusId;kind:MeshKind;capability:string;payload:unknown;timestamp:number;meta?:{runtime?:string;transport?:string;encoding?:string;version?:string;nonce?:string;traceId?:string}};
 
 const ACTIVE_PEERS:Exclude<NucleusId,'N01'|'N07'>[]=['N02','N03','N04','N05','N06'];
+const STRUCTURAL_PEERS:Extract<NucleusId,'N07'>[]=['N07'];
 const N07_STRUCTURAL_CAPABILITIES = new Set(['mesh.ping', 'external.federation.describe@1.0.0', 'external.federation.execute@1.0.0']);
 const MAX_ATTEMPTS=3;
 const RETRY_BASE_DELAY_MS=250;
@@ -200,5 +201,5 @@ export async function pingStructuralControlPlane(timeoutMs = 5000) {
 export const N01_OUT_CHANNELS = ACTIVE_PEERS.map(target => `N01.OUT.${target}`);
 export const N01_IN_CHANNELS = ACTIVE_PEERS.map(source => `N01.IN.${source}`);
 export const N01_LOGICAL_CHANNELS = [...N01_OUT_CHANNELS, ...N01_IN_CHANNELS];
-export const N01_STRUCTURAL_OUT_CHANNELS = ['N07.OUT.N01'];
-export const N01_STRUCTURAL_IN_CHANNELS = ['N01.IN.N07'];
+export const N01_STRUCTURAL_OUT_CHANNELS = STRUCTURAL_PEERS.map(target => `N01.OUT.${target}`);
+export const N01_STRUCTURAL_IN_CHANNELS = STRUCTURAL_PEERS.map(source => `N01.IN.${source}`);
