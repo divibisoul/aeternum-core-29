@@ -109,12 +109,14 @@ async function dispatchWithRetry(target: NucleusId, capability: string, payload:
   if (!capability.trim() || !/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/.test(capability.trim())) {
     throw new Error('SOUL_MESH_CAPABILITY_REQUIRED');
   }
-  if (target === 'N07' && !N07_STRUCTURAL_CAPABILITIES.has(capability.trim())) {
+  const isN07SuperGPU = target === 'N07' && capability.trim() === 'mesh.supergpu.execute@1.0.0';
+  if (target === 'N07' && !N07_STRUCTURAL_CAPABILITIES.has(capability.trim()) && !isN07SuperGPU) {
     throw new Error('N07_STRUCTURAL_CAPABILITY_ONLY');
   }
   const origin = globalThis.location?.origin?.trim() ?? '';
   if (!origin) throw new Error('SOUL_MESH_BROWSER_ORIGIN_REQUIRED');
-  const requestUrl = new URL('/api/soul-mesh/relay', origin).toString();
+  const relayPath = isN07SuperGPU ? '/api/soul-mesh/supergpu' : '/api/soul-mesh/relay';
+  const requestUrl = new URL(relayPath, origin).toString();
   if (!circuitAllows(target)) throw new Error(`SOUL_MESH_CIRCUIT_OPEN:${target}`);
 
   const retrySafe = RETRY_SAFE_CAPABILITIES.has(capability.trim());
