@@ -168,7 +168,7 @@ function validBrowserRelayResponse(body, target, capability, correlationId) {
     && (body.kind === 'response' || body.kind === 'error'));
 }
 
-async function handleBrowserRelay(req, res, rawBody, legacyN07Route = false) {
+async function handleBrowserRelay(req, res, rawBody, legacyN07Route = false, supergpuRoute = false) {
   if (!browserOriginAllowed(req)) {
     writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_ORIGIN_REJECTED' });
     return;
@@ -191,7 +191,7 @@ async function handleBrowserRelay(req, res, rawBody, legacyN07Route = false) {
     writeDirect(res, 400, { error: 'INVALID_JSON' });
     return;
   }
-  const target = legacyN07Route ? 'N07' : input?.target;
+  const target = legacyN07Route || supergpuRoute ? 'N07' : input?.target;
   const capability = typeof input?.capability === 'string' ? input.capability.trim() : '';
   const correlationId = typeof input?.correlationId === 'string' ? input.correlationId.trim() : '';
   if (!/^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,255}$/.test(capability)) {
@@ -203,7 +203,37 @@ async function handleBrowserRelay(req, res, rawBody, legacyN07Route = false) {
     return;
   }
   if (target === 'N07') {
-    if (!isPublicN07StructuralCapability(capability)) {
+    if (supergpuRoute) {
+      // Accelerator execution has its own explicit authorization boundary. It is
+      // not added to the public structural/control-plane allowlist.
+      if (capability !== 'mesh.supergpu.execute@1.0.0') {
+        writeDirect(res, 403, { error: 'N07_SUPERGPU_CAPABILITY_ONLY' });
+        return;
+      }
+      const allowedUsers = String(process.env.SOUL_MESH_BROWSER_SUPERGPU_ALLOWED_USER_IDS || '')
+        .split(',')
+        .map(value => value.trim())
+        .filter(Boolean);
+      if (!allowedUsers.includes(authorization.userId)) {
+        writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_SUPERGPU_USER_NOT_ALLOWED' });
+        return;
+      }
+      const payload = input?.payload;
+      const values = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload.values : undefined;
+      const metadata = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload.metadata : undefined;
+      if (!Array.isArray(values) || values.length === 0 || values.length > 65536
+        || values.some(value => typeof value !== 'number' || !Number.isFinite(value))) {
+        writeDirect(res, 400, { error: 'SUPERGPU_VALUES_INVALID' });
+        return;
+      }
+      if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)
+        || typeof metadata.operation !== 'string' || !metadata.operation.trim()
+        || metadata.operation.trim().length > 64
+        || (metadata.device !== undefined && (typeof metadata.device !== 'string' || metadata.device.trim().length > 128))) {
+        writeDirect(res, 400, { error: 'SUPERGPU_METADATA_INVALID' });
+        return;
+      }
+    } else if (!isPublicN07StructuralCapability(capability)) {
       writeDirect(res, 403, { error: 'N07_STRUCTURAL_CAPABILITY_ONLY' });
       return;
     }
@@ -333,7 +363,11 @@ async function proxy(req, res) {
   const rawBody = req.method === 'POST' ? await readRequestBody(req) : Buffer.alloc(0);
 
   const browserRoutePath = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
-  if (req.method === 'OPTIONS' && (browserRoutePath === '/api/soul-mesh/relay' || browserRoutePath === '/api/soul-mesh/n07')) {
+  if (req.method === 'OPTIONS' && (
+    browserRoutePath === '/api/soul-mesh/relay'
+    || browserRoutePath === '/api/soul-mesh/n07'
+    || browserRoutePath === '/api/soul-mesh/supergpu'
+  )) {
     if (!browserOriginAllowed(req)) {
       writeDirect(res, 403, { error: 'SOUL_MESH_BROWSER_ORIGIN_REJECTED' });
       return;
@@ -348,8 +382,18 @@ async function proxy(req, res) {
     res.end();
     return;
   }
-  if (req.method === 'POST' && (browserRoutePath === '/api/soul-mesh/relay' || browserRoutePath === '/api/soul-mesh/n07')) {
-    await handleBrowserRelay(req, res, rawBody, browserRoutePath === '/api/soul-mesh/n07');
+  if (req.method === 'POST' && (
+    browserRoutePath === '/api/soul-mesh/relay'
+    || browserRoutePath === '/api/soul-mesh/n07'
+    || browserRoutePath === '/api/soul-mesh/supergpu'
+  )) {
+    await handleBrowserRelay(
+      req,
+      res,
+      rawBody,
+      browserRoutePath === '/api/soul-mesh/n07',
+      browserRoutePath === '/api/soul-mesh/supergpu',
+    );
     return;
   }
 
