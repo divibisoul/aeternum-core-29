@@ -13,7 +13,14 @@ const SECRET = String(process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC
 const PROTOCOL = 'soul-mesh/1';
 const CONTRACT_VERSION = '1.1.0';
 const child = spawn(process.execPath, ['scripts/soul-mesh-server.mjs'], {
-  env: { ...process.env, SOUL_MESH_N01_PORT: String(internalPort) },
+  // Keep the internal capability server private to the local reverse proxy.
+  // Binding the child to 0.0.0.0 would expose the unwrapped internal port and
+  // bypass the public gateway's N07 relay and request-boundary policies.
+  env: {
+    ...process.env,
+    SOUL_MESH_N01_PORT: String(internalPort),
+    SOUL_MESH_N01_HOST: '127.0.0.1',
+  },
   stdio: 'inherit',
 });
 
