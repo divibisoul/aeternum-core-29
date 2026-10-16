@@ -31,7 +31,8 @@ Keep secrets out of source files and container layers.
 - `SOUL_MESH_SECRET`: high-entropy HMAC secret used by the N01 ingress. It must match the reciprocal Mesh secret configured for the peer.
 - `SOUL_MESH_N07_URL`: real reachable base URL of the N07 gateway for external federation calls. N01 sends a signed `soul-mesh/1` request through its authenticated relay.
 - `SOUL_MESH_N02_URL`: required for the existing N01-to-N02 capability route.
-- `SOUL_MESH_HMAC_SECRET` and the appropriate peer URL belong in the respective GitHub Actions Secrets/Variables or in the chosen host's runtime configuration, not in this repository.
+- `SOUL_MESH_N02_REGISTRATION_TOKEN` through `SOUL_MESH_N07_REGISTRATION_TOKEN`: distinct random server-only credentials, each at least 32 bytes. A peer must send `Authorization: Bearer <its own token>` when registering that same nucleus ID. A token for N04 cannot register or replace N05, and missing credentials fail closed.
+- Store these registration credentials, `SOUL_MESH_HMAC_SECRET`, and the appropriate peer URLs in the respective GitHub Actions Secrets/Variables or chosen host's runtime configuration, never in source control or `VITE_*` variables. Configure each peer's registration client to use its corresponding credential before enabling external registration.
 
 A GitHub-hosted workflow runner can prove a local container build and health endpoint. It cannot create a persistent public N01/N07 service URL by itself. Before claiming live cross-nucleus execution, deploy the images on an available free host or self-hosted machine, set the real URLs and matching secrets, then run the bidirectional HMAC/correlation and provider execution checks.
 
