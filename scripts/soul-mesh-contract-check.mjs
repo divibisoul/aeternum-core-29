@@ -113,6 +113,7 @@ assert.match(relaySource, /access-control-allow-headers/);
 assert.match(relaySource, /SOUL_MESH_BROWSER_ALLOWED_ORIGINS/);
 assert.match(relaySource, /SOUL_MESH_INTERNAL_RELAY_TOKEN/);
 assert.match(relaySource, /SOUL_MESH_BROWSER_SUPERGPU_ALLOWED_USER_IDS/);
+assert.match(relaySource, /Buffer\.byteLength\(SECRET, 'utf8'\) < 32/);
 assert.match(relaySource, /browserRoutePath === '\/api\/soul-mesh\/supergpu'/);
 assert.match(relaySource, /SUPERGPU_VALUES_INVALID/);
 assert.match(peerClientSource, /\/api\/soul-mesh\/supergpu/);
