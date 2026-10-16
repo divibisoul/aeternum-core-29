@@ -89,6 +89,23 @@ try {
     assert.equal(received.at(-1).correlationId, correlationId, 'bridge preserves correlation on the real HTTP envelope');
     assert.equal(received.at(-1).target, 'N02');
     assert.equal(received.at(-1).source, 'N01');
+
+    // Backward-compatibility contract: callers that do not yet supply a
+    // correlation still receive a generated UUID from the router.
+    const generatedResult = await delegateN01ExternalCapability(link, {
+      capability: 'strategic_planning',
+      workloads: [],
+      candidate: { capability: 'strategic_planning', utility: 0.7 },
+    });
+    const generatedCorrelationId = received.at(-1)?.correlationId;
+    assert.match(
+      generatedCorrelationId ?? '',
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      'legacy callers receive a generated UUID instead of losing correlation',
+    );
+    assert.deepEqual(generatedResult, { accepted: true, echoedCorrelationId: generatedCorrelationId });
+    assert.equal(received.at(-1).target, 'N02');
+    assert.equal(received.at(-1).source, 'N01');
   }
 
   console.log(`SOUL_MESH_CORRELATION_${mode.slice(2).toUpperCase()}_PASS`);
