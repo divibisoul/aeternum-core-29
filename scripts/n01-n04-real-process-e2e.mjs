@@ -15,6 +15,10 @@ const n01Url = 'http://127.0.0.1:' + n01Port;
 const n04Url = 'http://127.0.0.1:' + n04Port;
 const secret = process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || randomUUID() + randomUUID();
 const token = process.env.SOUL_MESH_TOKEN || randomUUID() + randomUUID();
+const databaseUrl = process.env.POSTGRES_URL?.trim();
+if (!databaseUrl) {
+  throw new Error('SOUL_MESH_E2E_REAL_POSTGRES_URL_REQUIRED: configure the healthy PostgreSQL service; synthetic URLs are not accepted.');
+}
 const children = [];
 const logs = new Map();
 
@@ -116,7 +120,7 @@ try {
     PORT: String(n04Port),
     HOSTNAME: '127.0.0.1',
     AUTH_SECRET: process.env.AUTH_SECRET || randomUUID() + randomUUID(),
-    POSTGRES_URL: process.env.POSTGRES_URL || 'postgresql://soulmesh:soulmesh@127.0.0.1:5432/soulmesh',
+    POSTGRES_URL: databaseUrl,
     SOUL_MESH_SECRET: secret,
     SOUL_MESH_HMAC_SECRET: secret,
     SOUL_MESH_TOKEN: token,
