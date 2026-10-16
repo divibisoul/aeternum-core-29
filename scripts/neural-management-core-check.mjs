@@ -20,16 +20,27 @@ try {
   resources.registerModule('NeuralManagementCore', 0.85);
 
   const core = new NeuralManagementCore(lattice, resources);
-  const output = core.processSignal('SOUL');
+  resources.start(10, 50);
+  let output;
+  let status;
+  try {
+    output = core.processSignal('SOUL');
+    assert.equal(Array.isArray(output), true);
+    assert.ok(output.length > 0);
 
-  assert.equal(Array.isArray(output), true);
-  assert.ok(output.length > 0);
-
-  const status = core.getStatus();
+    // The integrated public status must expose the same real samples as ResourceManager.
+    await new Promise(resolve => setTimeout(resolve, 80));
+    status = core.getStatus();
+  } finally {
+    resources.stop();
+  }
   assert.equal(status.name, 'NeuralManagementCore');
   assert.equal(status.connected, true);
   assert.ok(status.neural.nodeCount > 0);
   assert.ok(status.resources.modulesManaged > 0);
+  assert.equal(status.resources.telemetry.status, 'MEASURED');
+  assert.equal(status.resources.telemetry.cpuSource, 'process.cpuUsage(user+system)/wall-time');
+  assert.equal(status.resources.telemetry.memorySource, 'process.memoryUsage(heapUsed/heapTotal)');
   assert.equal(status.neural.nodeCount, 22);
   assert.equal(status.processing.totalProcessed, 0);
   assert.equal(status.resources.modulesManaged, 1);
