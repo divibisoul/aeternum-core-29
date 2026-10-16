@@ -15,6 +15,12 @@ const n01Url = 'http://127.0.0.1:' + n01Port;
 const n04Url = 'http://127.0.0.1:' + n04Port;
 const secret = process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC_SECRET || randomUUID() + randomUUID();
 const token = process.env.SOUL_MESH_TOKEN || randomUUID() + randomUUID();
+const registrationTokenN04 = process.env.SOUL_MESH_N04_REGISTRATION_TOKEN?.trim();
+const registrationTokenN05 = process.env.SOUL_MESH_N05_REGISTRATION_TOKEN?.trim();
+if (!registrationTokenN04 || Buffer.byteLength(registrationTokenN04, 'utf8') < 32
+  || !registrationTokenN05 || Buffer.byteLength(registrationTokenN05, 'utf8') < 32) {
+  throw new Error('SOUL_MESH_N04_N05_REGISTRATION_CREDENTIALS_REQUIRED: independent 32+ byte credentials are required for the registration boundary E2E.');
+}
 const databaseUrl = process.env.POSTGRES_URL?.trim();
 if (!databaseUrl) {
   throw new Error('SOUL_MESH_E2E_REAL_POSTGRES_URL_REQUIRED: configure the healthy PostgreSQL service; synthetic URLs are not accepted.');
@@ -109,6 +115,8 @@ try {
     SOUL_MESH_N01_PORT: String(n01Port),
     SOUL_MESH_N01_HOST: '127.0.0.1',
     SOUL_MESH_N04_URL: n04Url,
+    SOUL_MESH_N04_REGISTRATION_TOKEN: registrationTokenN04,
+    SOUL_MESH_N05_REGISTRATION_TOKEN: registrationTokenN05,
   });
   const n04 = start('N04 actual Next.js production runtime', [
     resolve(n04Root, 'node_modules/next/dist/bin/next'),
@@ -147,6 +155,86 @@ try {
       return response.status === 400;
     }),
   ]);
+
+  // Exercise peer registration through the real public gateway. Missing credentials
+  // must not mutate N04's current route, and one peer's credential cannot claim N05.
+  async function discoveredPeers() {
+    const response = await fetch(n01Url + '/mesh/discovery', {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) throw new Error('N01_REGISTRATION_DISCOVERY_FAILED:' + response.status);
+    const body = await response.json().catch(() => null);
+    if (!Array.isArray(body?.peers)) throw new Error('N01_REGISTRATION_DISCOVERY_INVALID');
+    return body.peers;
+  }
+  const beforeRegistration = await discoveredPeers();
+  const originalN04 = beforeRegistration.find(peer => peer.id === 'N04');
+  if (!originalN04 || String(originalN04.url).replace(/\/$/, '') !== n04Url) {
+    throw new Error('N01_REGISTRATION_TEST_PRECONDITION_FAILED: configured N04 endpoint is not visible.');
+  }
+  const originalN05 = beforeRegistration.find(peer => peer.id === 'N05') ?? null;
+  for (const path of ['/mesh/register', '/api/soul-mesh/register']) {
+    const response = await fetch(n01Url + path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nucleus: 'N04', endpoint: 'http://attacker.invalid', capabilities: ['mesh.ping'] }),
+      signal: AbortSignal.timeout(3000),
+    });
+    const body = await response.json().catch(() => null);
+    if (response.status !== 401 || body?.error !== 'MESH_REGISTRATION_AUTH_REQUIRED') {
+      throw new Error('N01_PEER_REGISTRATION_UNAUTHENTICATED_ACCEPTED:' + path + ':' + response.status + ':' + String(body?.error));
+    }
+  }
+  const crossIdentityRegistration = await fetch(n01Url + '/mesh/register', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer ' + registrationTokenN04,
+    },
+    body: JSON.stringify({ nucleus: 'N05', endpoint: 'http://attacker.invalid', capabilities: ['mesh.ping'] }),
+    signal: AbortSignal.timeout(3000),
+  });
+  const crossIdentityBody = await crossIdentityRegistration.json().catch(() => null);
+  if (crossIdentityRegistration.status !== 401 || crossIdentityBody?.error !== 'MESH_REGISTRATION_AUTH_INVALID') {
+    throw new Error('N01_PEER_REGISTRATION_CROSS_IDENTITY_ACCEPTED:' + crossIdentityRegistration.status + ':' + String(crossIdentityBody?.error));
+  }
+  const afterRejectedRegistrations = await discoveredPeers();
+  const unchangedN04 = afterRejectedRegistrations.find(peer => peer.id === 'N04');
+  const unchangedN05 = afterRejectedRegistrations.find(peer => peer.id === 'N05') ?? null;
+  if (!unchangedN04 || String(unchangedN04.url).replace(/\/$/, '') !== n04Url
+    || JSON.stringify(unchangedN05) !== JSON.stringify(originalN05)) {
+    throw new Error('N01_PEER_REGISTRATION_UNAUTHORIZED_MUTATED_REGISTRY');
+  }
+  const authenticatedRegistration = await fetch(n01Url + '/api/soul-mesh/register', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: 'Bearer ' + registrationTokenN04,
+    },
+    body: JSON.stringify({
+      nucleus: 'N04',
+      endpoint: n04Url,
+      role: 'independent-ai',
+      capabilities: ['mesh.ping'],
+    }),
+    signal: AbortSignal.timeout(3000),
+  });
+  const authenticatedBody = await authenticatedRegistration.json().catch(() => null);
+  if (authenticatedRegistration.status !== 200 || authenticatedBody?.registered !== 'N04') {
+    throw new Error('N01_PEER_REGISTRATION_VALID_CREDENTIAL_REJECTED:' + authenticatedRegistration.status + ':' + String(authenticatedBody?.error));
+  }
+  const afterAuthenticatedRegistration = await discoveredPeers();
+  const registeredN04 = afterAuthenticatedRegistration.find(peer => peer.id === 'N04');
+  if (!registeredN04 || String(registeredN04.url).replace(/\/$/, '') !== n04Url) {
+    throw new Error('N01_PEER_REGISTRATION_VALID_ENDPOINT_NOT_PRESERVED');
+  }
+  console.log('N01_PEER_REGISTRATION_AUTH_BOUNDARY_PASS ' + JSON.stringify({
+    rejectedUnauthenticatedRoutes: ['/mesh/register', '/api/soul-mesh/register'],
+    rejectedCrossIdentityRegistration: true,
+    acceptedAuthenticatedN04Registration: true,
+    attackerEndpointMutation: false,
+  }));
 
   // Verify the actual public gateway rejects browser-relay traffic without a
   // Supabase access token before it can mint an N01 identity or reach any peer.
