@@ -26,7 +26,8 @@
     "upstream:fabric:check": "bun test src/core/fusion/N01ExternalCapabilityFabric.test.ts",
     "vagus:clareira:check": "node scripts/vagus-clareira-check.mjs",
     "mesh:dual-runtime:check": "node --experimental-strip-types scripts/soul-mesh-dual-runtime-contract-check.mjs",
-    "mesh:dual-runtime:test": "node --experimental-strip-types --test src/core/mesh/SoulMeshDualRuntime.test.ts"
+    "mesh:dual-runtime:test": "node --experimental-strip-types --test src/core/mesh/SoulMeshDualRuntime.test.ts",
+    "mesh:correlation:check": "node --experimental-strip-types --test src/core/mesh/SoulMeshRouter.correlation.test.ts lib/aeternum/RecoveredAeternumExternalCapabilityBridge.test.ts"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.2.8",
