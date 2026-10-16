@@ -35,6 +35,7 @@ export class HomeostasisManager {
   private vagus: VagusNerve | null = null;
   private deviceState: ClareiraDeviceState | null = null;
   private lastTurboEnd = 0;
+  private cryptoUnavailableWarned = false;
   
   private checkInterval: ReturnType<typeof setInterval> | null = null;
   private _running = false;
@@ -88,9 +89,17 @@ export class HomeostasisManager {
     const node = this.allNodes.find(item => item.id === signal.sourceNodeId);
     if (!node) return;
     if (signal.signalType === 'thermal_critical') {
-      this.vagus?.sendEfferent(node.id, 'reduce_thermal', signal.payload, 0.95);
+      this.vagus?.sendEfferent(node.id, 'reduce_thermal', {
+        ...signal.payload,
+        reduction: 0.1,
+        sourceSignalId: signal.id,
+      }, 0.95);
     } else if (signal.signalType === 'overload' || signal.signalType === 'energy_low') {
-      this.vagus?.sendEfferent(node.id, 'calm', signal.payload, 0.85);
+      this.vagus?.sendEfferent(node.id, 'calm', {
+        ...signal.payload,
+        processingRateFactor: 0.9,
+        sourceSignalId: signal.id,
+      }, 0.85);
     } else if (signal.signalType === 'fault') {
       this.globalStress = Math.min(100, this.globalStress + signal.priority);
     }
@@ -188,6 +197,22 @@ export class HomeostasisManager {
   /**
    * Aplica regulação homeostática
    */
+  private shouldAttemptRecovery(): boolean {
+    const cryptoApi = globalThis.crypto;
+    if (!cryptoApi || typeof cryptoApi.getRandomValues !== 'function') {
+      if (!this.cryptoUnavailableWarned) {
+        this.cryptoUnavailableWarned = true;
+        console.warn('[HomeostasisManager] Recuperação automática bloqueada: fonte aleatória segura indisponível');
+      }
+      return false;
+    }
+    const sample = new Uint32Array(1);
+    cryptoApi.getRandomValues(sample);
+    const value = sample[0];
+    if (value === undefined) return false;
+    return value / 0x1_0000_0000 < RECOVERY_CHANCE_PER_CHECK;
+  }
+
   private applyRegulation(): void {
     const currentTime = Date.now();
 
@@ -227,7 +252,7 @@ export class HomeostasisManager {
     // ======= RECUPERAÇÃO DE NÓS =======
     if (this.globalStress < RECOVERY_STRESS_THRESHOLD) {
       for (const node of this.allNodes) {
-        if (!node.active && Math.random() < RECOVERY_CHANCE_PER_CHECK) {
+        if (!node.active && this.shouldAttemptRecovery()) {
           console.log(`[HomeostasisManager] Reativando nó ${node.id}`);
           node.setActive(true);
           this.nodesRecovered++;

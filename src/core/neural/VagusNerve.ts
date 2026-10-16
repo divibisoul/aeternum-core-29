@@ -10,6 +10,14 @@ import { VAGUS_BRANCH_QUEUE_SIZE, VAGUS_TICK_INTERVAL_MS } from './types';
 import type { HomeostasisManager } from './HomeostasisManager';
 import type { ProcessingNode } from './ProcessingNode';
 
+function createVagalId(prefix: 'vagal_in' | 'vagal_out'): string {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi || typeof cryptoApi.randomUUID !== 'function') {
+    throw new Error('CRYPTO_RANDOM_UUID_UNAVAILABLE');
+  }
+  return `${prefix}_${cryptoApi.randomUUID()}`;
+}
+
 export interface VagusBranchMetrics {
   nodeId: string;
   active: boolean;
@@ -115,7 +123,7 @@ export class VagusNerve {
     const branch = this.plexus.getActive(sourceNodeId);
     if (!branch) return;
     const signal: VagalSignal = {
-      id: `vagal_in_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: createVagalId('vagal_in'),
       sourceNodeId,
       signalType,
       payload,
@@ -140,7 +148,7 @@ export class VagusNerve {
     const branch = this.plexus.getActive(nodeId);
     if (!branch) return false;
     const cmd: VagalCommand = {
-      id: `vagal_out_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: createVagalId('vagal_out'),
       nodeId,
       command,
       payload,

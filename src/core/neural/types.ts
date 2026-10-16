@@ -71,6 +71,29 @@ export interface NodeState {
   timestamp: number;
 }
 
+export type VagalSignalType = 'thermal_critical' | 'overload' | 'energy_low' | 'fault';
+export type VagalCommandType = 'reduce_thermal' | 'calm';
+
+/** An observed afferent signal published by a real Clareira processing node. */
+export interface VagalSignal {
+  id: string;
+  sourceNodeId: string;
+  signalType: VagalSignalType;
+  payload: Record<string, unknown>;
+  priority: number;
+  timestamp: number;
+}
+
+/** An efferent command routed back to its owning processing node. */
+export interface VagalCommand {
+  id: string;
+  nodeId: string;
+  command: VagalCommandType;
+  payload: Record<string, unknown>;
+  priority: number;
+  timestamp: number;
+}
+
 /**
  * Relatório de homeostase
  */
@@ -115,6 +138,14 @@ export interface SystemMetrics {
 /**
  * Factory para criar pacotes de informação
  */
+function createSecurePacketId(): string {
+  const cryptoApi = globalThis.crypto;
+  if (!cryptoApi || typeof cryptoApi.randomUUID !== 'function') {
+    throw new Error('CRYPTO_RANDOM_UUID_UNAVAILABLE');
+  }
+  return `pkt_${cryptoApi.randomUUID()}`;
+}
+
 export function createInformationPacket(
   data: string,
   informationalValue: number,
@@ -125,7 +156,7 @@ export function createInformationPacket(
   metadata: Record<string, unknown> = {}
 ): InformationPacket {
   return {
-    id: `pkt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: createSecurePacketId(),
     data,
     informationalValue,
     criticality,

@@ -11,6 +11,8 @@ import {
   type NodeLevel,
   type NodeState,
   type PacketType,
+  type VagalCommand,
+  type VagalSignal,
   createInformationPacket,
   THERMAL_STRESS_WARN,
   THERMAL_STRESS_CRITICAL,
@@ -39,6 +41,16 @@ export class ProcessingNode {
   
   // Referência ao HomeostasisManager (será definida pelo setup)
   protected homeostasisReportCallback?: (report: NodeState) => void;
+
+  // VagusNerve binds this callback during node registration; no platform telemetry is fabricated.
+  private vagusAfferentReporter?: (
+    signalType: VagalSignal['signalType'],
+    payload: Record<string, unknown>,
+    priority?: number,
+  ) => void;
+  private thermalCriticalReported = false;
+  private energyLowReported = false;
+  private lastOverloadReportedAt = 0;
   
   // Controle de processamento
   private processingInterval: ReturnType<typeof setInterval> | null = null;
@@ -139,6 +151,16 @@ export class ProcessingNode {
     if (!this._active) return false;
     
     if (this.inputQueue.length >= MAX_QUEUE_SIZE) {
+      const now = Date.now();
+      if (now - this.lastOverloadReportedAt >= 1000) {
+        this.lastOverloadReportedAt = now;
+        this.reportVagalAfferent('overload', {
+          queueSize: this.inputQueue.length,
+          maxQueueSize: MAX_QUEUE_SIZE,
+          incomingPacketId: packet.id,
+        }, packet.criticality);
+      }
+
       // Descartar pacote menos crítico se necessário
       const leastCritical = this.inputQueue.reduce((min, p) => 
         p.criticality < min.criticality ? p : min
@@ -162,6 +184,56 @@ export class ProcessingNode {
    */
   setHomeostasisCallback(callback: (report: NodeState) => void): void {
     this.homeostasisReportCallback = callback;
+  }
+
+  /** Register the concrete VagusNerve ingress for this node. */
+  setVagusAfferentReporter(
+    reporter: (
+      signalType: VagalSignal['signalType'],
+      payload: Record<string, unknown>,
+      priority?: number,
+    ) => void,
+  ): void {
+    this.vagusAfferentReporter = reporter;
+  }
+
+  /** Publish an event from this node to the registered VagusNerve, if attached. */
+  reportVagalAfferent(
+    signalType: VagalSignal['signalType'],
+    payload: Record<string, unknown>,
+    priority = 0.5,
+  ): void {
+    if (!this.vagusAfferentReporter) return;
+    const normalizedPriority = Number.isFinite(priority)
+      ? Math.max(0, Math.min(1, priority))
+      : 0.5;
+    this.vagusAfferentReporter(signalType, payload, normalizedPriority);
+  }
+
+  /** Apply the two homeostatic commands supported by the current N01 contract. */
+  applyVagalCommand(command: VagalCommand['command'], payload: Record<string, unknown> = {}): boolean {
+    if (command === 'reduce_thermal') {
+      const requestedReduction = payload.reduction;
+      const reduction = typeof requestedReduction === 'number' && Number.isFinite(requestedReduction)
+        ? Math.max(0, Math.min(0.5, requestedReduction))
+        : 0.1;
+      const previousReading = this.thermalSensorReading;
+      this.thermalSensorReading = Math.max(0.1, Math.min(1.0, previousReading - reduction));
+      if (this.thermalSensorReading < THERMAL_STRESS_WARN) this.thermalCriticalReported = false;
+      return this.thermalSensorReading < previousReading;
+    }
+
+    if (command === 'calm') {
+      const requestedFactor = payload.processingRateFactor;
+      const factor = typeof requestedFactor === 'number' && Number.isFinite(requestedFactor) && requestedFactor > 0
+        ? Math.max(0.25, Math.min(0.99, requestedFactor))
+        : 0.9;
+      const previousRate = this._processingRateMultiplier;
+      this._processingRateMultiplier = Math.max(0.25, previousRate * factor);
+      return this._processingRateMultiplier < previousRate;
+    }
+
+    return false;
   }
 
   /**
@@ -286,6 +358,7 @@ export class ProcessingNode {
     
     // Consumir energia
     this.consumeEnergy(packet.criticality * 5);
+    this.reportEnergyLowIfNeeded();
     
     // Atualizar temperatura
     this.updateTemperature(packet.criticality);
@@ -344,6 +417,21 @@ export class ProcessingNode {
     );
   }
 
+  /** Publish energy-low only once per excursion; re-arm after measured recovery. */
+  private reportEnergyLowIfNeeded(): void {
+    const loadRatio = this.energyCapacity > 0 ? this.currentEnergy / this.energyCapacity : 0;
+    if (loadRatio <= 0.2 && !this.energyLowReported) {
+      this.energyLowReported = true;
+      this.reportVagalAfferent('energy_low', {
+        energy: this.currentEnergy,
+        energyCapacity: this.energyCapacity,
+        loadRatio,
+      }, 0.85);
+    } else if (loadRatio >= 0.3) {
+      this.energyLowReported = false;
+    }
+  }
+
   /**
    * Atualiza temperatura baseado no processamento
    */
@@ -357,12 +445,21 @@ export class ProcessingNode {
     // Limitar
     this.thermalSensorReading = Math.max(0.1, Math.min(1.0, this.thermalSensorReading));
 
-    // Verificar stress térmico
+    // Verificar stress térmico e publicar apenas a transição para estado crítico.
     if (this.thermalSensorReading >= THERMAL_STRESS_CRITICAL) {
       console.warn(`[ProcessingNode] ${this.id} em stress térmico crítico!`);
+      if (!this.thermalCriticalReported) {
+        this.thermalCriticalReported = true;
+        this.reportVagalAfferent('thermal_critical', {
+          temperature: this.thermalSensorReading,
+          criticalThreshold: THERMAL_STRESS_CRITICAL,
+        }, 0.95);
+      }
       this._processingRateMultiplier *= 0.8; // Throttle
     } else if (this.thermalSensorReading >= THERMAL_STRESS_WARN) {
       console.warn(`[ProcessingNode] ${this.id} temperatura elevada`);
+    } else {
+      this.thermalCriticalReported = false;
     }
   }
 
