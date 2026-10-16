@@ -83,7 +83,7 @@ function browserOriginAllowed(req) {
 
 async function requireBrowserAuthentication(req) {
   const authorization = String(req.headers.authorization || '');
-  const match = /^Bearer\\s+([^\\s]+)$/i.exec(authorization);
+  const match = /^Bearer\s+([^\s]+)$/i.exec(authorization);
   if (!match || match[1].length < 20) return { ok: false, status: 401, code: 'SOUL_MESH_BROWSER_SESSION_REQUIRED' };
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     return { ok: false, status: 503, code: 'SOUL_MESH_SUPABASE_AUTH_NOT_CONFIGURED' };
@@ -320,9 +320,9 @@ async function relayToN07(message) {
 async function proxy(req, res) {
   const rawBody = req.method === 'POST' ? await readRequestBody(req) : Buffer.alloc(0);
 
-  const requestPath = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
-  if (req.method === 'POST' && (requestPath === '/api/soul-mesh/relay' || requestPath === '/api/soul-mesh/n07')) {
-    await handleBrowserRelay(req, res, rawBody, requestPath === '/api/soul-mesh/n07');
+  const browserRoutePath = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`).pathname;
+  if (req.method === 'POST' && (browserRoutePath === '/api/soul-mesh/relay' || browserRoutePath === '/api/soul-mesh/n07')) {
+    await handleBrowserRelay(req, res, rawBody, browserRoutePath === '/api/soul-mesh/n07');
     return;
   }
 
