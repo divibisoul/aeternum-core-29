@@ -12,6 +12,7 @@ const peerClientPath = resolve(process.cwd(), 'src/core/soul-mesh/peerClient.ts'
 const runtimePath = resolve(process.cwd(), 'src/core/mesh/SoulMeshRuntime.ts');
 const externalFabricPath = resolve(process.cwd(), 'src/core/fusion/N01ExternalCapabilityFabric.ts');
 const externalFabricTestPath = resolve(process.cwd(), 'src/core/fusion/N01ExternalCapabilityFabric.test.ts');
+const realProcessE2EPath = resolve(process.cwd(), 'scripts/n01-n04-real-process-e2e.mjs');
 const externalManifestPath = resolve(process.cwd(), 'integrations/soul-25-augmentation.json');
 const envelopeSource = await readFile(localEnvelopeSource, 'utf8');
 const serverSource = await readFile(localServerSource, 'utf8');
@@ -20,6 +21,7 @@ const peerClientSource = await readFile(peerClientPath, 'utf8');
 const runtimeSource = await readFile(runtimePath, 'utf8');
 const externalFabricSource = await readFile(externalFabricPath, 'utf8');
 const externalFabricTestSource = await readFile(externalFabricTestPath, 'utf8');
+const realProcessE2ESource = await readFile(realProcessE2EPath, 'utf8');
 const externalManifest = JSON.parse(await readFile(externalManifestPath, 'utf8'));
 
 assert.match(envelopeSource, /contractVersion/, 'N01 envelope: canonical contractVersion is absent');
@@ -113,6 +115,9 @@ assert.match(relaySource, /SOUL_MESH_INTERNAL_RELAY_TOKEN/);
 assert.match(serverSource, /\/mesh\/browser-relay/);
 assert.match(serverSource, /INTERNAL_RELAY_UNAUTHORIZED/);
 assert.match(serverSource, /MESH_HMAC_SECRET_NOT_CONFIGURED/);
+assert.match(realProcessE2ESource, /scripts\/soul-mesh-server-entry\.mjs/);
+assert.match(realProcessE2ESource, /N01_BROWSER_RELAY_AUTH_BOUNDARY_PASS/);
+assert.match(realProcessE2ESource, /SOUL_MESH_BROWSER_SESSION_REQUIRED/);
 assert.match(relaySource, /isPublicN07StructuralCapability\(capability\)/);
 const correlationCheckIndex = relaySource.indexOf('if (body.correlationId !== message.correlationId)');
 const responseHmacCheckIndex = relaySource.indexOf('verifyN07Response(body)', correlationCheckIndex);
