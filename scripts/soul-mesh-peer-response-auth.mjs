@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { canonicalOrderedJson } from './soul-mesh-canonical-json.mjs';
 
 const LEGACY_ONLY_PEERS = new Set(['N02', 'N07']);
 const CANONICAL_ONLY_PEERS = new Set(['N05', 'N06']);
@@ -22,7 +23,28 @@ function canonicalModernResponse(message, nonce) {
   });
 }
 
-function canonicalLegacyResponse(message, nonce) {
+function canonicalLegacyResponse(message, nonce, target) {
+  const entries = [
+    ['version', '1.0'],
+    ['contractVersion', message.contractVersion],
+    ['messageId', message.id],
+    ['source', message.source],
+    ['target', message.target],
+    ['timestamp', message.timestamp],
+    ['nonce', nonce],
+    ['correlationId', message.correlationId],
+    ['type', message.kind === 'error' ? 'ERROR' : 'TASK_RESULT'],
+    ['payload', {
+      capability: message.capability ?? '',
+      payload: message.payload ?? {},
+    }],
+    // The Go MeshEnvelope retains these fields after Payload when they exist.
+    ['operation', message.operation],
+    ['metadata', message.metadata],
+  ];
+  // Go encoding/json sorts nested map keys lexicographically, including
+  // integer-looking keys. Keep JavaScript peers on their legacy JSON contract.
+  if (target === 'N07') return canonicalOrderedJson(entries);
   return JSON.stringify({
     version: '1.0',
     contractVersion: message.contractVersion,
@@ -69,7 +91,7 @@ export function verifyPeerResponseHmac(message, target, secret, nonce, suppliedH
       .digest('hex');
     canonicalValid = matchesDigest(supplied, canonical);
     const legacy = createHmac('sha256', secret)
-      .update(canonicalLegacyResponse(message, nonce), 'utf8')
+      .update(canonicalLegacyResponse(message, nonce, target), 'utf8')
       .digest('hex');
     legacyValid = matchesDigest(supplied, legacy);
   } catch {
