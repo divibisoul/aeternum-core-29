@@ -37,7 +37,7 @@ class SoulMeshHttpTransportTest {
             )
 
             val result = sender.send("http://127.0.0.1:18765/soul/mesh/v1", message)
-            assertTrue(result.isSuccess)
+            assertTrue("Loopback Mesh HTTP failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
             val response = result.getOrThrow()
             assertEquals("response", response.kind)
             assertEquals(correlationId, response.correlationId)
