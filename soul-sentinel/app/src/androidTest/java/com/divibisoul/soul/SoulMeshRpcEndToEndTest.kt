@@ -27,7 +27,7 @@ class SoulMeshRpcEndToEndTest {
                 payload = JSONObject().put("probe", true), timestamp = System.currentTimeMillis()
             )
             val result = sender.send("http://127.0.0.1:18767/soul/mesh/v1", request)
-            assertTrue(result.isSuccess)
+            assertTrue("Mesh RPC round-trip failed: ${result.exceptionOrNull()?.message}", result.isSuccess)
             val response = result.getOrThrow()
             assertEquals("response", response.kind)
             assertEquals(correlationId, response.correlationId)
