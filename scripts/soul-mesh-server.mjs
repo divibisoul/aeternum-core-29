@@ -7,6 +7,7 @@ import { buildCognitiveDelegationPayload } from './n01-cognitive-delegation.mjs'
 import { requestSara, saraConfigured, saraHealthConfigured, saraDescribe } from './sara-federation.mjs';
 import { N01_RESIDENT_AGENT } from './soul-resident-agent.mjs';
 import { resolveCapabilityOwner } from './soul-mesh-routing.mjs';
+import { verifyPeerResponseHmac } from './soul-mesh-peer-response-auth.mjs';
 
 const PORT = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const HOST = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
@@ -151,9 +152,7 @@ async function forward(target,message){
       const nonce=String(body.nonce||body.meta?.nonce||'').trim();
       const supplied=String(body.hmac||'').trim();
       if(!nonce||!/^[0-9a-f]{64}$/i.test(supplied))throw new Error('PEER_RESPONSE_HMAC_MISSING:'+target);
-      const expected=crypto.createHmac('sha256',SECRET).update(canonicalLegacyResponse(body,nonce),'utf8').digest('hex');
-      const actual=Buffer.from(supplied,'hex'),wanted=Buffer.from(expected,'hex');
-      if(actual.length!==wanted.length||!crypto.timingSafeEqual(actual,wanted))throw new Error('PEER_RESPONSE_HMAC_INVALID:'+target);
+      if(!verifyPeerResponseHmac(body,target,SECRET,nonce,supplied))throw new Error('PEER_RESPONSE_HMAC_INVALID:'+target);
     }
     if(!response.ok||body.kind==='error'){
       throw new Error('PEER_REMOTE_ERROR:'+target+':'+String(body.payload?.code||response.status));
