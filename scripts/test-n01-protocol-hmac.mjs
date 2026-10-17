@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
+import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import { verifyPeerResponseHmac } from './soul-mesh-peer-response-auth.mjs';
 
 const secret = 'soul-lote3-n01-n02-hmac-test-secret';
 const port = 19127;
@@ -23,7 +25,39 @@ function canonical(message, nonce) {
   });
 }
 
-function responseCanonical(body, nonce) {
+function goCanonicalValue(value) {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return '[' + value.map(item => item === undefined ? 'null' : goCanonicalValue(item)).join(',') + ']';
+  if (value && typeof value === 'object') {
+    return '{' + Object.keys(value).filter(key => value[key] !== undefined).sort()
+      .map(key => JSON.stringify(key) + ':' + goCanonicalValue(value[key])).join(',') + '}';
+  }
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) throw new TypeError('Unsupported value in Go canonical JSON');
+  return encoded;
+}
+
+function n07LegacyResponseCanonical(body, nonce) {
+  const entries = [
+    ['version', '1.0'],
+    ['contractVersion', body.contractVersion],
+    ['messageId', body.id],
+    ['source', body.source],
+    ['target', body.target],
+    ['timestamp', body.timestamp],
+    ['nonce', nonce],
+    ['correlationId', body.correlationId],
+    ['type', body.kind === 'error' ? 'ERROR' : 'TASK_RESULT'],
+    ['payload', { capability: body.capability ?? '', payload: body.payload ?? {} }],
+    ['operation', body.operation],
+    ['metadata', body.metadata],
+  ];
+  return '{' + entries.filter(([, value]) => value !== undefined)
+    .map(([key, value]) => JSON.stringify(key) + ':' + goCanonicalValue(value)).join(',') + '}';
+}
+
+function responseCanonical(body, nonce, target) {
+  if (target === 'N07') return n07LegacyResponseCanonical(body, nonce);
   return JSON.stringify({
     version: '1.0',
     contractVersion: body.contractVersion,
@@ -130,6 +164,57 @@ try {
   const replayBody = await replay.json().catch(() => null);
   if (replay.status !== 409 || replayBody?.error !== undefined && replayBody?.payload?.code !== undefined) {
     if (replay.status !== 400) throw new Error(`N01_PROTOCOL_HMAC_REPLAY_NOT_REJECTED:${replay.status}:${JSON.stringify(replayBody)}`);
+  }
+
+
+  // Verify the actual peer-response contract matrix used by N01's outbound gateway.
+  // Signatures are independently generated here from each established wire format.
+  function makePeerResponse(target, scheme) {
+    const nonce = crypto.randomUUID().replaceAll('-', '').padEnd(32, '0').slice(0, 32);
+    const message = {
+      protocol: 'soul-mesh/1',
+      contractVersion: '1.1.0',
+      id: crypto.randomUUID(),
+      correlationId: `n01-response-matrix-${target}`,
+      source: target,
+      target: 'N01',
+      kind: 'response',
+      capability: 'mesh.ping',
+      payload: { ok: true, nucleus: target, nested: { '10': 'ten', '2': 'two', alpha: 'a' } },
+      timestamp: Date.now(),
+      nonce,
+      meta: {
+        runtime: `${target}-contract-fixture`,
+        transport: 'HTTP',
+        encoding: 'json',
+        version: '1.1.0',
+        nonce,
+        traceId: `n01-response-matrix-${target}`,
+      },
+    };
+    const canonicalValue = scheme === 'canonical'
+      ? canonical(message, nonce)
+      : responseCanonical(message, nonce, target);
+    const hmac = crypto.createHmac('sha256', secret).update(canonicalValue, 'utf8').digest('hex');
+    return { message, nonce, hmac };
+  }
+
+  for (const target of ['N02', 'N03', 'N04', 'N05', 'N06', 'N07']) {
+    for (const scheme of ['canonical', 'legacy']) {
+      const signed = makePeerResponse(target, scheme);
+      const valid = verifyPeerResponseHmac(signed.message, target, secret, signed.nonce, signed.hmac);
+      const expected = target === 'N02' || target === 'N07'
+        ? scheme === 'legacy'
+        : target === 'N05' || target === 'N06'
+          ? scheme === 'canonical'
+          : true;
+      assert.equal(valid, expected, `peer-response auth contract mismatch for ${target}/${scheme}`);
+      assert.equal(
+        verifyPeerResponseHmac(signed.message, target, secret, signed.nonce, '0'.repeat(64)),
+        false,
+        `tampered response HMAC must fail for ${target}/${scheme}`,
+      );
+    }
   }
 
   const result = {

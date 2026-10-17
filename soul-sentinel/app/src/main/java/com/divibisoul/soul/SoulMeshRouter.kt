@@ -10,9 +10,13 @@ class SoulMeshRouter(
 ) {
     fun request(target: String, capability: String, payload: JSONObject): SoulMeshMessage {
         require(target != nucleusId) { "Self-routing is forbidden" }
-        require(target in SoulMeshChannels.nuclei) { "Unknown nucleus: $target" }
+        // N07 remains routable as a structural/control-plane participant without being
+        // counted as one of the six operational AI nuclei or the 60 AI channel surfaces.
+        require(target in SoulMeshContract.nucleusIds) { "Unknown Mesh participant: $target" }
         if (capability != "mesh.ping") {
-            require(SoulCapabilityCatalog.owner(capability).owner == target) { "Capability $capability belongs to ${SoulCapabilityCatalog.owner(capability).owner}, not $target" }
+            require(SoulCapabilityCatalog.owner(capability).owner == target) {
+                "Capability $capability belongs to ${SoulCapabilityCatalog.owner(capability).owner}, not $target"
+            }
         }
         val request = SoulMeshMessage(
             id = UUID.randomUUID().toString(),

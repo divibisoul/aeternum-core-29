@@ -46,6 +46,8 @@ jobs:
         run: npm run build
       - name: Core unit test
         run: node scripts/core-test.mjs
+      - name: Digital Vagus Clareira verification
+        run: npm run vagus:clareira:check
       - name: Emergency diagnostics
         if: failure()
         run: node scripts/diagnostics.mjs
@@ -108,6 +110,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Mesh health unit test
         run: npm run mesh:health:unit
+      - name: Peer client retry identity unit test
+        run: npm run mesh:peer-client:unit
       - name: Mesh async executor unit test
         run: npm run mesh:async:unit
       - name: Emergency diagnostics
