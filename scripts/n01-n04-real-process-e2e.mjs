@@ -29,9 +29,17 @@ const children = [];
 const logs = new Map();
 
 function start(name, args, cwd, env) {
+  const childEnv = { ...process.env, ...env };
+  // Registration credentials are needed only by N01 and the test harness.
+  // Do not leak a different nucleus's bearer token into the N04 build/runtime.
+  for (const key of Object.keys(childEnv)) {
+    if (/^SOUL_MESH_N0[2-7]_REGISTRATION_TOKEN$/.test(key) && !Object.hasOwn(env, key)) {
+      delete childEnv[key];
+    }
+  }
   const child = spawn(process.execPath, args, {
     cwd,
-    env: { ...process.env, ...env },
+    env: childEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   children.push(child);
