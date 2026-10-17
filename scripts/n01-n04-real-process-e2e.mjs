@@ -75,17 +75,23 @@ async function waitFor(name, child, probe) {
 function runN04Client(name, source, timeoutMs = 20000) {
   const driver = source.join('\n');
   return new Promise((resolvePromise, rejectPromise) => {
+    const driverEnv = {
+      ...process.env,
+      NODE_ENV: 'production',
+      SOUL_MESH_SECRET: secret,
+      SOUL_MESH_HMAC_SECRET: secret,
+      SOUL_MESH_TOKEN: token,
+      SOUL_MESH_N01_URL: n01Url,
+      SOUL_MESH_N04_URL: n04Url,
+    };
+    // This short-lived N04 client only needs the shared Mesh test secret.
+    // Peer registration credentials must remain within the N01 gateway process.
+    for (const key of Object.keys(driverEnv)) {
+      if (/^SOUL_MESH_N0[2-7]_REGISTRATION_TOKEN$/.test(key)) delete driverEnv[key];
+    }
     const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', driver], {
       cwd: n04Root,
-      env: {
-        ...process.env,
-        NODE_ENV: 'production',
-        SOUL_MESH_SECRET: secret,
-        SOUL_MESH_HMAC_SECRET: secret,
-        SOUL_MESH_TOKEN: token,
-        SOUL_MESH_N01_URL: n01Url,
-        SOUL_MESH_N04_URL: n04Url,
-      },
+      env: driverEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let captured = '';
