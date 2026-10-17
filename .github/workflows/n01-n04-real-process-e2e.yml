@@ -63,8 +63,12 @@ jobs:
       - name: Install N04 dependencies
         working-directory: .integration/n04
         run: pnpm install --frozen-lockfile
-      - name: Generate ephemeral Mesh authentication and app secrets
-        id: mesh-secrets
+      - name: Build N01 web runtime
+        run: npm run build
+      - name: Build N04 production runtime
+        working-directory: .integration/n04
+        run: pnpm run build
+      - name: Generate ephemeral E2E-only Mesh authentication and app secrets
         shell: bash
         run: |
           hmac_secret="$(openssl rand -hex 48)"
@@ -81,22 +85,13 @@ jobs:
             echo "SOUL_MESH_SECRET=$hmac_secret"
             echo "SOUL_MESH_HMAC_SECRET=$hmac_secret"
             echo "SOUL_MESH_TOKEN=$bearer_token"
+            echo "SOUL_MESH_N04_REGISTRATION_TOKEN=$registration_n04"
+            echo "SOUL_MESH_N05_REGISTRATION_TOKEN=$registration_n05"
             echo "AUTH_SECRET=$auth_secret"
           } >> "$GITHUB_ENV"
-          {
-            echo "registration_n04=$registration_n04"
-            echo "registration_n05=$registration_n05"
-          } >> "$GITHUB_OUTPUT"
-      - name: Build N01 web runtime
-        run: npm run build
-      - name: Build N04 production runtime
-        working-directory: .integration/n04
-        run: pnpm run build
       - name: Bidirectional N01↔N04 real-process HTTP/HMAC E2E
         env:
           SOUL_N01_WORKDIR: ${{ github.workspace }}
           SOUL_N04_WORKDIR: ${{ github.workspace }}/.integration/n04
           POSTGRES_URL: postgresql://soulmesh:soulmesh@127.0.0.1:5432/soulmesh
-          SOUL_MESH_N04_REGISTRATION_TOKEN: ${{ steps.mesh-secrets.outputs.registration_n04 }}
-          SOUL_MESH_N05_REGISTRATION_TOKEN: ${{ steps.mesh-secrets.outputs.registration_n05 }}
         run: node scripts/n01-n04-real-process-e2e.mjs
