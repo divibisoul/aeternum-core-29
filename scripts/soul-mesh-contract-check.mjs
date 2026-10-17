@@ -135,13 +135,17 @@ assert.match(realProcessE2ESource, /N01_PEER_REGISTRATION_CROSS_IDENTITY_ACCEPTE
 assert.match(realProcessE2ESource, /scripts\/soul-mesh-server-entry\.mjs/);
 assert.match(realProcessE2ESource, /Registration credentials are needed only by N01 and the test harness/);
 assert.match(realProcessE2ESource, /function runN04Client[\s\S]*?const driverEnv = \{[\s\S]*?SOUL_MESH_N0\[2-7\]_REGISTRATION_TOKEN[\s\S]*?delete driverEnv\[key\][\s\S]*?env: driverEnv/);
-assert.match(realProcessE2EWorkflowSource, /id: mesh-secrets/);
-assert.match(realProcessE2EWorkflowSource, /echo "registration_n04=\$registration_n04"/);
-assert.match(realProcessE2EWorkflowSource, /echo "registration_n05=\$registration_n05"/);
-assert.match(realProcessE2EWorkflowSource, /}\s*>> "\$GITHUB_OUTPUT"/);
-assert.match(realProcessE2EWorkflowSource, /SOUL_MESH_N04_REGISTRATION_TOKEN:.*steps\.mesh-secrets\.outputs\.registration_n04/);
-assert.match(realProcessE2EWorkflowSource, /SOUL_MESH_N05_REGISTRATION_TOKEN:.*steps\.mesh-secrets\.outputs\.registration_n05/);
-assert.doesNotMatch(realProcessE2EWorkflowSource, /echo "SOUL_MESH_N0[45]_REGISTRATION_TOKEN=.*GITHUB_ENV/);
+const n01BuildIndex = realProcessE2EWorkflowSource.indexOf('name: Build N01 web runtime');
+const n04BuildIndex = realProcessE2EWorkflowSource.indexOf('name: Build N04 production runtime');
+const secretGenerationIndex = realProcessE2EWorkflowSource.indexOf('name: Generate ephemeral E2E-only Mesh authentication and app secrets');
+const e2eIndex = realProcessE2EWorkflowSource.indexOf('name: Bidirectional N01↔N04 real-process HTTP/HMAC E2E');
+assert.ok(n01BuildIndex >= 0 && n04BuildIndex > n01BuildIndex && secretGenerationIndex > n04BuildIndex && e2eIndex > secretGenerationIndex,
+  'ephemeral Mesh secrets must be generated after both builds and immediately before runtime E2E');
+assert.match(realProcessE2EWorkflowSource, /echo "SOUL_MESH_N04_REGISTRATION_TOKEN=\$registration_n04"/);
+assert.match(realProcessE2EWorkflowSource, /echo "SOUL_MESH_N05_REGISTRATION_TOKEN=\$registration_n05"/);
+assert.match(realProcessE2EWorkflowSource, /}\s*>> "\$GITHUB_ENV"/);
+assert.doesNotMatch(realProcessE2EWorkflowSource, /GITHUB_OUTPUT|steps\.mesh-secrets\.outputs/);
+assert.match(realProcessE2ESource, /function runN04Client[\s\S]*?delete driverEnv\[key\][\s\S]*?env: driverEnv/);
 assert.match(realProcessE2ESource, /N01_BROWSER_RELAY_AUTH_BOUNDARY_PASS/);
 assert.match(realProcessE2ESource, /SOUL_MESH_BROWSER_SESSION_REQUIRED/);
 assert.match(relaySource, /isPublicN07StructuralCapability\(capability\)/);
