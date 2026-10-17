@@ -134,6 +134,7 @@ assert.match(realProcessE2ESource, /N01_PEER_REGISTRATION_UNAUTHENTICATED_ACCEPT
 assert.match(realProcessE2ESource, /N01_PEER_REGISTRATION_CROSS_IDENTITY_ACCEPTED/);
 assert.match(realProcessE2ESource, /scripts\/soul-mesh-server-entry\.mjs/);
 assert.match(realProcessE2ESource, /Registration credentials are needed only by N01 and the test harness/);
+assert.match(realProcessE2ESource, /function runN04Client[\s\S]*?const driverEnv = \{[\s\S]*?SOUL_MESH_N0\[2-7\]_REGISTRATION_TOKEN[\s\S]*?delete driverEnv\[key\][\s\S]*?env: driverEnv/);
 assert.match(realProcessE2EWorkflowSource, /id: mesh-secrets/);
 assert.match(realProcessE2EWorkflowSource, /echo "registration_n04=\$registration_n04"/);
 assert.match(realProcessE2EWorkflowSource, /echo "registration_n05=\$registration_n05"/);
