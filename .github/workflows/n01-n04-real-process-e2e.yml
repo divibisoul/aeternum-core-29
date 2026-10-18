@@ -53,13 +53,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: divibisoul/nextjs-ai-chatbots
-          ref: 1e2c41ef3da054f6974085de9caed03d3db17f47
+          ref: aa544747740d2d0840d10f115db1b0597d287201
           path: .integration/n04
           fetch-depth: 1
           submodules: false
           persist-credentials: false
       - name: Verify exact N04 source pin
-        run: test "$(git -C .integration/n04 rev-parse HEAD)" = "1e2c41ef3da054f6974085de9caed03d3db17f47"
+        run: test "$(git -C .integration/n04 rev-parse HEAD)" = "aa544747740d2d0840d10f115db1b0597d287201"
       - name: Install N04 dependencies
         working-directory: .integration/n04
         run: pnpm install --frozen-lockfile
