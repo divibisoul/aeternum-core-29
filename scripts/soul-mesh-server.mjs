@@ -1,10 +1,12 @@
 import http from 'node:http';
+import { readFileSync } from 'node:fs';
 import crypto from 'node:crypto';
 import { createSuperGPU } from './soul-supergpu.mjs';
 import { inferInitialIntent } from './n01-byok-gemini.mjs';
 import { buildCognitiveDelegationPayload } from './n01-cognitive-delegation.mjs';
 import { requestSara, saraConfigured, saraHealthConfigured, saraDescribe } from './sara-federation.mjs';
 import { N01_RESIDENT_AGENT } from './soul-resident-agent.mjs';
+import { resolveCapabilityOwner } from './soul-mesh-routing.mjs';
 
 const PORT = Number(process.env.SOUL_MESH_N01_PORT || process.env.PORT || 8080);
 const HOST = process.env.SOUL_MESH_N01_HOST || '0.0.0.0';
@@ -16,6 +18,8 @@ const SELF = 'N01';
 const FUSION_VERSION = '1.4';
 const TRANSPORTS = ['IN_PROCESS', 'WEBVIEW_BRIDGE', 'LOOPBACK_HTTP', 'HTTP', 'REALTIME'];
 const PEER_IDS = ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'];
+const NUCLEUS_IDS = [SELF, ...PEER_IDS];
+const ACTIVE_AI_IDS = ['N01', 'N02', 'N03', 'N04', 'N05', 'N06'];
 const peers = new Map();
 const registrationTokens = new Map();
 const seenNonces = new Map();
@@ -86,16 +90,41 @@ function verifyEnvelope(e){
   if(SECRET){ if(typeof e.hmac!=='string') throw new Error('MESH_HMAC_REQUIRED'); const expected=hmacFor(e); const actual=String(e.hmac); if(expected.length!==actual.length || !crypto.timingSafeEqual(Buffer.from(expected),Buffer.from(actual))) throw new Error('MESH_HMAC_INVALID'); }
   seenNonces.set(e.nonce,Date.now());
 }
-function envelope({target,correlationId,type='TASK_RESULT',payload}) { const base={version:VERSION,messageId:crypto.randomUUID(),source:SELF,target,timestamp:Date.now(),nonce:crypto.randomUUID(),correlationId,type,payload}; return {...base,hmac:SECRET?hmacFor(base):''}; }
+function envelope({target,correlationId,type='TASK_RESULT',payload}) { const base={version:VERSION,contractVersion:CONTRACT_VERSION,messageId:crypto.randomUUID(),source:SELF,target,timestamp:Date.now(),nonce:crypto.randomUUID(),correlationId,type,payload}; return {...base,hmac:SECRET?hmacFor(base):''}; }
 function canonicalMessage(target, capability, payload, correlationId){ return {protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,id:crypto.randomUUID(),correlationId:correlationId||crypto.randomUUID(),source:SELF,target,kind:'request',capability,payload,timestamp:Date.now()}; }
-function channelsFor(id){ const peersFor=id===SELF?PEER_IDS:PEER_IDS.filter(peer=>peer!==id); return {in:peersFor.map(peer=>`${id}.IN.${peer}`),out:peersFor.map(peer=>`${id}.OUT.${peer}`)}; }
-function capabilityList(){ return ['clareira.ingest','clareira.metrics','inference.intent','mesh.ping','mesh.health','mesh.discovery','mesh.register','mesh.heartbeat','mesh.delegate','mesh.capabilities','mesh.resident.describe@1.0.0','mesh.fusion.describe','mesh.capability.resolve','mesh.fusion.execute','mesh.supergpu.describe','mesh.supergpu.execute','mesh.supergpu.parallel','sara.health','sara.capabilities','sara.state','sara.cycle','sara.audit','sara.regenerate','sara.trace']; }
-function localFusionSnapshot(){ return {system:'SOUL',fusionVersion:FUSION_VERSION,reference:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,nuclei:[SELF,...PEER_IDS].map(id=>({id,role:id===SELF?'host-reference-gateway':(peers.get(id)?.role||'independent-ai'),status:id===SELF?'online':(peers.get(id)?.status||'unknown'),endpoint:id===SELF?`http://${HOST}:${PORT}`:(peers.get(id)?.url||null),capabilities:id===SELF?capabilityList():(peers.get(id)?.capabilities||[]),channels:channelsFor(id)})),transports:TRANSPORTS,directionalChannels:84,ownership:'native-per-nucleus',fusion:'federated-independent-runtimes',superGPU:superGPU.describe(),byokInference:{provider:'google-gemini',configured:Boolean(process.env.GEMINI_API_KEY?.trim())},sara:saraDescribe(),federatedProviders:{SARA:{owner:'SARA',transport:'HTTP',configured:saraConfigured(),operations:saraDescribe().operations}}}; }
-function resolveOwner(capability){ if(capability==='inference.intent') return 'N01'; if(capability?.startsWith('clareira.')) return 'N01'; for(const peer of peers.values()) if(Array.isArray(peer.capabilities)&&peer.capabilities.includes(capability)) return peer.id; if(capability?.startsWith('inference.')||capability?.startsWith('conversation.')) return 'N02'; if(capability?.startsWith('audio.')||capability?.startsWith('speech.')||capability?.startsWith('multimodal.')) return 'N03'; if(capability?.startsWith('document.')||capability?.startsWith('tool:')||capability?.startsWith('tool.')||capability?.startsWith('artifact.')) return 'N04'; if(capability?.startsWith('orchestration.')||capability?.startsWith('dispatch.')) return 'N05'; if(capability?.startsWith('pilot.')||capability?.startsWith('cognitive.')||capability?.startsWith('support.')) return 'N06'; return null; }
+function channelsFor(id){ const peersFor=NUCLEUS_IDS.filter(nucleus=>nucleus!==id); return {in:peersFor.map(peer=>`${id}.IN.${peer}`),out:peersFor.map(peer=>`${id}.OUT.${peer}`)}; }
+function topologyCounts(){ const activeAIDirectedRoutes=ACTIVE_AI_IDS.length*(ACTIVE_AI_IDS.length-1); const totalLogicalDirectedRoutes=NUCLEUS_IDS.length*(NUCLEUS_IDS.length-1); const structuralN07AdditionalDirectedRoutes=totalLogicalDirectedRoutes-activeAIDirectedRoutes; return {activeAINuclei:ACTIVE_AI_IDS.length,activeAIDirectedRoutes,activeAIEndpointSurfaces:activeAIDirectedRoutes*2,structuralN07AdditionalDirectedRoutes,structuralN07AdditionalEndpointSurfaces:structuralN07AdditionalDirectedRoutes*2,totalIdentityNuclei:NUCLEUS_IDS.length,totalLogicalDirectedRoutes,totalEndpointSurfaces:totalLogicalDirectedRoutes*2,topologyState:'LOGICAL_UNVERIFIED'}; }
+function capabilityList(){ return ['clareira.ingest','clareira.metrics','inference.intent','mesh.ping','mesh.health','mesh.discovery','mesh.register','mesh.heartbeat','mesh.delegate','mesh.capabilities','mesh.resident.describe@1.0.0','mesh.fusion.describe','mesh.capability.resolve','mesh.fusion.execute','mesh.supergpu.describe','mesh.supergpu.execute','mesh.supergpu.parallel','external.capability.resolve@1.0.0','external.capability.fabric.describe@1.0.0','external.capability.execute','external.capability.execute@1.0.0','sara.health','sara.capabilities','sara.state','sara.cycle','sara.audit','sara.regenerate','sara.trace']; }
+function localFusionSnapshot(){ const counts=topologyCounts(); return {system:'SOUL',fusionVersion:FUSION_VERSION,reference:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,nuclei:NUCLEUS_IDS.map(id=>({id,role:id===SELF?'host-reference-gateway':(peers.get(id)?.role||'independent-ai'),status:id===SELF?'online':(peers.get(id)?.status||'unknown'),endpoint:id===SELF?`http://${HOST}:${PORT}`:(peers.get(id)?.url||null),capabilities:id===SELF?capabilityList():(peers.get(id)?.capabilities||[]),channels:channelsFor(id)})),transports:TRANSPORTS,directionalChannels:counts.totalEndpointSurfaces,directedRoutes:counts.totalLogicalDirectedRoutes,endpointSurfaces:counts.totalEndpointSurfaces,topologyCounts:counts,ownership:'native-per-nucleus',fusion:'federated-independent-runtimes',superGPU:superGPU.describe(),byokInference:{provider:'google-gemini',configured:Boolean(process.env.GEMINI_API_KEY?.trim())},sara:saraDescribe(),federatedProviders:{SARA:{owner:'SARA',transport:'HTTP',configured:saraConfigured(),operations:saraDescribe().operations}}}; }
+function resolveOwner(capability){ return resolveCapabilityOwner(capability, peers); }
 function resolveCapability(capability){ if(typeof capability!=='string'||!capability.trim()) throw new Error('CAPABILITY_REQUIRED'); if(capability.startsWith('sara.')) return {capability,owner:null,provider:'SARA',available:capability==='sara.health'?saraHealthConfigured():saraConfigured(),transport:'HTTP',nativeOwnership:false}; const owner=resolveOwner(capability); if(!owner) return {capability,owner:null,available:false,transport:null}; return {capability,owner,available:owner===SELF||Boolean(peers.get(owner)?.url),transport:owner===SELF?'IN_PROCESS':'REMOTE_MESH',nativeOwnership:true}; }
-async function forward(target,message){ const peer=peers.get(target); if(!peer?.url) throw new Error(`PEER_NOT_DISCOVERED:${target}`); const until=circuitOpenUntil.get(target)||0; if(until>Date.now()) throw new Error(`PEER_CIRCUIT_OPEN:${target}`); const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),30_000); try{
-  const wire={...message,meta:{...(message.meta||{})}};
-  const headers={'content-type':'application/json','x-correlation-id':message.correlationId};
+async function forward(target,message){
+  const peer=peers.get(target);
+  if(!peer?.url) throw new Error(`PEER_NOT_DISCOVERED:${target}`);
+  const until=circuitOpenUntil.get(target)||0;
+  if(until>Date.now()) throw new Error(`PEER_CIRCUIT_OPEN:${target}`);
+  const correlationId=String(message.correlationId||crypto.randomUUID());
+  const wire={
+    protocol:PROTOCOL,
+    contractVersion:CONTRACT_VERSION,
+    id:crypto.randomUUID(),
+    correlationId,
+    source:SELF,
+    target,
+    kind:'request',
+    capability:message.capability,
+    payload:message.payload??{},
+    timestamp:Date.now(),
+    meta:{
+      ...(message.meta||{}),
+      runtime:'aeternum-core-29',
+      transport:'HTTP',
+      encoding:'json',
+      version:CONTRACT_VERSION,
+      traceId:message.meta?.traceId||correlationId
+    }
+  };
+  const headers={'content-type':'application/json','accept':'application/json','x-soul-correlation-id':correlationId};
   if(SECRET){
     const nonce=crypto.randomUUID().replaceAll('-','').padEnd(32,'0').slice(0,32);
     wire.nonce=nonce;
@@ -103,10 +132,116 @@ async function forward(target,message){ const peer=peers.get(target); if(!peer?.
     headers['x-soul-mesh-nonce']=nonce;
     headers['x-soul-mesh-hmac']=protocolHmacFor(wire,nonce);
   }
-  const response=await fetch(peer.url+'/api/soul-mesh',{method:'POST',headers,body:JSON.stringify(wire),signal:controller.signal,cache:'no-store'});
-  const body=await response.json().catch(()=>({})); if(!response.ok) throw new Error(`PEER_HTTP_${response.status}`);
-  failures.set(target,0); peer.lastSeen=Date.now(); peer.status='healthy'; return body;
- }catch(error){ const count=(failures.get(target)||0)+1; failures.set(target,count); if(count>=5) circuitOpenUntil.set(target,Date.now()+60_000); throw error; } finally{ clearTimeout(timer); } }
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),30_000);
+  try{
+    const endpoint=normalizeUrl(peer.url)+'/api/soul-mesh';
+    const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(wire),signal:controller.signal,cache:'no-store'});
+    const body=await response.json().catch(()=>null);
+    if(!body||body.protocol!==PROTOCOL||body.contractVersion!==CONTRACT_VERSION
+      ||typeof body.id!=='string'||!body.id
+      ||body.source!==target||body.target!==SELF
+      ||!['response','error'].includes(body.kind)
+      ||body.capability!==wire.capability
+      ||body.correlationId!==correlationId
+      ||!Number.isFinite(body.timestamp)||Math.abs(Date.now()-body.timestamp)>30_000){
+      throw new Error('PEER_RESPONSE_CONTRACT_INVALID:'+target);
+    }
+    if(SECRET){
+      const nonce=String(body.nonce||body.meta?.nonce||'').trim();
+      const supplied=String(body.hmac||'').trim();
+      if(!nonce||!/^[0-9a-f]{64}$/i.test(supplied))throw new Error('PEER_RESPONSE_HMAC_MISSING:'+target);
+      const expected=crypto.createHmac('sha256',SECRET).update(canonicalLegacyResponse(body,nonce),'utf8').digest('hex');
+      const actual=Buffer.from(supplied,'hex'),wanted=Buffer.from(expected,'hex');
+      if(actual.length!==wanted.length||!crypto.timingSafeEqual(actual,wanted))throw new Error('PEER_RESPONSE_HMAC_INVALID:'+target);
+    }
+    if(!response.ok||body.kind==='error'){
+      throw new Error('PEER_REMOTE_ERROR:'+target+':'+String(body.payload?.code||response.status));
+    }
+    failures.set(target,0);
+    peer.lastSeen=Date.now();
+    peer.status='healthy';
+    return body.payload;
+  }catch(error){
+    const count=(failures.get(target)||0)+1;
+    failures.set(target,count);
+    if(count>=5)circuitOpenUntil.set(target,Date.now()+60_000);
+    throw error;
+  }finally{clearTimeout(timer);}
+}
+const N01_EXTERNAL_FABRIC = JSON.parse(
+  readFileSync(new URL('../integrations/soul-25-augmentation.json', import.meta.url), 'utf8'),
+);
+const N01_EXTERNAL_PROVIDERS = Array.isArray(N01_EXTERNAL_FABRIC.external_providers)
+  ? N01_EXTERNAL_FABRIC.external_providers
+  : [];
+
+function resolveN01ExternalProvider(provider) {
+  const requested = typeof provider === 'string' ? provider.trim().toLowerCase() : '';
+  if (!requested) throw new Error('N01_EXTERNAL_PROVIDER_REQUIRED');
+  const found = N01_EXTERNAL_PROVIDERS.find((item) => String(item.id).toLowerCase() === requested);
+  if (!found) throw new Error('N01_EXTERNAL_PROVIDER_UNKNOWN:' + String(provider));
+  if (!/^[0-9a-f]{40}$/i.test(String(found.revision || '')) ||
+      !String(found.source || '').startsWith('https://github.com/') ||
+      !String(found.owner || '').trim()) {
+    throw new Error('N01_EXTERNAL_PROVIDER_REGISTRY_INVALID:' + String(found.id));
+  }
+  return found;
+}
+
+function describeN01ExternalCapabilityFabric() {
+  const providers = N01_EXTERNAL_PROVIDERS.map((p) => ({
+    id: p.id, source: p.source, revision: p.revision, owner: p.owner,
+    targets: p.targets, capabilities: p.capabilities,
+    directAffinity: Boolean(p.direct_affinity),
+    structuralState: 'REAL', runtimeState: 'PROJECTED', executionProven: false,
+  }));
+  return {
+    nucleus: SELF, graph: N01_EXTERNAL_FABRIC.graph,
+    providerCount: providers.length, nativePeerCount: Number(N01_EXTERNAL_FABRIC.soul_peer_count || 0),
+    runtimeVerifiedProviderCount: 0, providers, structuralState: 'REAL',
+    runtimeState: 'PROJECTED_UNTIL_PROVIDER_E2E', liveExecutionProven: false,
+  };
+}
+
+async function executeN01ExternalProvider(value, correlationId) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED');
+  const provider = resolveN01ExternalProvider(value.provider);
+  const operation = typeof value.operation === 'string' ? value.operation.trim() : '';
+  if (!operation) throw new Error('N01_EXTERNAL_OPERATION_REQUIRED');
+  if (provider.runtime_adapter_status !== 'REGISTERED') {
+    throw new Error('N01_EXTERNAL_ADAPTER_NOT_REGISTERED:' + provider.id + ':' + String(provider.runtime_adapter_status || 'UNREGISTERED'));
+  }
+  if (!Array.isArray(provider.adapter_operations) || !provider.adapter_operations.includes(operation)) {
+    throw new Error('N01_EXTERNAL_OPERATION_NOT_REGISTERED:' + provider.id + ':' + operation);
+  }
+  const userPayload = value.payload && typeof value.payload === 'object' && !Array.isArray(value.payload) ? value.payload : {};
+  const gatewayResult = await forward('N07', canonicalMessage(
+    'N07', 'external.federation.execute@1.0.0',
+    { payload: userPayload, metadata: {
+      provider: provider.id, external_operation: operation, native_owner: provider.owner,
+      provider_revision: provider.revision, timeout_seconds: String(
+        typeof value.timeout_seconds === 'number' && Number.isFinite(value.timeout_seconds)
+          ? Math.max(1, Math.min(170, Math.floor(value.timeout_seconds))) : 60
+      ),
+    } }, correlationId,
+  ));
+  if (!gatewayResult || gatewayResult.status !== 'ok') {
+    const code = gatewayResult && typeof gatewayResult.error === 'string' ? gatewayResult.error : 'N01_EXTERNAL_GATEWAY_DID_NOT_CONFIRM_SUCCESS';
+    throw new Error('N01_EXTERNAL_EXECUTION_BLOCKED:' + provider.id + ':' + code);
+  }
+  const raw = gatewayResult.metadata && gatewayResult.metadata.external_result_json;
+  let result;
+  try { result = typeof raw === 'string' ? JSON.parse(raw) : raw; }
+  catch { throw new Error('N01_EXTERNAL_RESULT_INVALID_JSON:' + provider.id); }
+  if (!result || result.state !== 'PASS') {
+    throw new Error('N01_EXTERNAL_EXECUTION_BLOCKED:' + provider.id + ':' + String(result && result.code || 'EXTERNAL_EXECUTION_NOT_PROVEN'));
+  }
+  return { nucleus: SELF, capability: 'external.capability.execute@1.0.0', correlationId,
+    provider: provider.id, owner: provider.owner, revision: provider.revision,
+    state: 'PASS', runtimeState: 'PASS_OBSERVED', executionProven: true, result };
+}
+
 function bootstrapPeers(){ for(const id of PEER_IDS){ const endpoint=normalizeUrl(process.env[`SOUL_MESH_${id}_URL`]); if(endpoint) peers.set(id,{id,url:endpoint,capabilities:[],role:'independent-ai',lastSeen:Date.now(),status:'configured'}); } }
 async function executeLocalCapability(task, correlationId) {
   if (task.capability === 'inference.intent') {
@@ -117,14 +252,51 @@ async function executeLocalCapability(task, correlationId) {
 const superGPU=createSuperGPU({self:SELF,resolveOwner,forward,localExecute:executeLocalCapability});
 async function executeUnified(capability,payload,correlationId){ if(capability==='inference.intent') return inferInitialIntent({...payload||{},correlationId}); if(capability.startsWith('sara.')) return (await requestSara(capability,payload,correlationId)).payload; const task={id:crypto.randomUUID(),capability,payload}; return superGPU.execute(task,correlationId); }
 async function handle(req,res){ const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);
+  if(process.env.NODE_ENV==='test'&&req.method==='POST'&&url.pathname==='/mesh/test/execute'){
+    try{
+      const probe=await readBody(req);
+      if(probe.capability!=='mesh.peer.ping')return json(res,400,{ok:false,nucleus:SELF,error:'TEST_CAPABILITY_NOT_ALLOWED'});
+      const correlationId=typeof probe.correlationId==='string'&&probe.correlationId?probe.correlationId:crypto.randomUUID();
+      const result=await superGPU.execute({id:crypto.randomUUID(),capability:probe.capability,payload:probe.payload??{}},correlationId);
+      return json(res,200,{ok:true,nucleus:SELF,correlationId,result});
+    }catch(error){
+      return json(res,502,{ok:false,nucleus:SELF,error:error instanceof Error?error.message:'MESH_TEST_ROUTE_FAILED'});
+    }
+  }
   if(req.method==='GET'&&url.pathname==='/mesh/health')return json(res,200,{ok:true,nucleus:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,timestamp:Date.now(),capabilities:capabilityList(),residentAgent:N01_RESIDENT_AGENT,peers:[...peers.values()].map(p=>({id:p.id,url:p.url,status:p.status,lastSeen:p.lastSeen})),byokInference:{provider:'google-gemini',configured:Boolean(process.env.GEMINI_API_KEY?.trim())}});
   if(req.method==='GET'&&url.pathname==='/mesh/discovery')return json(res,200,{nucleus:SELF,protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,capabilities:capabilityList(),peers:[...peers.values()],transports:TRANSPORTS,channels:channelsFor(SELF)});
   if(req.method==='GET'&&(url.pathname==='/mesh/fusion'||url.pathname==='/api/soul-fusion'))return json(res,200,localFusionSnapshot());
   if(req.method==='POST'&&url.pathname==='/api/soul-intake'){ try{ const body=await readBody(req); const requestCorrelationId=typeof req.headers['x-correlation-id']==='string'&&req.headers['x-correlation-id'].trim()?req.headers['x-correlation-id'].trim():crypto.randomUUID(); const result=await inferInitialIntent({...body,correlationId:requestCorrelationId}); return json(res,200,{ok:true,nucleus:SELF,correlationId:requestCorrelationId,capability:'inference.intent',result}); }catch(error){ return json(res,502,{ok:false,nucleus:SELF,capability:'inference.intent',error:error instanceof Error?error.message:'GEMINI_INTENT_INFERENCE_ERROR'}); } }
   if(req.method==='POST'&&url.pathname==='/mesh/register'){ const body=await readBody(req); if(!PEER_IDS.includes(body.nucleus)||!normalizeUrl(body.endpoint))return json(res,400,{error:'INVALID_REGISTRATION'}); const id=body.nucleus; const token=crypto.randomUUID(); registrationTokens.set(id,token); peers.set(id,{id,url:normalizeUrl(body.endpoint),capabilities:Array.isArray(body.capabilities)?body.capabilities:[],role:typeof body.role==='string'?body.role:'independent-ai',lastSeen:Date.now(),status:'registered'}); return json(res,200,{ok:true,nucleus:SELF,registered:id,token,heartbeatIntervalMs:60_000,transports:TRANSPORTS,contractVersion:CONTRACT_VERSION}); }
   if(req.method==='POST'&&url.pathname==='/mesh/heartbeat'){ const body=await readBody(req); const id=body.nucleus; const expected=registrationTokens.get(id); const provided=(req.headers.authorization||'').replace(/^Bearer\s+/i,''); if(!PEER_IDS.includes(id)||!expected||provided!==expected)return json(res,401,{error:'INVALID_HEARTBEAT_AUTH'}); const peer=peers.get(id); if(!peer)return json(res,404,{error:'PEER_NOT_REGISTERED'}); peer.lastSeen=Date.now(); peer.status='healthy'; if(normalizeUrl(body.endpoint))peer.url=normalizeUrl(body.endpoint); if(Array.isArray(body.capabilities))peer.capabilities=body.capabilities; return json(res,200,{ok:true,nucleus:SELF,peer:id,contractVersion:CONTRACT_VERSION,timestamp:Date.now()}); }
-  if(req.method==='POST'&&(url.pathname==='/mesh/in'||url.pathname==='/mesh/out'||url.pathname==='/api/soul-mesh')){ try{ const message=await readBody(req); if(message.protocol===PROTOCOL){ verifyProtocolEnvelope(message,req); if(message.target!==SELF)throw new Error('MESH_TARGET_MISMATCH'); if(!message.source||!/^N0[1-7]$/.test(message.source)||message.source===SELF||!message.correlationId)throw new Error('INVALID_SOUL_MESH_MESSAGE'); if(message.contractVersion!==CONTRACT_VERSION)throw new Error('UNSUPPORTED_MESH_CONTRACT_VERSION'); const capability=message.capability; const respond=(kind,payload,status=200)=>{ const body={protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,id:crypto.randomUUID(),correlationId:message.correlationId,source:SELF,target:message.source,kind,capability,payload,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:CONTRACT_VERSION,traceId:message.correlationId}}; const nonce=crypto.randomUUID().replaceAll('-','').padEnd(32,'0').slice(0,32); const signed=SECRET?protocolResponse({...body,nonce,meta:{...body.meta,nonce}},nonce):body; return json(res,status,signed); }; if(capability==='clareira.metrics')return respond('response',clareiraMetrics()); if(capability==='clareira.ingest'){const packet=message.payload?.packet;if(!isClareiraPacket(packet)){clareiraIngress.errored++;return respond('error',{code:'INVALID_CLAREIRA_PACKET'},400);}if(clareiraIngress.queue.length>=CLAREIRA_MAX_QUEUE_SIZE){clareiraIngress.dropped++;return respond('error',{code:'CLAREIRA_QUEUE_FULL',capacity:CLAREIRA_MAX_QUEUE_SIZE},429);}clareiraIngress.queue.push(packet);clareiraIngress.ingested++;return respond('response',{accepted:true,contractVersion:'1.0.0',correlationId:packet.correlationId,sourceId:packet.sourceId,queued:clareiraIngress.queue.length});} if(capability==='mesh.ping')return respond('response',{ok:true,nucleus:SELF}); if(capability==='mesh.resident.describe@1.0.0')return respond('response',N01_RESIDENT_AGENT); if(capability==='mesh.health')return respond('response',{ok:true,nucleus:SELF,peers:[...peers.keys()]}); if(capability==='mesh.discovery'||capability==='mesh.capabilities')return respond('response',{nucleus:SELF,capabilities:capabilityList(),peers:[...peers.values()],transports:TRANSPORTS,channels:channelsFor(SELF)}); if(capability==='mesh.fusion.describe')return respond('response',localFusionSnapshot()); if(capability==='mesh.capability.resolve'){ try{return respond('response',resolveCapability(message.payload?.capability));}catch(error){return respond('error',{code:error instanceof Error?error.message:'CAPABILITY_RESOLUTION_ERROR'},400);} } if(capability?.startsWith('sara.')){ try{return respond('response',await executeUnified(capability,message.payload,message.correlationId));}catch(error){return respond('error',{code:error instanceof Error?error.message:'SARA_REQUEST_FAILED',provider:'SARA'},502);} } if(capability==='inference.intent'){ try{return respond('response',await inferInitialIntent({...message.payload||{},correlationId:message.correlationId}));}catch(error){return respond('error',{code:error instanceof Error?error.message:'GEMINI_INTENT_INFERENCE_ERROR'},502);} } if(capability==='mesh.supergpu.describe')return respond('response',superGPU.describe()); if(capability==='mesh.supergpu.execute'){ try{const task=message.payload?.task;if(!task)return respond('error',{code:'SUPERGPU_TASK_REQUIRED'},400);return respond('response',await superGPU.execute(task,message.correlationId));}catch(error){return respond('error',{code:'SUPERGPU_EXECUTION_ERROR',detail:error instanceof Error?error.message:'Unknown error'},502);} } if(capability==='mesh.supergpu.parallel'){ try{const tasks=message.payload?.tasks;if(!Array.isArray(tasks))return respond('error',{code:'SUPERGPU_TASKS_REQUIRED'},400);return respond('response',await superGPU.executeParallel(tasks,message.correlationId));}catch(error){return respond('error',{code:'SUPERGPU_PARALLEL_EXECUTION_ERROR',detail:error instanceof Error?error.message:'Unknown error'},502);} } if(capability==='mesh.fusion.execute'){ try{const requested=message.payload?.capability;if(typeof requested!=='string')return respond('error',{code:'CAPABILITY_REQUIRED'},400);if(requested==='inference.intent')return respond('response',await inferInitialIntent({...message.payload?.payload||{},correlationId:message.correlationId}));return respond('response',await executeUnified(requested,message.payload?.payload,message.correlationId));}catch(error){return respond('error',{code:'CAPABILITY_EXECUTION_ERROR',detail:error instanceof Error?error.message:'Unknown error'},502);} } if(capability==='mesh.register')return respond('response',{ok:true,registry:[...peers.keys()]}); if(capability==='mesh.heartbeat')return respond('response',{ok:true,timestamp:Date.now()}); if(capability==='mesh.delegate'){ const target=message.payload?.target;if(!PEER_IDS.includes(target)||target===SELF)return respond('error',{code:'INVALID_DELEGATION_TARGET'},400); const delegatedPayload=await buildCognitiveDelegationPayload(message.payload?.payload||{},message.correlationId); return json(res,200,await forward(target,canonicalMessage(target,message.payload?.capability||'mesh.ping',delegatedPayload,message.correlationId))); } const owner=resolveOwner(capability); if(owner&&owner!==SELF)return json(res,200,await forward(owner,message)); return respond('error',{code:'CAPABILITY_NOT_IMPLEMENTED',capability},501); }
- verifyEnvelope(message); const capability=message.payload?.capability; if(capability==='mesh.ping'||message.type==='PING')return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF}})); if(capability==='mesh.health')return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF,peers:[...peers.keys()]}})); if(capability==='mesh.discovery'||capability==='mesh.capabilities'||capability==='mesh.fusion.describe')return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:localFusionSnapshot()})); if(capability==='mesh.capability.resolve'){ const requested=message.payload?.capability;if(typeof requested!=='string')return json(res,400,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_REQUIRED'}}));return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:resolveCapability(requested)})); } if(capability==='mesh.fusion.execute'||capability==='mesh.supergpu.execute'){ const requested=capability==='mesh.supergpu.execute'?message.payload?.task?.capability:message.payload?.capability;if(typeof requested!=='string')return json(res,400,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_REQUIRED'}}));try{return json(res,200,await superGPU.execute({id:message.payload?.task?.id||crypto.randomUUID(),capability:requested,payload:message.payload?.task?.payload??message.payload?.payload},message.correlationId));}catch(error){return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'SUPERGPU_EXECUTION_ERROR',detail:error instanceof Error?'error':error.message}}));} } if(capability?.startsWith('sara.')){ try{const saraPayload=message.payload&&typeof message.payload==='object'&&'payload' in message.payload?message.payload.payload:message.payload;return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:await executeUnified(capability,saraPayload,message.correlationId)}));}catch(error){return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:error instanceof Error?error.message:'SARA_REQUEST_FAILED',provider:'SARA'}}));} } if(capability==='inference.intent'){ try{return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:await inferInitialIntent({...message.payload||{},correlationId:message.correlationId})}));}catch(error){return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:error instanceof Error?error.message:'GEMINI_INTENT_INFERENCE_ERROR'}}));} } const owner=resolveOwner(capability); if(owner&&owner!==SELF)return json(res,200,await forward(owner,message)); return json(res,501,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_NOT_IMPLEMENTED',capability}})); }
+  if(req.method==='POST'&&(url.pathname==='/mesh/in'||url.pathname==='/mesh/out'||url.pathname==='/api/soul-mesh')){ try{ const message=await readBody(req); if(message.protocol===PROTOCOL){ verifyProtocolEnvelope(message,req); if(message.target!==SELF)throw new Error('MESH_TARGET_MISMATCH'); if(!message.source||!/^N0[1-7]$/.test(message.source)||message.source===SELF||!message.correlationId)throw new Error('INVALID_SOUL_MESH_MESSAGE'); if(message.contractVersion!==CONTRACT_VERSION)throw new Error('UNSUPPORTED_MESH_CONTRACT_VERSION'); const capability=message.capability; const respond=(kind,payload,status=200)=>{ const body={protocol:PROTOCOL,contractVersion:CONTRACT_VERSION,id:crypto.randomUUID(),correlationId:message.correlationId,source:SELF,target:message.source,kind,capability,payload,timestamp:Date.now(),meta:{runtime:'aeternum-core-29',transport:'HTTP',encoding:'json',version:CONTRACT_VERSION,traceId:message.correlationId}}; const nonce=crypto.randomUUID().replaceAll('-','').padEnd(32,'0').slice(0,32); const signed=SECRET?protocolResponse({...body,nonce,meta:{...body.meta,nonce}},nonce):body; return json(res,status,signed); }; if(capability==='clareira.metrics')return respond('response',clareiraMetrics()); if(capability==='clareira.ingest'){const packet=message.payload?.packet;if(!isClareiraPacket(packet)){clareiraIngress.errored++;return respond('error',{code:'INVALID_CLAREIRA_PACKET'},400);}if(clareiraIngress.queue.length>=CLAREIRA_MAX_QUEUE_SIZE){clareiraIngress.dropped++;return respond('error',{code:'CLAREIRA_QUEUE_FULL',capacity:CLAREIRA_MAX_QUEUE_SIZE},429);}clareiraIngress.queue.push(packet);clareiraIngress.ingested++;return respond('response',{accepted:true,contractVersion:'1.0.0',correlationId:packet.correlationId,sourceId:packet.sourceId,queued:clareiraIngress.queue.length});} if(capability==='mesh.ping')return respond('response',{ok:true,nucleus:SELF}); if(capability==='mesh.resident.describe@1.0.0')return respond('response',N01_RESIDENT_AGENT); if(capability==='mesh.health')return respond('response',{ok:true,nucleus:SELF,peers:[...peers.keys()]}); if(capability==='mesh.discovery'||capability==='mesh.capabilities')return respond('response',{nucleus:SELF,capabilities:capabilityList(),peers:[...peers.values()],transports:TRANSPORTS,channels:channelsFor(SELF)}); if(capability==='mesh.fusion.describe')return respond('response',localFusionSnapshot()); if(capability==='external.capability.resolve@1.0.0'){try{const p=resolveN01ExternalProvider(message.payload?.provider);return respond('response',{nucleus:SELF,capability,runtimeState:'PROJECTED',executionProven:false,provider:p.id,source:p.source,revision:p.revision,owner:p.owner,targets:p.targets,capabilities:p.capabilities,directAffinity:Boolean(p.direct_affinity),adapterOperations:p.adapter_operations||[],runtimeAdapterStatus:p.runtime_adapter_status||'UNREGISTERED'});}catch(error){return respond('error',{code:error instanceof Error?error.message:'N01_EXTERNAL_PROVIDER_RESOLVE_FAILED'},400);}} if(capability==='external.capability.fabric.describe@1.0.0')return respond('response',{...describeN01ExternalCapabilityFabric(),correlationId:message.correlationId}); if(capability==='external.capability.execute'||capability==='external.capability.execute@1.0.0'){try{const input=message.payload;if(!input||typeof input!=='object'||Array.isArray(input))return respond('error',{code:'N01_EXTERNAL_CAPABILITY_PAYLOAD_REQUIRED'},400);if(typeof input.provider==='string'&&input.provider.trim())return respond('response',await executeN01ExternalProvider(input,message.correlationId));const targetCapability=typeof input.capability==='string'?input.capability.trim():'';if(!targetCapability)return respond('error',{code:'N01_EXTERNAL_PROVIDER_OR_CAPABILITY_REQUIRED'},400);const delegated={payload:input.payload??{},metadata:{prefrontal_orbital:'true',workloads_json:JSON.stringify(Array.isArray(input.workloads)?input.workloads:[]),candidate_json:JSON.stringify(input.candidate??{capability:targetCapability}),strategy:typeof input.strategy==='string'?input.strategy:'n01-external-tool-preflight'}};const response=await forward('N02',canonicalMessage('N02',targetCapability,delegated,message.correlationId));return respond('response',response);}catch(error){return respond('error',{code:error instanceof Error?error.message:'N01_EXTERNAL_EXECUTION_BLOCKED'},502);}} if(capability==='mesh.capability.resolve'){ try{return respond('response',resolveCapability(message.payload?.capability));}catch(error){return respond('error',{code:error instanceof Error?error.message:'CAPABILITY_RESOLUTION_ERROR'},400);} } if(capability?.startsWith('sara.')){ try{return respond('response',await executeUnified(capability,message.payload,message.correlationId));}catch(error){return respond('error',{code:error instanceof Error?error.message:'SARA_REQUEST_FAILED',provider:'SARA'},502);} } if(capability==='inference.intent'){ try{return respond('response',await inferInitialIntent({...message.payload||{},correlationId:message.correlationId}));}catch(error){return respond('error',{code:error instanceof Error?error.message:'GEMINI_INTENT_INFERENCE_ERROR'},502);} } if(capability==='mesh.supergpu.describe')return respond('response',superGPU.describe()); if(capability==='mesh.supergpu.execute'){ try{const task=message.payload?.task;if(!task)return respond('error',{code:'SUPERGPU_TASK_REQUIRED'},400);return respond('response',await superGPU.execute(task,message.correlationId));}catch(error){return respond('error',{code:'SUPERGPU_EXECUTION_ERROR',detail:error instanceof Error?error.message:'Unknown error'},502);} } if(capability==='mesh.supergpu.parallel'){ try{const tasks=message.payload?.tasks;if(!Array.isArray(tasks))return respond('error',{code:'SUPERGPU_TASKS_REQUIRED'},400);return respond('response',await superGPU.executeParallel(tasks,message.correlationId));}catch(error){return respond('error',{code:'SUPERGPU_PARALLEL_EXECUTION_ERROR',detail:error instanceof Error?error.message:'Unknown error'},502);} } if(capability==='mesh.fusion.execute'){ try{const requested=message.payload?.capability;if(typeof requested!=='string')return respond('error',{code:'CAPABILITY_REQUIRED'},400);if(requested==='inference.intent')return respond('response',await inferInitialIntent({...message.payload?.payload||{},correlationId:message.correlationId}));return respond('response',await executeUnified(requested,message.payload?.payload,message.correlationId));}catch(error){return respond('error',{code:'CAPABILITY_EXECUTION_ERROR',detail:error instanceof Error?error.message:'Unknown error'},502);} } if(capability==='mesh.register')return respond('response',{ok:true,registry:[...peers.keys()]}); if(capability==='mesh.heartbeat')return respond('response',{ok:true,timestamp:Date.now()}); if(capability==='mesh.delegate'){
+    const target=message.payload?.target;
+    if(!PEER_IDS.includes(target)||target===SELF)return respond('error',{code:'INVALID_DELEGATION_TARGET'},400);
+    try{
+      const delegatedPayload=await buildCognitiveDelegationPayload(message.payload?.payload||{},message.correlationId);
+      const result=await forward(target,canonicalMessage(target,message.payload?.capability||'mesh.ping',delegatedPayload,message.correlationId));
+      return respond('response',result);
+    }catch(error){
+      return respond('error',{code:'MESH_DELEGATION_FAILED',target,detail:error instanceof Error?error.message:'Unknown error'},502);
+    }
+  }
+  const owner=resolveOwner(capability);
+  if(owner&&owner!==SELF){
+    try{return respond('response',await forward(owner,message));}
+    catch(error){return respond('error',{code:'PEER_FORWARD_FAILED',target:owner,detail:error instanceof Error?error.message:'Unknown error'},502);}
+  }
+  return respond('error',{code:'CAPABILITY_NOT_IMPLEMENTED',capability},501); }
+ verifyEnvelope(message); const capability=message.payload?.capability; if(capability==='mesh.ping'||message.type==='PING')return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF}})); if(capability==='mesh.health')return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:{ok:true,nucleus:SELF,peers:[...peers.keys()]}})); if(capability==='mesh.discovery'||capability==='mesh.capabilities'||capability==='mesh.fusion.describe')return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:localFusionSnapshot()})); if(capability==='mesh.capability.resolve'){ const requested=message.payload?.capability;if(typeof requested!=='string')return json(res,400,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_REQUIRED'}}));return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:resolveCapability(requested)})); } if(capability==='mesh.fusion.execute'||capability==='mesh.supergpu.execute'){ const requested=capability==='mesh.supergpu.execute'?message.payload?.task?.capability:message.payload?.capability;if(typeof requested!=='string')return json(res,400,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_REQUIRED'}}));try{return json(res,200,await superGPU.execute({id:message.payload?.task?.id||crypto.randomUUID(),capability:requested,payload:message.payload?.task?.payload??message.payload?.payload},message.correlationId));}catch(error){return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'SUPERGPU_EXECUTION_ERROR',detail:error instanceof Error?'error':error.message}}));} } if(capability?.startsWith('sara.')){ try{const saraPayload=message.payload&&typeof message.payload==='object'&&'payload' in message.payload?message.payload.payload:message.payload;return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:await executeUnified(capability,saraPayload,message.correlationId)}));}catch(error){return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:error instanceof Error?error.message:'SARA_REQUEST_FAILED',provider:'SARA'}}));} } if(capability==='inference.intent'){ try{return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:await inferInitialIntent({...message.payload||{},correlationId:message.correlationId})}));}catch(error){return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:error instanceof Error?error.message:'GEMINI_INTENT_INFERENCE_ERROR'}}));} } const owner=resolveOwner(capability);
+  if(owner&&owner!==SELF){
+    const legacyPayload=message.payload&&typeof message.payload==='object'?(message.payload.payload??{}):{};
+    try{
+      const result=await forward(owner,canonicalMessage(owner,capability,legacyPayload,message.correlationId));
+      return json(res,200,envelope({target:message.source,correlationId:message.correlationId,payload:result}));
+    }catch(error){
+      return json(res,502,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'PEER_FORWARD_FAILED',target:owner,detail:error instanceof Error?error.message:'Unknown error'}}));
+    }
+  }
+  return json(res,501,envelope({target:message.source,correlationId:message.correlationId,type:'ERROR',payload:{code:'CAPABILITY_NOT_IMPLEMENTED',capability}})); }
  catch(error){return json(res,400,{ok:false,error:error instanceof Error?error.message:'MESH_ERROR'});} }
 }
 
