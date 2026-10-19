@@ -71,7 +71,7 @@ class SoulMeshHttpTransport(
             }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
-            val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use(BufferedReader::readText).orEmpty()
+            val body = stream?.bufferedReader(StandardCharsets.UTF_8)?.use { it.readText() }.orEmpty()
             require(body.isNotBlank()) { "Empty Mesh response: HTTP $status" }
 
             val response = SoulMeshMessage.fromJson(JSONObject(body))
