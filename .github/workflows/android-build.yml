@@ -92,7 +92,7 @@ jobs:
           emulator-boot-timeout: 600
           force-avd-creation: true
           # swiftshader_indirect is deprecated; use the supported SwiftShader software renderer.
-          emulator-options: -no-window -gpu swiftshader -no-snapshot -wipe-data -noaudio -no-boot-anim -camera-back none -camera-front none
+          emulator-options: -no-window -gpu swiftshader -no-snapshot -wipe-data -noaudio -no-boot-anim -camera-back none -camera-front none -memory 2048 -cores 2
           disable-animations: true
           disable-linux-hw-accel: auto
           working-directory: soul-sentinel
