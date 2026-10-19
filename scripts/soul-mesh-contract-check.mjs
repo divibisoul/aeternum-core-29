@@ -42,8 +42,10 @@ assert.match(serverSource, /function channelsFor\(id\)\{ const peersFor=NUCLEUS_
   'N01 channel matrix: every nucleus must include all six other identities');
 assert.match(serverSource, /directionalChannels:counts\.totalEndpointSurfaces,directedRoutes:counts\.totalLogicalDirectedRoutes,endpointSurfaces:counts\.totalEndpointSurfaces,topologyCounts:counts/,
   'N01 fusion snapshot must distinguish directed links from endpoint surfaces');
-assert.match(serverSource, /if\(!PEER_IDS\.includes\(body\.nucleus\)\|\|!normalizeUrl\(body\.endpoint\)\)/,
+assert.match(serverSource, /if \(!body \|\| typeof body !== 'object' \|\| Array\.isArray\(body\) \|\| !PEER_IDS\.includes\(body\.nucleus\)\)/,
   'N01 registration: structural peer validation is not based on the canonical peer set');
+assert.match(serverSource, /const endpoint = validatedRegistrationEndpoint\(body\.endpoint\);/,
+  'N01 registration: endpoint validation must remain explicit and separate from peer identity validation');
 assert.match(serverSource, /if\(!PEER_IDS\.includes\(id\)\|\|!expected\|\|provided!==expected\)/,
   'N01 heartbeat: structural peer validation is not based on the canonical peer set');
 assert.match(serverSource, /if\(!PEER_IDS\.includes\(target\)\|\|target===SELF\)/,
