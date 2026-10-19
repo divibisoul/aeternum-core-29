@@ -9,8 +9,16 @@ function stablePort() {
 }
 const port = Number(process.env.SOUL_MESH_LOCAL_TEST_PORT || stablePort());
 const baseUrl = `http://127.0.0.1:${port}`;
+// Exercise the real registration guard with a per-run credential. Never disable
+// authentication merely to make a local contract test pass.
+const n02RegistrationToken = crypto.randomBytes(32).toString('hex');
 const child = spawn(process.execPath, ['scripts/soul-mesh-server-entry.mjs'], {
-  env: { ...process.env, SOUL_MESH_N01_PORT: String(port), SOUL_MESH_N01_HOST: '127.0.0.1' },
+  env: {
+    ...process.env,
+    SOUL_MESH_N01_PORT: String(port),
+    SOUL_MESH_N01_HOST: '127.0.0.1',
+    SOUL_MESH_N02_REGISTRATION_TOKEN: n02RegistrationToken,
+  },
   stdio: ['ignore', 'inherit', 'inherit'],
 });
 
@@ -41,7 +49,10 @@ try {
 
   const register = await json(await fetch(`${baseUrl}/api/soul-mesh/register`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${n02RegistrationToken}`,
+    },
     body: JSON.stringify({ nucleus: 'N02', endpoint: 'http://127.0.0.1:19002', capabilities: ['ai.generate'], role: 'independent-ai' }),
   }));
   if (register.status !== 200 || register.body.registered !== 'N02' || typeof register.body.token !== 'string') {
