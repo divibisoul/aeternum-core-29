@@ -37,5 +37,5 @@ assert.equal(output.hops[1].status,'SUCCEEDED');
 assert.equal(output.hops[2].provider,'langgraph');
 assert.equal(output.hops[2].model,'langgraph@1400d25b7b88cfa055c55b8a82bd95b7c25caef1');
 assert.equal(output.result?.inference?.intent,'integration_verification');
-assert.match(output.result?.inference?.summary||/,/i,/LangGraph executed a two-node graph/);
+assert.match(output.result?.inference?.summary || '', /LangGraph executed a two-node graph/);
 console.log(JSON.stringify({event:'soul.fusion.langgraph.test.completed',status:'PASS',trace_id:output.trace_id,correlation_id:output.correlation_id,provider:output.hops[2].provider,model:output.hops[2].model,latency_ms:output.latency_ms,exit_code:0},null,2));
