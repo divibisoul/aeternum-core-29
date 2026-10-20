@@ -188,10 +188,16 @@ try {
     body: JSON.stringify(message),
   });
   const replayBody = await replay.json().catch(() => null);
-  if (replay.status !== 409 || replayBody?.error !== undefined && replayBody?.payload?.code !== undefined) {
-    if (replay.status !== 400) throw new Error(`N01_PROTOCOL_HMAC_REPLAY_NOT_REJECTED:${replay.status}:${JSON.stringify(replayBody)}`);
-  }
-
+  assert.equal(
+    replay.status,
+    400,
+    `replayed request must be rejected with HTTP 400; received ${replay.status}`,
+  );
+  assert.equal(
+    replayBody?.error,
+    'MESH_REPLAY_DETECTED',
+    `replayed request must fail closed; received ${JSON.stringify(replayBody)}`,
+  );
 
   // Verify the actual peer-response contract matrix used by N01's outbound gateway.
   // Signatures are independently generated here from each established wire format.
@@ -249,7 +255,7 @@ try {
     request: { hmac: true, nonce: true, correlation: true },
     response: { hmac: true, nonce: true, correlation: firstBody.correlationId === message.correlationId },
     negativeRequestSignatureRejected: invalidSignatureResponse.status === 400 && invalidSignatureBody?.error === 'MESH_HMAC_INVALID',
-    replayRejected: replay.status === 409,
+    replayRejected: replay.status === 400 && replayBody?.error === 'MESH_REPLAY_DETECTED',
   };
   console.log(JSON.stringify(result, null, 2));
 } finally {
