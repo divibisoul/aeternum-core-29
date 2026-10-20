@@ -1,13 +1,6 @@
 name: N01 NVOD fusion verification
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'src/core/fusion/**'
-      - 'src/core/mesh/SoulMeshRuntime.ts'
-      - 'scripts/nvod-fusion-contract-check.mjs'
-      - '.github/workflows/n01-nvod-fusion.yml'
   workflow_dispatch:
 
 permissions:

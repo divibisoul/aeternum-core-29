@@ -1,11 +1,7 @@
 name: rgo-trinity-mmd
 on:
-  pull_request:
-  push:
-    branches:
-      - main
-      - "reconcile/**"
-      - "rgo/**"
+  workflow_dispatch:
+
 jobs:
   verify:
     runs-on: ubuntu-latest

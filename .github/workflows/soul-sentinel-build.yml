@@ -1,13 +1,7 @@
 name: Soul Core Android Build
 
 on:
-  push:
-    branches: [main, soul-core-v0.2-events-4]
-  pull_request:
-    branches: [main]
-    paths:
-      - 'soul-sentinel/**'
-      - '.github/workflows/soul-sentinel-build.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read

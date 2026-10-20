@@ -1,9 +1,6 @@
 name: N01 Mesh Boot Diagnostic
 
 on:
-  push:
-    branches:
-      - fix/n01-validation-remediation-2026-09-27
   workflow_dispatch:
 
 permissions:

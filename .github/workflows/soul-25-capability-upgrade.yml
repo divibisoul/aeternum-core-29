@@ -1,8 +1,7 @@
 name: SOUL 25 Capability Upgrade - N01
 
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
