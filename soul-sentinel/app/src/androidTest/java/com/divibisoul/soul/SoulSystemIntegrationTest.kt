@@ -8,13 +8,13 @@ import org.junit.Test
 class SoulSystemIntegrationTest {
     @Test
     fun bootstrapRegistersAllSixNuclei() {
-        val runtime = SoulMeshBootstrap.create()
+        val runtime = SoulMeshBootstrap.create(webDelegate = { SoulMeshBootstrap.delegateToWeb(it) })
         assertEquals(setOf("N01", "N02", "N03", "N04", "N05", "N06"), runtime.registeredNuclei())
     }
 
     @Test
     fun completeDirectedMatrixResponds() {
-        val runtime = SoulMeshBootstrap.create()
+        val runtime = SoulMeshBootstrap.create(webDelegate = { SoulMeshBootstrap.delegateToWeb(it) })
         SoulMeshChannels.directedLinks().forEach { (source, target) ->
             val result = runtime.send(source, target, "mesh.ping", JSONObject().put("source", source))
             assertEquals("response", result.kind)
