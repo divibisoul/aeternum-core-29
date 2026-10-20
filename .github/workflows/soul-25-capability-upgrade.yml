@@ -12,21 +12,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate 25-repository augmentation contract
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.21
+      - name: Install locked N01 dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate 25-source N01 capability fabric and preserved native topology
         run: |
           python - <<'PY'
           import json
-          d=json.load(open('integrations/soul-25-augmentation.json'))
-          assert d['external_provider_count'] == 16
-          assert len(d['external_providers']) == 16
+          import re
+
+          d = json.load(open('integrations/soul-25-augmentation.json'))
+          providers = d['external_providers']
+          peers = d['soul_peers']
+          assert d['external_provider_count'] == 25, f"provider_count={d['external_provider_count']}"
+          assert len(providers) == 25, f"providers={len(providers)}"
+          assert len({p['id'] for p in providers}) == 25, 'duplicate provider IDs'
           assert d['soul_peer_count'] == 9
-          assert len(d['soul_peers']) == 9
+          assert len(peers) == 9
+          assert len(set(peers)) == 9, 'duplicate native peer identities'
           assert d['native_authority'] == 'preserved'
-          for p in d['external_providers']:
-              assert p['id'] and p['capabilities']
-              assert p['access'] == 'N07 canonical federation'
-              assert p['structural_state'] == 'REAL'
-              assert p['runtime_state'] == 'PROJECTED'
-              assert p['requires_adapter'] is True
-          print('SOUL-25 AUGMENTATION CONTRACT: PASS')
+          assert d['graph'] == 'SOUL-34-capability-fabric'
+          adapter_states = {'REGISTERED': 0, 'EXPANSION_ONLY': 0, 'UNREGISTERED': 0}
+          for p in providers:
+              assert p['id'] and p['capabilities'], f"missing identity/capabilities: {p.get('id')}"
+              assert p['access'] == 'N01 capability fabric', f"access drift: {p['id']}"
+              assert p['structural_state'] == 'REAL', f"structural state drift: {p['id']}"
+              assert p['runtime_state'] == 'PROJECTED', f"unproven runtime promoted: {p['id']}"
+              assert p['requires_adapter'] is True, f"adapter contract missing: {p['id']}"
+              assert p['source'].startswith('https://github.com/'), f"non-public source: {p['id']}"
+              assert re.fullmatch(r'[0-9a-fA-F]{40}', p['revision']), f"unpinned source: {p['id']}"
+              assert p['owner'] and p['targets'], f"native ownership/targets missing: {p['id']}"
+              assert p['execution_boundary'] == f"native-owner:{p['owner']}", f"owner boundary drift: {p['id']}"
+              status = p['runtime_adapter_status']
+              assert status in adapter_states, f"invalid adapter status: {p['id']}"
+              adapter_states[status] += 1
+              assert isinstance(p['adapter_operations'], list), f"adapter operation list missing: {p['id']}"
+              if status == 'REGISTERED':
+                  assert p['adapter_operations'], f"registered provider has no operations: {p['id']}"
+              elif status == 'EXPANSION_ONLY':
+                  assert p['id'] == 'ray' and p['adapter_operations'], f"unexpected expansion-only provider: {p['id']}"
+              else:
+                  assert p['adapter_operations'] == [], f"unregistered provider claims operations: {p['id']}"
+          assert adapter_states == {'REGISTERED': 16, 'EXPANSION_ONLY': 1, 'UNREGISTERED': 8}, adapter_states
+          print('N01 FABRIC: 25 pinned sources; 9 native peers preserved; 16 adapter registrations, 1 expansion-only, 8 unregistered; unproven runtime remains PROJECTED.')
           PY
+      - name: Test N01 manifest-backed upstream capability fabric
+        run: bun run upstream:fabric:check

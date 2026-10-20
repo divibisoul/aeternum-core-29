@@ -38,7 +38,9 @@ Default listener: `0.0.0.0:8080`.
 
 Configure peer endpoints with `SOUL_MESH_N02_URL` through `SOUL_MESH_N06_URL`. Configure `SOUL_MESH_SECRET` to enable HMAC-SHA256 envelope authentication.
 
-N01 provides discovery, registration, delegation, retry/circuit protection and ordered `mesh.combo` workflows. Specialized capabilities remain owned by their respective nuclei; N01 orchestrates rather than replacing them.
+Public peer registration is fail-closed: configure distinct server-only `SOUL_MESH_N02_REGISTRATION_TOKEN` through `SOUL_MESH_N07_REGISTRATION_TOKEN` values (32+ bytes). Each peer must use `Authorization: Bearer <its own registration token>` for its matching identity; cross-nucleus claims are rejected. Do not expose these credentials in `VITE_*` variables. Peer clients that have not yet been configured for this registration contract remain blocked from registering until their migration is complete.
+
+N01 provides discovery, authenticated registration, delegation, retry/circuit protection and ordered `mesh.combo` workflows. Specialized capabilities remain owned by their respective nuclei; N01 orchestrates rather than replacing them.
 
 To run the N01/N06 probe:
 

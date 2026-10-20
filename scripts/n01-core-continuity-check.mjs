@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { ProcessingNode } from '../src/core/neural/ProcessingNode.ts';
+import { HomeostasisManager } from '../src/core/neural/HomeostasisManager.ts';
+import { VagusNerve } from '../src/core/neural/VagusNerve.ts';
 
 const [{ EventBus }, { nervoVago }, { aeternumBus }, { ProjetoClareira }, { ModuleRegistry }] =
   await Promise.all([
@@ -38,4 +41,32 @@ assert.equal(typeof ModuleRegistry.initialize, 'function');
 
 unsubscribeNervo();
 unsubscribeCanonical();
+
+// Exercise the real afferent/efferent path without mocks: node -> VagusNerve
+// -> HomeostasisManager -> command -> same node.
+const communicationNode = new ProcessingNode('N01-CONTINUITY-VAGUS', 'Primary');
+const communicationHomeostasis = new HomeostasisManager();
+const communicationVagus = new VagusNerve(communicationHomeostasis);
+communicationHomeostasis.attachVagus(communicationVagus);
+communicationHomeostasis.registerNodes([communicationNode]);
+communicationVagus.registerNode(communicationNode);
+const initialProcessingRate = communicationNode.processingRateMultiplier;
+communicationVagus.start();
+try {
+  communicationNode.reportVagalAfferent(
+    'energy_low',
+    { source: 'continuity-check', energyRatio: communicationNode.getState().loadRatio },
+    0.85,
+  );
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const vagusSnapshot = communicationVagus.snapshot();
+  assert.equal(vagusSnapshot.signalsIn, 1, 'node afferent reaches VagusNerve');
+  assert.equal(vagusSnapshot.signalsOut, 1, 'HomeostasisManager command returns through VagusNerve');
+  assert.ok(
+    communicationNode.processingRateMultiplier < initialProcessingRate,
+    'efferent calm command changes the original node rate',
+  );
+} finally {
+  communicationVagus.stop();
+}
 console.log('N01_CORE_CONTINUITY_PASS');
