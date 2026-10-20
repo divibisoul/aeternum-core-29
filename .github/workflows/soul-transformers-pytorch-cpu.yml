@@ -1,11 +1,6 @@
 name: SOUL Transformers and PyTorch pinned CPU inference
 
 on:
-  push:
-    branches: ["fusion/phase-zero-canon-20261019"]
-    paths:
-      - "integrations/transformers-cpu/**"
-      - ".github/workflows/soul-transformers-pytorch-cpu.yml"
   workflow_dispatch:
 
 concurrency:

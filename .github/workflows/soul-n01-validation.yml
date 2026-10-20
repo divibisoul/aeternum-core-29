@@ -2,9 +2,13 @@ name: SOUL N01 validation
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: ["fusion/phase-zero-canon-20261019"]
+    paths:
+      - "src/**"
+      - "scripts/**"
+      - "soul-sentinel/**"
+      - "package.json"
+      - ".github/workflows/soul-n01-validation.yml"
   workflow_dispatch:
 
 permissions:

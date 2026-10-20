@@ -1,141 +1,160 @@
-name: SOUL Fusion Minimal E2E v0.1.0
-
+name: SOUL Fusion Minimal E2E local CPU v0.2.0
 on:
   push:
     branches: ["fusion/phase-zero-canon-20261019"]
     paths:
       - "scripts/soul-mesh-server-entry.mjs"
-      - "scripts/soul-fusion-model-adapter.mjs"
       - "scripts/soul-fusion-e2e-minimal.mjs"
+      - "scripts/soul-fusion-synergy.mjs"
+      - "integrations/langgraph-runtime/**"
+      - "integrations/transformers-cpu/**"
       - ".github/workflows/soul-fusion-e2e-minimal.yml"
       - ".github/workflows/android-build.yml"
+      - ".github/workflows/soul-n01-validation.yml"
   workflow_dispatch:
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
-  real-e2e:
-    name: Real N01 -> N07 -> Google Gemini -> correlated response
+  real-local-e2e-and-synergy:
+    name: "Group F CPU inference + Group A N01 -> N07 -> LangGraph -> local model + 10x10 latency"
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 55
     env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      GEMINI_MODEL: gemini-3.8-flash
+      LANGGRAPH_UPSTREAM_SHA: "1400d25b7b88cfa055c55b8a82bd95b7c25caef1"
+      TRANSFORMERS_SHA: "6f2e80bdad560947903bb4bde8043ae95387069a"
+      PYTORCH_SOURCE_SHA: "a84b7baa33f893ab92176c08a85b14455e60b2fc"
+      SOUL_LOCAL_MODEL_ID: "distilbert/distilbert-base-uncased-finetuned-sst-2-english"
     steps:
-      - name: Checkout N01 baseline branch
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
-
-      - name: Install existing N01 dependencies
-        run: bun install --no-save
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
+          bun-version: "1.4.3"
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
           cache: false
-
-      - name: Freeze public N07 source at baseline SHA
+      - name: Install N01 dependencies
+        run: bun install --no-save
+      - name: Configure ephemeral local-only service credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOUL_MESH_SECRET="$(openssl rand -hex 32)"
+          SOUL_FUSION_EXECUTION_TOKEN="$(openssl rand -hex 32)"
+          SOUL_FUSION_MODEL_TOKEN="$(openssl rand -hex 32)"
+          {
+            echo "SOUL_MESH_SECRET=$SOUL_MESH_SECRET"
+            echo "SOUL_FUSION_EXECUTION_TOKEN=$SOUL_FUSION_EXECUTION_TOKEN"
+            echo "SOUL_FUSION_MODEL_TOKEN=$SOUL_FUSION_MODEL_TOKEN"
+            echo "SOUL_MESH_N07_URL=http://127.0.0.1:18090"
+            echo "SOUL_FUSION_MODEL_URL=http://127.0.0.1:18070"
+            echo "SOUL_FUSION_MODEL_PROVIDER=local-transformers-pytorch"
+            echo "SOUL_FUSION_LOCAL_MODEL_URL=http://127.0.0.1:18071"
+            echo "SOUL_FUSION_N01_URL=http://127.0.0.1:18080"
+            echo "SOUL_MESH_N01_PORT=18080"
+            echo "SOUL_MESH_N01_HOST=127.0.0.1"
+            echo "N07_HTTP_ADDR=127.0.0.1:18090"
+            echo "SOUL_LOCAL_MODEL_PORT=18071"
+            echo "SOUL_LOCAL_MODEL_HOST=0.0.0.0"
+          } >> "$GITHUB_ENV"
+      - name: Create ephemeral Docker network and model cache
+        run: |
+          set -euo pipefail
+          docker network create soul-fusion-e2e
+          docker volume create soul-local-model-cache
+      - name: Build isolated Transformers + PyTorch CPU image
+        run: |
+          set -euo pipefail
+          docker build --pull --build-arg TRANSFORMERS_SHA="$TRANSFORMERS_SHA" --build-arg PYTORCH_SHA="$PYTORCH_SOURCE_SHA" \
+            -t soul-transformers-pytorch-cpu:ci integrations/transformers-cpu
+      - name: Group F — execute one real CPU inference, record model SHA and latency
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network soul-fusion-e2e --cpus=2 --memory=8g --mount source=soul-local-model-cache,target=/root/.cache/huggingface \
+            -e SOUL_LOCAL_MODEL_ID="$SOUL_LOCAL_MODEL_ID" -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" \
+            -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" \
+            soul-transformers-pytorch-cpu:ci --self-test | tee "$RUNNER_TEMP/group-f-self-test.log"
+          MODEL_SHA="$(python3 - "$RUNNER_TEMP/group-f-self-test.log" <<'PY'
+          import json,sys
+          for line in reversed(open(sys.argv[1],encoding="utf-8").read().splitlines()):
+              try: item=json.loads(line)
+              except Exception: continue
+              if item.get("event")=="group_f.cpu_inference.self_test": print(item["model_sha"]); raise SystemExit(0)
+          raise SystemExit("GROUP_F_MODEL_SHA_NOT_RECORDED")
+          PY
+          )"
+          [[ "$MODEL_SHA" =~ ^[0-9a-f]{40}$ ]]
+          echo "SOUL_LOCAL_MODEL_SHA=$MODEL_SHA" >> "$GITHUB_ENV"
+      - name: Start local CPU inference service
+        run: |
+          set -euo pipefail
+          docker run --detach --name soul-local-model --network soul-fusion-e2e --publish 127.0.0.1:18071:18071 --cpus=2 --memory=8g \
+            --mount source=soul-local-model-cache,target=/root/.cache/huggingface \
+            -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" -e SOUL_LOCAL_MODEL_ID="$SOUL_LOCAL_MODEL_ID" -e SOUL_LOCAL_MODEL_SHA="$SOUL_LOCAL_MODEL_SHA" \
+            -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" -e SOUL_LOCAL_MODEL_PORT=18071 -e SOUL_LOCAL_MODEL_HOST=0.0.0.0 \
+            soul-transformers-pytorch-cpu:ci --serve
+          for i in $(seq 1 90); do if curl -fsS http://127.0.0.1:18071/health; then break; fi; sleep 2; done
+          curl -fsS http://127.0.0.1:18071/health
+      - name: Build and start isolated LangGraph at frozen upstream SHA
+        run: |
+          set -euo pipefail
+          docker build --pull --build-arg LANGGRAPH_SHA="$LANGGRAPH_UPSTREAM_SHA" -t soul-langgraph-adapter:ci integrations/langgraph-runtime
+          docker run --detach --name soul-langgraph-adapter --network soul-fusion-e2e --publish 127.0.0.1:18070:18070 \
+            -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" -e SOUL_LOCAL_MODEL_URL=http://soul-local-model:18071 \
+            -e LANGGRAPH_UPSTREAM_SHA="$LANGGRAPH_UPSTREAM_SHA" soul-langgraph-adapter:ci
+          for i in $(seq 1 60); do if curl -fsS http://127.0.0.1:18070/health; then break; fi; sleep 2; done
+          curl -fsS http://127.0.0.1:18070/health
+      - name: Build real N07 from frozen SOUL source SHA and add trace logging
         shell: bash
         run: |
           set -euo pipefail
           git clone --no-checkout https://github.com/divibisoul/Orquestrador-.git "$RUNNER_TEMP/Orquestrador-"
           git -C "$RUNNER_TEMP/Orquestrador-" checkout --detach 5fd4e95d4e2bffb7fd1028da00cdbf7b4f66e49a
           test "$(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)" = "5fd4e95d4e2bffb7fd1028da00cdbf7b4f66e49a"
+          python3 - "$RUNNER_TEMP/Orquestrador-/mesh/http.go" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          if '"log"' not in s: s=s.replace('"fmt"','"fmt"\n\t"log"',1)
+          marker='\tif envelope.Target != "N07" && envelope.Target != "BROADCAST" {'
+          line='\tlog.Printf("SOUL_TRACE n07.authorized trace_id=%s correlation_id=%s capability=%s", envelope.CorrelationID, envelope.CorrelationID, canonicalCapability(wire))\n'
+          if marker not in s: raise SystemExit("N07_TRACE_INSERTION_POINT_MISSING")
+          if 'SOUL_TRACE n07.authorized' not in s: s=s.replace(marker,line+marker,1)
+          p.write_text(s)
+          PY
           (cd "$RUNNER_TEMP/Orquestrador-" && go build -trimpath -o "$RUNNER_TEMP/soul-n07" ./cmd/nexus)
-          echo "N07 source SHA: $(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)"
-
-      - name: Configure ephemeral local service credentials
-        shell: bash
+          echo "N07_SOURCE_SHA=$(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)"
+      - name: Start N07 Mesh authorization service
         run: |
           set -euo pipefail
-          test -n "$GEMINI_API_KEY" || { echo "BLOCKED_ENVIRONMENT: repository secret GEMINI_API_KEY is not configured; refusing mock inference."; exit 78; }
-          printf 'SOUL_MESH_SECRET=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          printf 'SOUL_FUSION_EXECUTION_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          printf 'SOUL_FUSION_MODEL_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "GEMINI_MODEL=gemini-3.8-flash" >> "$GITHUB_ENV"
-          echo "SOUL_MESH_N07_URL=http://127.0.0.1:18090" >> "$GITHUB_ENV"
-          echo "SOUL_FUSION_MODEL_URL=http://127.0.0.1:18070" >> "$GITHUB_ENV"
-          echo "SOUL_FUSION_EXECUTION_ENABLED=true" >> "$GITHUB_ENV"
-          echo "SOUL_MESH_N01_PORT=18080" >> "$GITHUB_ENV"
-          echo "SOUL_MESH_N01_HOST=127.0.0.1" >> "$GITHUB_ENV"
-          echo "N07_HTTP_ADDR=127.0.0.1:18090" >> "$GITHUB_ENV"
-          echo "SOUL_FUSION_MODEL_PORT=18070" >> "$GITHUB_ENV"
-          echo "SOUL_FUSION_MODEL_HOST=127.0.0.1" >> "$GITHUB_ENV"
-
-      - name: Start N07 real neural runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-          SOUL_MESH_HMAC_SECRET="$SOUL_MESH_SECRET" N07_APP_TOKEN="$(openssl rand -hex 32)" N07_HTTP_ADDR="$N07_HTTP_ADDR" "$RUNNER_TEMP/soul-n07" > "$RUNNER_TEMP/n07-runtime.log" 2>&1 &
+          SOUL_MESH_HMAC_SECRET="$SOUL_MESH_SECRET" N07_APP_TOKEN="$(openssl rand -hex 32)" N07_HTTP_ADDR="$N07_HTTP_ADDR" \
+            "$RUNNER_TEMP/soul-n07" > "$RUNNER_TEMP/n07-runtime.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/n07-runtime.pid"
-          for i in $(seq 1 40); do
-            if curl -fsS --max-time 2 http://127.0.0.1:18090/health > "$RUNNER_TEMP/n07-health.json"; then
-              cat "$RUNNER_TEMP/n07-health.json"
-              exit 0
-            fi
-            sleep 1
-          done
-          cat "$RUNNER_TEMP/n07-runtime.log"
-          exit 1
-
-      - name: Start real Google Gemini model adapter
-        shell: bash
+          for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:18090/health; then exit 0; fi; sleep 1; done
+          cat "$RUNNER_TEMP/n07-runtime.log"; exit 1
+      - name: Start N01 Mesh HTTP gateway
         run: |
           set -euo pipefail
-          node scripts/soul-fusion-model-adapter.mjs > "$RUNNER_TEMP/model-adapter.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/model-adapter.pid"
-          for i in $(seq 1 30); do
-            if curl -fsS --max-time 2 http://127.0.0.1:18070/health > "$RUNNER_TEMP/model-health.json"; then
-              cat "$RUNNER_TEMP/model-health.json"
-              exit 0
-            fi
-            sleep 1
-          done
-          cat "$RUNNER_TEMP/model-adapter.log"
-          exit 1
-
-      - name: Start N01 Mesh gateway
-        shell: bash
-        run: |
-          set -euo pipefail
-          SOUL_MESH_SECRET="$SOUL_MESH_SECRET" SOUL_MESH_N07_URL="$SOUL_MESH_N07_URL" SOUL_MESH_N01_PORT=18080 SOUL_MESH_N01_HOST=127.0.0.1 node scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-mesh.log" 2>&1 &
+          SOUL_MESH_SECRET="$SOUL_MESH_SECRET" SOUL_MESH_N07_URL="$SOUL_MESH_N07_URL" SOUL_FUSION_EXECUTION_TOKEN="$SOUL_FUSION_EXECUTION_TOKEN" \
+            SOUL_FUSION_MODEL_URL="$SOUL_FUSION_MODEL_URL" SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" SOUL_FUSION_MODEL_PROVIDER=local-transformers-pytorch \
+            SOUL_FUSION_EXECUTION_ENABLED=true SOUL_MESH_N01_PORT=18080 SOUL_MESH_N01_HOST=127.0.0.1 node scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-mesh.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/n01-mesh.pid"
-          for i in $(seq 1 40); do
-            if curl -fsS --max-time 2 http://127.0.0.1:18080/api/soul-mesh/health > "$RUNNER_TEMP/n01-health.json"; then
-              cat "$RUNNER_TEMP/n01-health.json"
-              exit 0
-            fi
-            sleep 1
-          done
-          cat "$RUNNER_TEMP/n01-mesh.log"
-          exit 1
-
-      - name: Run REAL E2E and assert correlated response
-        shell: bash
-        run: |
-          set -euo pipefail
-          node scripts/soul-fusion-e2e-minimal.mjs
-
-      - name: Emit correlated service logs on completion or failure
+          for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:18080/api/soul-mesh/health; then exit 0; fi; sleep 1; done
+          cat "$RUNNER_TEMP/n01-mesh.log"; exit 1
+      - name: Group A — real N01 -> N07 authorization -> LangGraph -> local PyTorch response
+        run: node scripts/soul-fusion-e2e-minimal.mjs
+      - name: Synergy — measure 10 direct versus 10 fused local-model requests
+        run: node scripts/soul-fusion-synergy.mjs | tee "$RUNNER_TEMP/soul-fusion-synergy.json"
+      - name: Emit trace-correlated execution logs
         if: always()
-        shell: bash
         run: |
-          echo "=== N01 Mesh gateway log ==="
-          cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
-          echo "=== N07 runtime log ==="
-          cat "$RUNNER_TEMP/n07-runtime.log" 2>/dev/null || true
-          echo "=== Group F model adapter log ==="
-          cat "$RUNNER_TEMP/model-adapter.log" 2>/dev/null || true
-          kill "$(cat "$RUNNER_TEMP/n01-mesh.pid" 2>/dev/null)" 2>/dev/null || true
-          kill "$(cat "$RUNNER_TEMP/model-adapter.pid" 2>/dev/null)" 2>/dev/null || true
-          kill "$(cat "$RUNNER_TEMP/n07-runtime.pid" 2>/dev/null)" 2>/dev/null || true
+          echo "=== N01 ==="; cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
+          echo "=== N07 ==="; cat "$RUNNER_TEMP/n07-runtime.log" 2>/dev/null || true
+          echo "=== LangGraph ==="; docker logs soul-langgraph-adapter 2>&1 || true
+          echo "=== Group F Transformers + PyTorch CPU service ==="; docker logs soul-local-model 2>&1 || true
+          docker rm -f soul-langgraph-adapter soul-local-model >/dev/null 2>&1 || true
+          docker network rm soul-fusion-e2e >/dev/null 2>&1 || true
+          docker volume rm soul-local-model-cache >/dev/null 2>&1 || true

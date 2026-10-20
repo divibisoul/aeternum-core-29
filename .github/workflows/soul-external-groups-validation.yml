@@ -1,13 +1,6 @@
 name: SOUL external integration runtime checks
 
 on:
-  push:
-    branches: ["fusion/phase-zero-canon-20261019"]
-    paths:
-      - "scripts/soul-mesh-server-entry.mjs"
-      - "scripts/soul-fusion-langgraph-e2e.mjs"
-      - "integrations/langgraph-runtime/**"
-      - ".github/workflows/soul-external-groups-validation.yml"
   workflow_dispatch:
 
 concurrency:
