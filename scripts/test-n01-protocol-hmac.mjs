@@ -156,6 +156,32 @@ try {
     throw new Error('N01_PROTOCOL_HMAC_RESPONSE_SIGNATURE_INVALID');
   }
 
+  // Negative runtime proof: a syntactically valid but incorrect request HMAC
+  // must be rejected by the real HTTP listener before any capability executes.
+  const { message: invalidSignatureMessage, nonce: invalidSignatureNonce } = makeMessage();
+  invalidSignatureMessage.hmac = '0'.repeat(64);
+  const invalidSignatureResponse = await fetch(`${baseUrl}/api/soul-mesh`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-soul-mesh-nonce': invalidSignatureNonce,
+      'x-soul-mesh-hmac': invalidSignatureMessage.hmac,
+      'x-correlation-id': invalidSignatureMessage.correlationId,
+    },
+    body: JSON.stringify(invalidSignatureMessage),
+  });
+  const invalidSignatureBody = await invalidSignatureResponse.json().catch(() => null);
+  assert.equal(
+    invalidSignatureResponse.status,
+    400,
+    `invalid request HMAC must be rejected with HTTP 400; received ${invalidSignatureResponse.status}`,
+  );
+  assert.equal(
+    invalidSignatureBody?.error,
+    'MESH_HMAC_INVALID',
+    `invalid request HMAC must fail closed; received ${JSON.stringify(invalidSignatureBody)}`,
+  );
+
   const replay = await fetch(`${baseUrl}/api/soul-mesh`, {
     method: 'POST',
     headers: requestHeaders,
@@ -222,6 +248,7 @@ try {
     status: 'PASS',
     request: { hmac: true, nonce: true, correlation: true },
     response: { hmac: true, nonce: true, correlation: firstBody.correlationId === message.correlationId },
+    negativeRequestSignatureRejected: invalidSignatureResponse.status === 400 && invalidSignatureBody?.error === 'MESH_HMAC_INVALID',
     replayRejected: replay.status === 409,
   };
   console.log(JSON.stringify(result, null, 2));
