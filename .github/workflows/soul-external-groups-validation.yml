@@ -52,8 +52,7 @@ jobs:
             echo "N07_HTTP_ADDR=127.0.0.1:18090"
             echo "SOUL_FUSION_MODEL_PORT=18070"
             echo "SOUL_FUSION_MODEL_HOST=0.0.0.0"
-            echo "SOUL_FUSION_MODEL_TOKEN=$SOUL_FUSION_MODEL_TOKEN"
-            echo "LANGGRAPH_UPSTREAM_SHA=$LANGGRAPH_UPSTREAM_SHA"
+              echo "LANGGRAPH_UPSTREAM_SHA=$LANGGRAPH_UPSTREAM_SHA"
           } >> "$GITHUB_ENV"
       - name: Build isolated LangGraph container at frozen source SHA
         run: |

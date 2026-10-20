@@ -1,0 +1,35 @@
+name: SOUL Transformers and PyTorch pinned CPU inference
+
+on:
+  push:
+    branches: ["fusion/phase-zero-canon-20261019"]
+    paths:
+      - "integrations/transformers-cpu/**"
+      - ".github/workflows/soul-transformers-pytorch-cpu.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-transformers-pytorch-cpu:
+    name: "Group F pinned sources, no TensorFlow/JAX, real CPU inference"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated container from exact upstream source revisions
+        run: |
+          set -euo pipefail
+          docker build --pull \
+            --build-arg TRANSFORMERS_SHA=6f2e80bdad560947903bb4bde8043ae95387069a \
+            --build-arg PYTORCH_SHA=a84b7baa33f893ab92176c08a85b14455e60b2fc \
+            -t soul-transformers-pytorch-cpu:ci integrations/transformers-cpu
+      - name: Execute real model inference on CPU
+        run: |
+          set -euo pipefail
+          docker run --rm --cpus=2 --memory=8g soul-transformers-pytorch-cpu:ci
