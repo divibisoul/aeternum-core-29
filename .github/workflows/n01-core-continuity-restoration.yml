@@ -1,12 +1,7 @@
 name: N01 Core Continuity Restoration Guard
 
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - fase0/n01-core-continuity-main-2026-09-30
+  workflow_dispatch:
 
 jobs:
   continuity:

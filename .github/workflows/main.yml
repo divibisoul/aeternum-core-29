@@ -1,24 +1,7 @@
 name: SOUL – Ciclo de Vida Completo (Validação, Reparo, Regeneração e Manutenção)
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
-    inputs:
-      action:
-        description: "Ação solicitada"
-        required: true
-        default: validate
-        type: choice
-        options:
-          - validate
-          - repair
-          - regenerate
-          - maintenance
-  schedule:
-    - cron: "0 3 * * *"
 
 permissions:
   contents: read
