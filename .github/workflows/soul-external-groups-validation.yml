@@ -1,0 +1,110 @@
+name: SOUL external integration runtime checks
+
+on:
+  push:
+    branches: ["fusion/phase-zero-canon-20261019"]
+    paths:
+      - "scripts/soul-mesh-server-entry.mjs"
+      - "scripts/soul-fusion-langgraph-e2e.mjs"
+      - "integrations/langgraph-runtime/**"
+      - ".github/workflows/soul-external-groups-validation.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  group-a-langgraph-real-e2e:
+    name: "Group A real N01 -> N07 -> LangGraph two-node graph"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      LANGGRAPH_UPSTREAM_SHA: "1400d25b7b88cfa055c55b8a82bd95b7c25caef1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.3"
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: false
+      - name: Install N01 dependencies
+        run: bun install --no-save
+      - name: Build isolated LangGraph container at frozen source SHA
+        run: |
+          set -euo pipefail
+          docker build --pull --build-arg LANGGRAPH_SHA="$LANGGRAPH_UPSTREAM_SHA" -t soul-langgraph-adapter:ci integrations/langgraph-runtime
+          docker run --detach --name soul-langgraph-adapter -p 127.0.0.1:18070:18070 -e SOUL_FUSION_MODEL_TOKEN="$(openssl rand -hex 32)" -e LANGGRAPH_UPSTREAM_SHA="$LANGGRAPH_UPSTREAM_SHA" soul-langgraph-adapter:ci
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18070/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:18070/health
+      - name: Build real N07 runtime at baseline SHA with trace log
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/divibisoul/Orquestrador-.git "$RUNNER_TEMP/Orquestrador-"
+          git -C "$RUNNER_TEMP/Orquestrador-" checkout --detach 5fd4e95d4e2bffb7fd1028da00cdbf7b4f66e49a
+          test "$(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)" = "5fd4e95d4e2bffb7fd1028da00cdbf7b4f66e49a"
+          python3 - "$RUNNER_TEMP/Orquestrador-/mesh/http.go" <<'PY'
+          import pathlib,sys
+          p=pathlib.Path(sys.argv[1]); s=p.read_text()
+          if '"log"' not in s:
+              s=s.replace('"fmt"','"fmt"\n\t"log"',1)
+          marker='\tif envelope.Target != "N07" && envelope.Target != "BROADCAST" {'
+          line='\tlog.Printf("SOUL_TRACE n07.authorized trace_id=%s correlation_id=%s capability=%s", envelope.CorrelationID, envelope.CorrelationID, canonicalCapability(wire))\n'
+          if marker not in s: raise SystemExit("N07_TRACE_INSERTION_POINT_MISSING")
+          if 'SOUL_TRACE n07.authorized' not in s: s=s.replace(marker,line+marker,1)
+          p.write_text(s)
+          PY
+          (cd "$RUNNER_TEMP/Orquestrador-" && go build -trimpath -o "$RUNNER_TEMP/soul-n07" ./cmd/nexus)
+          echo "N07_SOURCE_SHA=$(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)"
+      - name: Configure isolated service credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'SOUL_MESH_SECRET=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          printf 'SOUL_FUSION_EXECUTION_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          printf 'SOUL_FUSION_MODEL_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          {
+            echo "SOUL_MESH_N07_URL=http://127.0.0.1:18090"
+            echo "SOUL_FUSION_MODEL_URL=http://127.0.0.1:18070"
+            echo "SOUL_FUSION_MODEL_PROVIDER=langgraph"
+            echo "SOUL_FUSION_EXECUTION_ENABLED=true"
+            echo "SOUL_MESH_N01_PORT=18080"
+            echo "SOUL_MESH_N01_HOST=127.0.0.1"
+            echo "N07_HTTP_ADDR=127.0.0.1:18090"
+            echo "SOUL_FUSION_MODEL_PORT=18070"
+            echo "SOUL_FUSION_MODEL_HOST=0.0.0.0"
+            echo "SOUL_FUSION_MODEL_TOKEN=$SOUL_FUSION_MODEL_TOKEN"
+            echo "LANGGRAPH_UPSTREAM_SHA=$LANGGRAPH_UPSTREAM_SHA"
+          } >> "$GITHUB_ENV"
+      - name: Start N07 service
+        run: |
+          set -euo pipefail
+          SOUL_MESH_HMAC_SECRET="$SOUL_MESH_SECRET" N07_APP_TOKEN="$(openssl rand -hex 32)" N07_HTTP_ADDR="$N07_HTTP_ADDR" "$RUNNER_TEMP/soul-n07" > "$RUNNER_TEMP/n07-runtime.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/n07-runtime.pid"
+          for i in $(seq 1 40); do curl -fsS http://127.0.0.1:18090/health && exit 0 || sleep 1; done
+          cat "$RUNNER_TEMP/n07-runtime.log"; exit 1
+      - name: Start N01 Mesh gateway
+        run: |
+          set -euo pipefail
+          SOUL_MESH_SECRET="$SOUL_MESH_SECRET" SOUL_MESH_N07_URL="$SOUL_MESH_N07_URL" SOUL_MESH_N01_PORT=18080 SOUL_MESH_N01_HOST=127.0.0.1 node scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-mesh.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/n01-mesh.pid"
+          for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:18080/api/soul-mesh/health; then exit 0; fi; sleep 1; done
+          cat "$RUNNER_TEMP/n01-mesh.log"; exit 1
+      - name: Run actual N01-N07-LangGraph integration request
+        run: node scripts/soul-fusion-langgraph-e2e.mjs
+      - name: Emit actual logs from all three services
+        if: always()
+        run: |
+          echo "=== N01 ==="; cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
+          echo "=== N07 ==="; cat "$RUNNER_TEMP/n07-runtime.log" 2>/dev/null || true
+          echo "=== LangGraph container ==="; docker logs soul-langgraph-adapter 2>&1 || true
+          docker rm -f soul-langgraph-adapter >/dev/null 2>&1 || true

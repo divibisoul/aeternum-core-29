@@ -10,6 +10,7 @@ const SECRET = String(process.env.SOUL_MESH_SECRET || process.env.SOUL_MESH_HMAC
 const FUSION_EXECUTION_ENABLED = String(process.env.SOUL_FUSION_EXECUTION_ENABLED || '').trim().toLowerCase() === 'true';
 const FUSION_EXECUTION_TOKEN = String(process.env.SOUL_FUSION_EXECUTION_TOKEN || '').trim();
 const FUSION_MODEL_URL = String(process.env.SOUL_FUSION_MODEL_URL || '').trim().replace(/\/$/, '');
+const FUSION_MODEL_PROVIDER = String(process.env.SOUL_FUSION_MODEL_PROVIDER || 'google-gemini').trim();
 const FUSION_MODEL_TOKEN = String(process.env.SOUL_FUSION_MODEL_TOKEN || '').trim();
 const fusionIdempotency = new Map();
 const PROTOCOL = 'soul-mesh/1';
@@ -177,7 +178,7 @@ async function executeFusionV010(execution) {
     capability: 'neural.forward@1.0.0',
     payload: { values: execution.payload.values },
     timestamp: Date.now(),
-    meta: { transport: 'HTTP' },
+    meta: { transport: 'HTTP', trace_id: traceId },
   };
 
   console.log(JSON.stringify({
@@ -237,7 +238,7 @@ async function executeFusionV010(execution) {
     if (modelBody.correlation_id !== correlationId || modelBody.trace_id !== traceId) {
       throw new Error('FUSION_MODEL_TRACE_CORRELATION_MISMATCH');
     }
-    if (modelBody.provider !== 'google-gemini' || !modelBody.model
+    if (modelBody.provider !== FUSION_MODEL_PROVIDER || !modelBody.model
         || !modelBody.result || typeof modelBody.result.summary !== 'string'
         || !modelBody.result.summary.trim()) {
       throw new Error('FUSION_MODEL_RESULT_INVALID_OR_NOT_REAL_PROVIDER');
