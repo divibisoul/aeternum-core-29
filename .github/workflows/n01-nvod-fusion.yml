@@ -1,5 +1,9 @@
 name: N01 NVOD fusion verification
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches: [main]
