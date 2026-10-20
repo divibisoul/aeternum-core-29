@@ -1,6 +1,10 @@
 name: Aeternum Functional Authority
 # Revalidation after immutable snapshot publication
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     paths:
