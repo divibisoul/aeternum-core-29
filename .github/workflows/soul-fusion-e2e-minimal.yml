@@ -77,7 +77,7 @@ jobs:
           docker run --rm --network soul-fusion-e2e --cpus=2 --memory=8g --mount source=soul-local-model-cache,target=/root/.cache/huggingface \
             -e SOUL_LOCAL_MODEL_ID="$SOUL_LOCAL_MODEL_ID" -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" \
             -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" \
-            soul-transformers-pytorch-cpu:ci --self-test | tee "$RUNNER_TEMP/group-f-self-test.log"
+            --entrypoint python soul-transformers-pytorch-cpu:ci /app/infer.py --self-test | tee "$RUNNER_TEMP/group-f-self-test.log"
           MODEL_SHA="$(python3 - "$RUNNER_TEMP/group-f-self-test.log" <<'PY'
           import json,sys
           for line in reversed(open(sys.argv[1],encoding="utf-8").read().splitlines()):
@@ -96,7 +96,7 @@ jobs:
             --mount source=soul-local-model-cache,target=/root/.cache/huggingface \
             -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" -e SOUL_LOCAL_MODEL_ID="$SOUL_LOCAL_MODEL_ID" -e SOUL_LOCAL_MODEL_SHA="$SOUL_LOCAL_MODEL_SHA" \
             -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" -e SOUL_LOCAL_MODEL_PORT=18071 -e SOUL_LOCAL_MODEL_HOST=0.0.0.0 \
-            soul-transformers-pytorch-cpu:ci --serve
+            --entrypoint python soul-transformers-pytorch-cpu:ci /app/infer.py --serve
           for i in $(seq 1 90); do if curl -fsS http://127.0.0.1:18071/health; then break; fi; sleep 2; done
           curl -fsS http://127.0.0.1:18071/health
       - name: Build and start isolated LangGraph at frozen upstream SHA
