@@ -2,7 +2,7 @@ name: Soul N01 Full Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, "fusion/phase-zero-canon-20261019" ]
   workflow_dispatch:
 
 permissions:
@@ -56,13 +56,13 @@ jobs:
       - name: Run Mesh instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           target: google_apis
           arch: x86_64
-          profile: pixel_5
-          emulator-boot-timeout: 1200
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none
+          profile: pixel_2
+          emulator-boot-timeout: 900
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -no-snapshot-load -no-snapshot-save -noaudio -no-boot-anim -camera-back none -camera-front none
           disable-animations: true
           disable-linux-hw-accel: auto
           working-directory: soul-sentinel

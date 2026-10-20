@@ -1,6 +1,6 @@
 # SOUL Fusion Group Contracts — Draft 0.1.0
 
-> **DRAFT / NOT ACTIVE / NOT A PUBLIC MESH CONTRACT.**
+> **ACTIVE PROVISIONAL RULE v0.1.0 / INTERNAL EXECUTION CONTRACT.**
 >
 > This document proposes integration boundaries for review. It does not change Soul Mesh v1.1.0, existing public message schemas, HMAC header formats, or any runtime behavior. Do not implement changes that alter a public Mesh contract until the owner explicitly approves the exact schema and compatibility plan.
 
@@ -18,7 +18,7 @@ Transport-independent logical shape. This is not yet a JSON Schema and must not 
 ```json
 {
   "contract_name": "soul-fusion-execution",
-  "schema_version": "0.1.0-draft",
+  "schema_version": "0.1.0",
   "message_id": "immutable-message-id",
   "idempotency_key": "caller-stable-operation-key",
   "trace_id": "W3C-trace-id",

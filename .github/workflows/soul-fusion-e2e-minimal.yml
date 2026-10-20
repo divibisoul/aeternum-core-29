@@ -1,0 +1,137 @@
+name: SOUL Fusion Minimal E2E v0.1.0
+
+on:
+  push:
+    branches: ["fusion/phase-zero-canon-20261019"]
+    paths:
+      - "scripts/soul-mesh-server-entry.mjs"
+      - "scripts/soul-fusion-model-adapter.mjs"
+      - "scripts/soul-fusion-e2e-minimal.mjs"
+      - ".github/workflows/soul-fusion-e2e-minimal.yml"
+      - ".github/workflows/android-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-e2e:
+    name: Real N01 -> N07 -> Google Gemini -> correlated response
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_MODEL: gemini-3.8-flash
+    steps:
+      - name: Checkout N01 baseline branch
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install existing N01 dependencies
+        run: bun install --no-save
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache: false
+
+      - name: Freeze public N07 source at baseline SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/divibisoul/Orquestrador-.git "$RUNNER_TEMP/Orquestrador-"
+          git -C "$RUNNER_TEMP/Orquestrador-" checkout --detach 5fd4e95d4e2bffb7fd1028da00cdbf7b4f66e49a
+          test "$(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)" = "5fd4e95d4e2bffb7fd1028da00cdbf7b4f66e49a"
+          (cd "$RUNNER_TEMP/Orquestrador-" && go build -trimpath -o "$RUNNER_TEMP/soul-n07" ./cmd/nexus)
+          echo "N07 source SHA: $(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)"
+
+      - name: Configure ephemeral local service credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$GEMINI_API_KEY" || { echo "BLOCKED_ENVIRONMENT: repository secret GEMINI_API_KEY is not configured; refusing mock inference."; exit 78; }
+          printf 'SOUL_MESH_SECRET=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          printf 'SOUL_FUSION_EXECUTION_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          printf 'SOUL_FUSION_MODEL_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "GEMINI_MODEL=gemini-3.8-flash" >> "$GITHUB_ENV"
+          echo "SOUL_MESH_N07_URL=http://127.0.0.1:18090" >> "$GITHUB_ENV"
+          echo "SOUL_FUSION_MODEL_URL=http://127.0.0.1:18070" >> "$GITHUB_ENV"
+          echo "SOUL_FUSION_EXECUTION_ENABLED=true" >> "$GITHUB_ENV"
+          echo "SOUL_MESH_N01_PORT=18080" >> "$GITHUB_ENV"
+          echo "SOUL_MESH_N01_HOST=127.0.0.1" >> "$GITHUB_ENV"
+          echo "N07_HTTP_ADDR=127.0.0.1:18090" >> "$GITHUB_ENV"
+          echo "SOUL_FUSION_MODEL_PORT=18070" >> "$GITHUB_ENV"
+          echo "SOUL_FUSION_MODEL_HOST=127.0.0.1" >> "$GITHUB_ENV"
+
+      - name: Start N07 real neural runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOUL_MESH_HMAC_SECRET="$SOUL_MESH_SECRET" N07_APP_TOKEN="$(openssl rand -hex 32)" N07_HTTP_ADDR="$N07_HTTP_ADDR" "$RUNNER_TEMP/soul-n07" > "$RUNNER_TEMP/n07-runtime.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/n07-runtime.pid"
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18090/health > "$RUNNER_TEMP/n07-health.json"; then
+              cat "$RUNNER_TEMP/n07-health.json"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/n07-runtime.log"
+          exit 1
+
+      - name: Start real Google Gemini model adapter
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/soul-fusion-model-adapter.mjs > "$RUNNER_TEMP/model-adapter.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/model-adapter.pid"
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18070/health > "$RUNNER_TEMP/model-health.json"; then
+              cat "$RUNNER_TEMP/model-health.json"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/model-adapter.log"
+          exit 1
+
+      - name: Start N01 Mesh gateway
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOUL_MESH_SECRET="$SOUL_MESH_SECRET" SOUL_MESH_N07_URL="$SOUL_MESH_N07_URL" SOUL_MESH_N01_PORT=18080 SOUL_MESH_N01_HOST=127.0.0.1 node scripts/soul-mesh-server-entry.mjs > "$RUNNER_TEMP/n01-mesh.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/n01-mesh.pid"
+          for i in $(seq 1 40); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18080/api/soul-mesh/health > "$RUNNER_TEMP/n01-health.json"; then
+              cat "$RUNNER_TEMP/n01-health.json"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/n01-mesh.log"
+          exit 1
+
+      - name: Run REAL E2E and assert correlated response
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/soul-fusion-e2e-minimal.mjs
+
+      - name: Emit correlated service logs on completion or failure
+        if: always()
+        shell: bash
+        run: |
+          echo "=== N01 Mesh gateway log ==="
+          cat "$RUNNER_TEMP/n01-mesh.log" 2>/dev/null || true
+          echo "=== N07 runtime log ==="
+          cat "$RUNNER_TEMP/n07-runtime.log" 2>/dev/null || true
+          echo "=== Group F model adapter log ==="
+          cat "$RUNNER_TEMP/model-adapter.log" 2>/dev/null || true
+          kill "$(cat "$RUNNER_TEMP/n01-mesh.pid" 2>/dev/null)" 2>/dev/null || true
+          kill "$(cat "$RUNNER_TEMP/model-adapter.pid" 2>/dev/null)" 2>/dev/null || true
+          kill "$(cat "$RUNNER_TEMP/n07-runtime.pid" 2>/dev/null)" 2>/dev/null || true
