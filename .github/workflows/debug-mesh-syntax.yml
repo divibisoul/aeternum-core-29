@@ -1,4 +1,8 @@
 name: Debug N01 Mesh syntax
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ main ]
