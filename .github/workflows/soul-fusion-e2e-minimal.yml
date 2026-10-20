@@ -119,6 +119,10 @@ jobs:
           import pathlib,sys
           p=pathlib.Path(sys.argv[1]); s=p.read_text()
           if '"log"' not in s: s=s.replace('"fmt"','"fmt"\n\t"log"',1)
+          nonce_marker='\tenvelope := normalizedMeshEnvelope(wire)'
+          nonce_line='\twire.Nonce = strings.TrimSpace(r.Header.Get("x-soul-mesh-nonce"))\n'
+          if nonce_marker not in s: raise SystemExit("N07_HEADER_NONCE_INSERTION_POINT_MISSING")
+          if 'wire.Nonce = strings.TrimSpace(r.Header.Get("x-soul-mesh-nonce"))' not in s: s=s.replace(nonce_marker,nonce_line+nonce_marker,1)
           marker='\tif envelope.Target != "N07" && envelope.Target != "BROADCAST" {'
           line='\tlog.Printf("SOUL_TRACE n07.authorized trace_id=%s correlation_id=%s capability=%s", envelope.CorrelationID, envelope.CorrelationID, canonicalCapability(wire))\n'
           if marker not in s: raise SystemExit("N07_TRACE_INSERTION_POINT_MISSING")
