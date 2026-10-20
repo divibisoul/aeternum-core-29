@@ -1,10 +1,7 @@
 name: Temporary runner recovery
 
 on:
-  push:
-    branches: ["fusion/phase-zero-canon-20261019"]
-    paths:
-      - ".github/workflows/temporary-runner-recovery.yml"
+  workflow_dispatch:
 
 permissions:
   actions: write
