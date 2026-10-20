@@ -106,8 +106,8 @@ Os documentos abaixo foram gerados lendo a lista aberta por repositório e consu
 - **N05 (23 PRs):** [001–014](inventory/N05-001-014.md) · [015–023](inventory/N05-015-023.md)
 - **N06 (20 PRs):** [001–014](inventory/N06-001-014.md) · [015–020](inventory/N06-015-020.md)
 - **N07 (100 PRs):** [001–014](inventory/N07-001-014.md) · [015–028](inventory/N07-015-028.md) · [029–042](inventory/N07-029-042.md) · [043–056](inventory/N07-043-056.md) · [057–070](inventory/N07-057-070.md) · [071–084](inventory/N07-071-084.md) · [085–098](inventory/N07-085-098.md) · [099–100](inventory/N07-099-100.md)
-- **SARA/G0 (22 PRs; N08 provisório):** [001–014](inventory/SARA%20%2F%20G0-001-014.md) · [015–022](inventory/SARA%20%2F%20G0-015-022.md)
-- **JEV/N09 (2 PRs; N09 provisório):** [001–002](inventory/JEV%20%2F%20N09-001-002.md)
+- **SARA/G0 (22 PRs; N08 provisório):** [001–014](inventory/SARA%20/%20G0-001-014.md) · [015–022](inventory/SARA%20/%20G0-015-022.md)
+- **JEV/N09 (2 PRs; N09 provisório):** [001–002](inventory/JEV%20/%20N09-001-002.md)
 
 ## 8. Matriz de similaridade funcional — global
 
