@@ -1,10 +1,7 @@
 name: Temporary N01 stale-run cancellation
 
 on:
-  push:
-    branches: ["fusion/phase-zero-canon-20261019"]
-    paths:
-      - ".github/workflows/temporary-n01-stale-cancel.yml"
+  workflow_dispatch:
 
 permissions:
   actions: write
