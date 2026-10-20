@@ -35,11 +35,31 @@ jobs:
           cache: false
       - name: Install N01 dependencies
         run: bun install --no-save
+      - name: Configure isolated service credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'SOUL_MESH_SECRET=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          printf 'SOUL_FUSION_EXECUTION_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          printf 'SOUL_FUSION_MODEL_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          {
+            echo "SOUL_MESH_N07_URL=http://127.0.0.1:18090"
+            echo "SOUL_FUSION_MODEL_URL=http://127.0.0.1:18070"
+            echo "SOUL_FUSION_MODEL_PROVIDER=langgraph"
+            echo "SOUL_FUSION_EXECUTION_ENABLED=true"
+            echo "SOUL_MESH_N01_PORT=18080"
+            echo "SOUL_MESH_N01_HOST=127.0.0.1"
+            echo "N07_HTTP_ADDR=127.0.0.1:18090"
+            echo "SOUL_FUSION_MODEL_PORT=18070"
+            echo "SOUL_FUSION_MODEL_HOST=0.0.0.0"
+            echo "SOUL_FUSION_MODEL_TOKEN=$SOUL_FUSION_MODEL_TOKEN"
+            echo "LANGGRAPH_UPSTREAM_SHA=$LANGGRAPH_UPSTREAM_SHA"
+          } >> "$GITHUB_ENV"
       - name: Build isolated LangGraph container at frozen source SHA
         run: |
           set -euo pipefail
           docker build --pull --build-arg LANGGRAPH_SHA="$LANGGRAPH_UPSTREAM_SHA" -t soul-langgraph-adapter:ci integrations/langgraph-runtime
-          docker run --detach --name soul-langgraph-adapter -p 127.0.0.1:18070:18070 -e SOUL_FUSION_MODEL_TOKEN="$(openssl rand -hex 32)" -e LANGGRAPH_UPSTREAM_SHA="$LANGGRAPH_UPSTREAM_SHA" soul-langgraph-adapter:ci
+          docker run --detach --name soul-langgraph-adapter -p 127.0.0.1:18070:18070 -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" -e LANGGRAPH_UPSTREAM_SHA="$LANGGRAPH_UPSTREAM_SHA" soul-langgraph-adapter:ci
           for i in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:18070/health; then break; fi
             sleep 2
@@ -65,26 +85,6 @@ jobs:
           PY
           (cd "$RUNNER_TEMP/Orquestrador-" && go build -trimpath -o "$RUNNER_TEMP/soul-n07" ./cmd/nexus)
           echo "N07_SOURCE_SHA=$(git -C "$RUNNER_TEMP/Orquestrador-" rev-parse HEAD)"
-      - name: Configure isolated service credentials
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf 'SOUL_MESH_SECRET=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          printf 'SOUL_FUSION_EXECUTION_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          printf 'SOUL_FUSION_MODEL_TOKEN=%s\n' "$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          {
-            echo "SOUL_MESH_N07_URL=http://127.0.0.1:18090"
-            echo "SOUL_FUSION_MODEL_URL=http://127.0.0.1:18070"
-            echo "SOUL_FUSION_MODEL_PROVIDER=langgraph"
-            echo "SOUL_FUSION_EXECUTION_ENABLED=true"
-            echo "SOUL_MESH_N01_PORT=18080"
-            echo "SOUL_MESH_N01_HOST=127.0.0.1"
-            echo "N07_HTTP_ADDR=127.0.0.1:18090"
-            echo "SOUL_FUSION_MODEL_PORT=18070"
-            echo "SOUL_FUSION_MODEL_HOST=0.0.0.0"
-            echo "SOUL_FUSION_MODEL_TOKEN=$SOUL_FUSION_MODEL_TOKEN"
-            echo "LANGGRAPH_UPSTREAM_SHA=$LANGGRAPH_UPSTREAM_SHA"
-          } >> "$GITHUB_ENV"
       - name: Start N07 service
         run: |
           set -euo pipefail
