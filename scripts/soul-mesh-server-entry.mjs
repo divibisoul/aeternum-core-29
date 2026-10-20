@@ -176,9 +176,9 @@ async function executeFusionV010(execution) {
     target: 'N07',
     kind: 'request',
     capability: 'mesh.ping',
-    payload: { trace_id: traceId, purpose: 'authorize-local-inference' },
+    payload: { trace_id: traceId },
     timestamp: Date.now(),
-    meta: { transport: 'HTTP', trace_id: traceId },
+    meta: { transport: 'HTTP' },
   };
 
   console.log(JSON.stringify({
