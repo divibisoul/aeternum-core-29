@@ -1,0 +1,58 @@
+name: Temporary N01 stale-run cancellation
+
+on:
+  push:
+    branches: ["fusion/phase-zero-canon-20261019"]
+    paths:
+      - ".github/workflows/temporary-n01-stale-cancel.yml"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: temporary-n01-stale-cancel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cancel-noncritical-runs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Cancel stale noncritical queued or running jobs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runs"
+          critical_regex='^(SOUL Fusion Minimal E2E local CPU v0\.2\.0|Soul N01 Full Build|SOUL N01 validation)$'
+          requested=0
+          scanned=0
+          for page in $(seq 1 20); do
+            body="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" "$api?per_page=100&page=$page")"
+            count="$(jq '.workflow_runs | length' <<< "$body")"
+            [[ "$count" -gt 0 ]] || break
+            while IFS=$'\t' read -r id name; do
+              [[ -n "$id" ]] || continue
+              scanned=$((scanned+1))
+              if [[ "$name" =~ $critical_regex ]]; then
+                echo "KEEP_CRITICAL_RUN id=$id name=$name"
+                continue
+              fi
+              code="$(curl -sSL -o "$RUNNER_TEMP/cancel-response.json" -w '%{http_code}' -X POST \
+                -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+                -H "X-GitHub-Api-Version: 2022-11-28" "$api/$id/cancel")"
+              case "$code" in
+                202|200) requested=$((requested+1)); echo "CANCEL_ACCEPTED id=$id name=$name http=$code" ;;
+                409|422) echo "CANCEL_RACE_OR_NOT_CANCELLABLE id=$id name=$name http=$code" ;;
+                *) echo "CANCEL_FAILED id=$id name=$name http=$code"; cat "$RUNNER_TEMP/cancel-response.json"; exit 1 ;;
+              esac
+            done < <(jq -r --arg self "$GITHUB_RUN_ID" '
+              .workflow_runs[]
+              | select((.id|tostring) != $self)
+              | select(.status == "queued" or .status == "in_progress" or .status == "pending")
+              | [.id, .name] | @tsv' <<< "$body")
+          done
+          echo "STALE_RUN_CANCELLATION_COMPLETE self=$GITHUB_RUN_ID scanned=$scanned accepted=$requested"
