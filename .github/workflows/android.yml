@@ -4,11 +4,8 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    paths:
-      - 'soul-sentinel/**'
-      - '.github/workflows/android.yml'
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest

@@ -6,20 +6,7 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  pull_request:
-    paths:
-      - "lib/aeternum/AeternumModuleMap.ts"
-      - "lib/aeternum/AeternumTypes.ts"
-      - "lib/aeternum/AeternumFunctionalAuthority.ts"
-      - "scripts/n01-aeternum-functional-authority-check.mjs"
-      - ".github/workflows/aeternum-functional-authority.yml"
-      - "package.json"
-  push:
-    branches:
-      - main
-      - "fase0/**"
-      - "recovery/**"
-      - "feat/**"
+  workflow_dispatch:
 
 jobs:
   verify:

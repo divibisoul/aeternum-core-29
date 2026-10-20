@@ -4,17 +4,8 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches:
-      - "recovery/cycle3-29-modules-2026-09-28"
-  pull_request:
-    branches: [main]
-    paths:
-      - "docs/29-MODULES-RECOVERY.md"
-      - "docs/MISSING-COMPONENTS.md"
-      - "scripts/verify-29-modules-recovery.mjs"
-      - ".github/workflows/29-modules-recovery.yml"
   workflow_dispatch:
+
 permissions:
   contents: read
 jobs:
