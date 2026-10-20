@@ -1,5 +1,9 @@
 name: Soul Core Android Build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main, soul-core-v0.2-events-4]
