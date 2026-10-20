@@ -6,7 +6,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -34,7 +33,7 @@ class SoulMeshHttpTransportTest {
                 kind = "request",
                 capability = "context.read",
                 payload = JSONObject().put("probe", true),
-                timestamp = Instant.now().toString(),
+                timestamp = System.currentTimeMillis(),
             )
 
             val result = sender.send("http://127.0.0.1:18765/soul/mesh/v1", message)
@@ -68,7 +67,7 @@ class SoulMeshHttpTransportTest {
                 kind = "request",
                 capability = "context.read",
                 payload = JSONObject(),
-                timestamp = Instant.now().toString(),
+                timestamp = System.currentTimeMillis(),
             )
             val result = sender.send("http://127.0.0.1:18766/soul/mesh/v1", malformed)
             assertTrue(result.isFailure)
