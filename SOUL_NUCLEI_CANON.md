@@ -52,7 +52,7 @@ These are the GitHub `refs/heads/main` SHAs observed during Phase Zero. Re-query
 ## 4. Critical policy notes
 
 1. `Orquestrador-` declares GPL-3.0 in GitHub repository metadata. Linking it to a separately deployed service is safer than copying its code into a differently licensed distribution; confirm obligations with a license review.
-2. Several SOUL repositories have no recognized repository-level license in GitHub metadata. Treat their code as rights-restricted until a license is explicitly confirmed; do not infer MIT from the use of open-source dependencies.
+2. License spot-check of the frozen main branches: root `LICENSE` is absent in `aeternum-core-29`, `SARA`, `nexus-aeternum-fusion` and `Eternium-`; treat these repositories as rights-restricted until the owner supplies/approves a license. The three `nextjs-ai-chatbot*` repositories contain an Apache-2.0 `LICENSE` file even though GitHub metadata reports `NOASSERTION`; preserve the upstream notices and audit local modifications/dependencies. Do not infer MIT from the use of open-source dependencies.
 3. No external candidate is merged into the SOUL by virtue of being listed here. Every external integration requires a frozen SHA, license check, isolated adapter, contract tests and measured baseline.
 4. No source files or dependencies are authorized for deletion by this file.
 5. No N02 work begins until the overall DoD is backed by verified evidence and the relevant sinergy comparison is recorded.
