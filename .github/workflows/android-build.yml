@@ -6,7 +6,10 @@ concurrency:
 
 on:
   push:
-    branches: [ main ]
+    branches: ["fusion/phase-zero-canon-20261019"]
+    paths:
+      - "soul-sentinel/**"
+      - ".github/workflows/android-build.yml"
   workflow_dispatch:
 
 permissions:
