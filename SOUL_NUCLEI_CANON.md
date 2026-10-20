@@ -26,7 +26,7 @@
 | N06 | Logical responsibility retained from `divibisoul/nextjs-ai-chatbot-2000` | Cognition, reasoning, agents and learning bridges | **PARTIAL / TO CONSOLIDATE** | Selected as the physical canonical Next.js repository for the consolidation because GitHub returned a commit for history page 500 (with `per_page=1`) while the two sibling repositories returned no commit at that page. This establishes a higher commit-history bound, not equivalence or merge safety. |
 | N07 | `divibisoul/Orquestrador-` | Go control plane, orchestration and federation | **PARTIAL** | Latest baseline commit describes local Mesh capability authentication. Inspect package-level tests and real N01↔N07 CI before declaring end-to-end success. |
 | N08 | `divibisoul/SARA` | Regenerative core, ethics / guardrails and GRCE-related processing | **PARTIAL / PROVISIONAL ID** | Repository name and declared capabilities are known, but N08 assignment is provisional pending the authoritative nucleus registry. |
-| N09 | `divibisoul/jev-api` (provisional; repo availability not yet confirmed in this file) | Decision, triage and guardrail services | **UNMEASURABLE / PROVISIONAL ID** | Not one of the eight repositories frozen by the current task. Verify repository URL, license, SHA, tests and owner before depending on it. |
+| N09 | `divibisoul/jev-api` (repository exists; role mapping provisional) | Decision, triage and guardrail services | **UNMEASURABLE / PROVISIONAL ID** | GitHub API resolves this repository, but it is not among the eight repositories frozen in this phase. Its language metadata is HTML and its responsibilities must be confirmed from actual source and tests; freeze its SHA/license separately before depending on it. |
 
 ### Next.js repository disposition
 
