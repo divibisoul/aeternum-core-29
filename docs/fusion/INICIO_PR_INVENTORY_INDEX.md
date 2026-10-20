@@ -89,7 +89,40 @@ Estas são propostas para o MEIO, não branches de integração já criadas. O i
 | PRs fechadas | 0 |
 | PRs originais alteradas/rebaseadas | 0 |
 | Arquivos de código modificados neste passo | 0 |
-| Relatórios de PR por repositório | em preparação |
+| Relatórios de PR por repositório | **CONCLUÍDOS** — 25 lotes com fichas e matriz local |
 | Estado | **INÍCIO — somente inventário** |
 
 **Gate:** não iniciar o MEIO/N01 até o inventário por PR, a matriz de similaridade e a base de rollback serem revisados. O tracker começa em zero porque nenhuma PR foi integrada por esta atividade.
+
+
+## 7. Inventários detalhados — PRs abertas por núcleo
+
+Os documentos abaixo foram gerados lendo a lista aberta por repositório e consultando os arquivos alterados de cada PR. Cada linha registra datas UTC, título, branch head/base, draft/ready, resumo da descrição, paths/statísticas, dependências/base empilhada, capacidades/adapters identificados e tags T01–T16.
+
+- **N01 (42 PRs):** [001–014](inventory/N01-001-014.md) · [015–028](inventory/N01-015-028.md) · [029–042](inventory/N01-029-042.md)
+- **N02 (32 PRs):** [001–014](inventory/N02-001-014.md) · [015–028](inventory/N02-015-028.md) · [029–032](inventory/N02-029-032.md)
+- **N03 (24 PRs):** [001–014](inventory/N03-001-014.md) · [015–024](inventory/N03-015-024.md)
+- **N04 (26 PRs):** [001–014](inventory/N04-001-014.md) · [015–026](inventory/N04-015-026.md)
+- **N05 (23 PRs):** [001–014](inventory/N05-001-014.md) · [015–023](inventory/N05-015-023.md)
+- **N06 (20 PRs):** [001–014](inventory/N06-001-014.md) · [015–020](inventory/N06-015-020.md)
+- **N07 (100 PRs):** [001–014](inventory/N07-001-014.md) · [015–028](inventory/N07-015-028.md) · [029–042](inventory/N07-029-042.md) · [043–056](inventory/N07-043-056.md) · [057–070](inventory/N07-057-070.md) · [071–084](inventory/N07-071-084.md) · [085–098](inventory/N07-085-098.md) · [099–100](inventory/N07-099-100.md)
+- **SARA/G0 (22 PRs; N08 provisório):** [001–014](inventory/SARA%20%2F%20G0-001-014.md) · [015–022](inventory/SARA%20%2F%20G0-015-022.md)
+- **JEV/N09 (2 PRs; N09 provisório):** [001–002](inventory/JEV%20%2F%20N09-001-002.md)
+
+## 8. Matriz de similaridade funcional — global
+
+- [Matriz global consolidada — 291 PRs](MATRIZ_SIMILARIDADE_GLOBAL.md)
+- [Parte 1 — N01–N03](matrix-parts/PART-01-N01-N03.md)
+- [Parte 2 — N04–N06](matrix-parts/PART-02-N04-N06.md)
+- [Parte 3 — N07](matrix-parts/PART-03-N07.md)
+- [Parte 4 — SARA/G0 e JEV/N09](matrix-parts/PART-04-SARA-JEV.md)
+
+A matriz usa `●` como indício encontrado no título/body/paths e `·` como “não detectado por regra de triagem”, nunca prova de ausência. As tags agrupam candidatos por função; a decisão de fusão exige revisão de diffs, símbolos, contratos e testes, e deve respeitar a cadeia de bases empilhadas.
+
+## 9. Estado do INÍCIO
+
+**INÍCIO concluído para revisão:** 9 repositórios/núcleos lógicos mapeados, 291 PRs abertas inventariadas em ordem cronológica por repositório, 291 linhas reunidas na matriz global, 7 camadas propostas e tracker ainda zerado.
+
+Nenhuma PR foi integrada, fechada, rebaseada ou alterada. Nenhum arquivo de código foi modificado. Nenhuma branch de fusão por núcleo foi criada. A única branch criada para esta fase é a branch documental `inventory/soul-open-prs-2026-10-20`.
+
+**Aguarda-se confirmação humana para iniciar o MEIO em N01.**
