@@ -1,5 +1,9 @@
 name: SOUL – Ciclo de Vida Completo (Validação, Reparo, Regeneração e Manutenção)
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
