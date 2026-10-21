@@ -1,4 +1,5 @@
 name: Soul N01 Full Build
+# Branch-triggered cross-validation for the SOUL fusion branch; no main changes.
 
 on:
   push:

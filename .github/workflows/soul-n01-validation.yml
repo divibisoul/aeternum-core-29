@@ -1,4 +1,5 @@
 name: SOUL N01 validation
+# Branch-triggered cross-validation for the SOUL fusion branch; no main changes.
 
 on:
   push:
