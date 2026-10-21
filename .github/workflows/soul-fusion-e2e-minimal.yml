@@ -65,6 +65,7 @@ jobs:
           set -euo pipefail
           docker network create soul-fusion-e2e
           docker volume create soul-local-model-cache
+          docker volume create soul-local-generation-cache
           docker volume create soul-langgraph-checkpoint-cache
       - name: Build isolated Transformers + PyTorch CPU image
         run: |
@@ -109,6 +110,72 @@ jobs:
             --entrypoint python soul-transformers-pytorch-cpu:ci /app/infer.py --serve
           for i in $(seq 1 90); do if curl -fsS http://127.0.0.1:18071/health; then break; fi; sleep 2; done
           curl -fsS http://127.0.0.1:18071/health
+      - name: Start local Transformers + PyTorch structured-artifact generator
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --name soul-local-generator --network soul-fusion-e2e --publish 127.0.0.1:18072:18072 --cpus=2 --memory=8g \
+            --mount source=soul-local-generation-cache,target=/root/.cache/huggingface \
+            -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" \
+            -e SOUL_LOCAL_GENERATION_MODEL_ID="google/flan-t5-small" \
+            -e SOUL_LOCAL_GENERATION_PORT=18072 \
+            -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" \
+            --entrypoint python soul-transformers-pytorch-cpu:ci /app/generate.py --serve
+          for i in $(seq 1 120); do
+            if curl -fsS http://127.0.0.1:18072/health > "$RUNNER_TEMP/generator-health.json"; then break; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/generator-health.json"
+          python3 - "$RUNNER_TEMP/generator-health.json" <<'PY'
+          import json,sys
+          health=json.load(open(sys.argv[1],encoding="utf-8"))
+          assert health.get("ready") is True
+          assert health.get("provider")=="local-transformers-pytorch-seq2seq"
+          assert len(health.get("model_sha",""))==40
+          PY
+      - name: Local model generates one structured artifact without external API
+        shell: bash
+        run: |
+          set -euo pipefail
+          TRACE_ID="$(openssl rand -hex 16)"
+          python3 - "$TRACE_ID" > "$RUNNER_TEMP/local-artifact-request.json" <<'PY'
+          import json,sys
+          trace=sys.argv[1]
+          print(json.dumps({
+            "model":"local-flan-t5-small",
+            "messages":[{"role":"user","content":
+              "Write a short structured software PRD in Markdown. Include sections Objective, Assumptions, Architecture, Acceptance Criteria, Validation Tests, Risks. "
+              "Project: SOUL routes a request from N01 through N07 authorization and a two-node LangGraph runtime into a local CPU model. "
+              "Require trace_id/correlation_id equality, persistent SQLite checkpoint recovery after process restart, "
+              "and 10 direct versus 10 fused benchmark samples. Avoid claiming any untested capability."}],
+            "max_tokens":192,
+            "trace_id":trace,
+            "correlation_id":trace
+          }))
+          PY
+          curl -fsS -X POST http://127.0.0.1:18072/v1/chat/completions \
+            -H "Authorization: Bearer $SOUL_FUSION_MODEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -H "X-Soul-Trace-Id: $TRACE_ID" -H "X-Correlation-Id: $TRACE_ID" \
+            --data-binary @"$RUNNER_TEMP/local-artifact-request.json" | tee "$RUNNER_TEMP/local-artifact-response.json"
+          python3 - "$RUNNER_TEMP/local-artifact-response.json" "$TRACE_ID" "$RUNNER_TEMP/soul-local-prd.md" <<'PY'
+          import json,sys
+          result=json.load(open(sys.argv[1],encoding="utf-8"))
+          trace=sys.argv[2]
+          choices=result.get("choices") or []
+          assert choices and isinstance(choices[0].get("message",{}).get("content"),str)
+          content=choices[0]["message"]["content"].strip()
+          assert len(content)>=40, "LOCAL_ARTIFACT_EMPTY_OR_TOO_SHORT"
+          metadata=result.get("soul_trace",{})
+          assert metadata.get("trace_id")==trace and metadata.get("correlation_id")==trace
+          assert len(metadata.get("model_sha",""))==40
+          open(sys.argv[3],"w",encoding="utf-8").write(content+"\n")
+          print(json.dumps({"event":"group_a.local_artifact.completed","status":"PASS",
+            "trace_id":trace,"correlation_id":trace,"provider":metadata.get("provider"),
+            "model":result.get("model"),"model_sha":metadata.get("model_sha"),
+            "latency_ms":metadata.get("latency_ms"),"output_chars":len(content),
+            "output_literal":content,"exit_code":0},ensure_ascii=False))
+          PY
       - name: Build and start isolated LangGraph at frozen upstream SHA
         run: |
           set -euo pipefail
@@ -204,6 +271,6 @@ jobs:
           echo "=== N07 ==="; cat "$RUNNER_TEMP/n07-runtime.log" 2>/dev/null || true
           echo "=== LangGraph ==="; docker logs soul-langgraph-adapter 2>&1 || true
           echo "=== Group F Transformers + PyTorch CPU service ==="; docker logs soul-local-model 2>&1 || true
-          docker rm -f soul-langgraph-adapter soul-local-model >/dev/null 2>&1 || true
+          docker rm -f soul-langgraph-adapter soul-local-model soul-local-generator >/dev/null 2>&1 || true
           docker network rm soul-fusion-e2e >/dev/null 2>&1 || true
-          docker volume rm soul-local-model-cache soul-langgraph-checkpoint-cache >/dev/null 2>&1 || true
+          docker volume rm soul-local-model-cache soul-local-generation-cache soul-langgraph-checkpoint-cache >/dev/null 2>&1 || true

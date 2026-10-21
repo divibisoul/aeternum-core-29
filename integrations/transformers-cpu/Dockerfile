@@ -20,5 +20,6 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
  && python -c "import importlib.util; assert all(importlib.util.find_spec(x) is None for x in ('tensorflow','jax','flax'))"
 WORKDIR /app
 COPY infer.py /app/infer.py
-EXPOSE 18071
+COPY generate.py /app/generate.py
+EXPOSE 18071 18072
 CMD ["python","/app/infer.py","--serve"]
