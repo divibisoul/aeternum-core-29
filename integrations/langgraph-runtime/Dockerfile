@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
     && git clone https://github.com/langchain-ai/langgraph.git /opt/langgraph \
     && git -C /opt/langgraph checkout --detach "${LANGGRAPH_SHA}" \
     && test "$(git -C /opt/langgraph rev-parse HEAD)" = "${LANGGRAPH_SHA}" \
-    && python -m pip install --no-cache-dir -e /opt/langgraph/libs/langgraph
+    && python -m pip install --no-cache-dir -e /opt/langgraph/libs/langgraph \
+    && python -m pip install --no-cache-dir -e /opt/langgraph/libs/checkpoint-sqlite
 WORKDIR /app
 COPY server.py /app/server.py
 EXPOSE 18070

@@ -65,6 +65,7 @@ jobs:
           set -euo pipefail
           docker network create soul-fusion-e2e
           docker volume create soul-local-model-cache
+          docker volume create soul-langgraph-checkpoint-cache
       - name: Build isolated Transformers + PyTorch CPU image
         run: |
           set -euo pipefail
@@ -89,6 +90,15 @@ jobs:
           )"
           [[ "$MODEL_SHA" =~ ^[0-9a-f]{40}$ ]]
           echo "SOUL_LOCAL_MODEL_SHA=$MODEL_SHA" >> "$GITHUB_ENV"
+      - name: Group F — PyTorch torch.compile CPU smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm --network soul-fusion-e2e --cpus=2 --memory=8g --mount source=soul-local-model-cache,target=/root/.cache/huggingface \
+            -e SOUL_LOCAL_MODEL_ID="$SOUL_LOCAL_MODEL_ID" -e SOUL_LOCAL_MODEL_SHA="$SOUL_LOCAL_MODEL_SHA" \
+            -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" \
+            --entrypoint python soul-transformers-pytorch-cpu:ci /app/infer.py --compile-smoke | tee "$RUNNER_TEMP/group-f-torch-compile.log"
+          grep -q '"status":"PASS"' "$RUNNER_TEMP/group-f-torch-compile.log"
       - name: Start local CPU inference service
         run: |
           set -euo pipefail
@@ -104,6 +114,8 @@ jobs:
           set -euo pipefail
           docker build --pull --build-arg LANGGRAPH_SHA="$LANGGRAPH_UPSTREAM_SHA" -t soul-langgraph-adapter:ci integrations/langgraph-runtime
           docker run --detach --name soul-langgraph-adapter --network soul-fusion-e2e --publish 127.0.0.1:18070:18070 \
+            --mount source=soul-langgraph-checkpoint-cache,target=/var/lib/soul-langgraph \
+            -e SOUL_LANGGRAPH_CHECKPOINT_DB=/var/lib/soul-langgraph/checkpoints.sqlite \
             -e SOUL_FUSION_MODEL_TOKEN="$SOUL_FUSION_MODEL_TOKEN" -e SOUL_LOCAL_MODEL_URL=http://soul-local-model:18071 \
             -e LANGGRAPH_UPSTREAM_SHA="$LANGGRAPH_UPSTREAM_SHA" soul-langgraph-adapter:ci
           for i in $(seq 1 60); do if curl -fsS http://127.0.0.1:18070/health; then break; fi; sleep 2; done
@@ -148,6 +160,39 @@ jobs:
           echo $! > "$RUNNER_TEMP/n01-mesh.pid"
           for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:18080/api/soul-mesh/health; then exit 0; fi; sleep 1; done
           cat "$RUNNER_TEMP/n01-mesh.log"; exit 1
+      - name: Group A — SQLite checkpoint survives process restart and resumes
+        shell: bash
+        run: |
+          set -euo pipefail
+          THREAD_ID="soul-checkpoint-\${GITHUB_RUN_ID}-\${GITHUB_RUN_ATTEMPT}"
+          TRACE_ID="$(openssl rand -hex 16)"
+          python3 - "$THREAD_ID" "$TRACE_ID" > "$RUNNER_TEMP/checkpoint-prepare.json" <<'PY'
+          import json,sys
+          thread_id,trace=sys.argv[1],sys.argv[2]
+          print(json.dumps({"thread_id":thread_id,"trace_id":trace,"correlation_id":trace,
+            "text":"The movie was excellent and the acting was wonderful.",
+            "authorization":{"status":"authorized","nucleus_id":"N07","capability":"mesh.ping",
+              "trace_id":trace,"correlation_id":trace}}))
+          PY
+          curl -fsS -X POST http://127.0.0.1:18070/checkpoint/prepare \
+            -H "Authorization: Bearer $SOUL_FUSION_MODEL_TOKEN" -H "Content-Type: application/json" \
+            --data-binary @"$RUNNER_TEMP/checkpoint-prepare.json" | tee "$RUNNER_TEMP/checkpoint-prepare-result.json"
+          grep -q '"status":"INTERRUPTED"' "$RUNNER_TEMP/checkpoint-prepare-result.json"
+          python3 - "$THREAD_ID" "$TRACE_ID" > "$RUNNER_TEMP/checkpoint-resume.json" <<'PY'
+          import json,sys
+          print(json.dumps({"thread_id":sys.argv[1],"trace_id":sys.argv[2],"correlation_id":sys.argv[2]}))
+          PY
+          docker restart soul-langgraph-adapter
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:18070/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:18070/health | grep -q '"checkpointer":"sqlite"'
+          curl -fsS -X POST http://127.0.0.1:18070/checkpoint/resume \
+            -H "Authorization: Bearer $SOUL_FUSION_MODEL_TOKEN" -H "Content-Type: application/json" \
+            --data-binary @"$RUNNER_TEMP/checkpoint-resume.json" | tee "$RUNNER_TEMP/checkpoint-resume-result.json"
+          grep -q '"status":"PASS"' "$RUNNER_TEMP/checkpoint-resume-result.json"
+          grep -q '"resume_after_process_restart":true' "$RUNNER_TEMP/checkpoint-resume-result.json"
       - name: Group A — real N01 -> N07 authorization -> LangGraph -> local PyTorch response
         run: node scripts/soul-fusion-e2e-minimal.mjs
       - name: Synergy — measure 10 direct versus 10 fused local-model requests
@@ -161,4 +206,4 @@ jobs:
           echo "=== Group F Transformers + PyTorch CPU service ==="; docker logs soul-local-model 2>&1 || true
           docker rm -f soul-langgraph-adapter soul-local-model >/dev/null 2>&1 || true
           docker network rm soul-fusion-e2e >/dev/null 2>&1 || true
-          docker volume rm soul-local-model-cache >/dev/null 2>&1 || true
+          docker volume rm soul-local-model-cache soul-langgraph-checkpoint-cache >/dev/null 2>&1 || true

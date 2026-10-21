@@ -68,6 +68,21 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             print(json.dumps({"event":"group_f.inference.failed","error":str(exc),"trace_id":request.get("trace_id","")}),flush=True)
             send_json(self,400,{"error":str(exc)})
+def compile_smoke()->int:
+    trace=uuid.uuid4().hex
+    tokens=tokenizer(DEFAULT_TEXT,return_tensors="pt",truncation=True,max_length=256)
+    with torch.inference_mode(): expected=model(**tokens).logits.detach()
+    started=time.perf_counter()
+    compiled=torch.compile(model,backend="inductor",fullgraph=False)
+    with torch.inference_mode(): actual=compiled(**tokens).logits.detach()
+    elapsed=(time.perf_counter()-started)*1000
+    torch.testing.assert_close(actual,expected,rtol=1e-4,atol=1e-4)
+    event={"event":"group_f.torch_compile.cpu_smoke","status":"PASS","backend":"inductor","device":"cpu",
+        "model_id":MODEL_ID,"model_sha":MODEL_SHA,"torch_version":torch.__version__,
+        "latency_ms":round(elapsed,3),"output_equivalent":True,"trace_id":trace,"exit_code":0}
+    print(json.dumps(event),flush=True)
+    return 0
+
 def self_test()->int:
     trace=uuid.uuid4().hex; response=infer(DEFAULT_TEXT,trace,trace)
     print(json.dumps({"event":"group_f.cpu_inference.self_test","status":"PASS","input":DEFAULT_TEXT,"output":response["result"],
@@ -76,13 +91,14 @@ def self_test()->int:
       "tensorflow_installed":False,"jax_installed":False,"exit_code":0},ensure_ascii=False),flush=True)
     return 0
 if __name__=="__main__":
-    parser=argparse.ArgumentParser(); parser.add_argument("--self-test",action="store_true"); parser.add_argument("--serve",action="store_true")
+    parser=argparse.ArgumentParser(); parser.add_argument("--self-test",action="store_true"); parser.add_argument("--compile-smoke",action="store_true"); parser.add_argument("--serve",action="store_true")
     args=parser.parse_args()
     print(json.dumps({"event":"group_f.model.loaded","model_id":MODEL_ID,"model_sha":MODEL_SHA,"provider":"local-transformers-pytorch","device":"cpu",
       "transformers_source_sha":transformers_sha_runtime,"pytorch_pinned_source_sha":pytorch_repo_sha,"torch_version":torch.__version__,
       "torch_runtime_git_sha":torch.version.git_version,"tensorflow_installed":importlib.util.find_spec("tensorflow") is not None,
       "jax_installed":importlib.util.find_spec("jax") is not None}),flush=True)
     if args.self_test: raise SystemExit(self_test())
+    if args.compile_smoke: raise SystemExit(compile_smoke())
     if not TOKEN: raise SystemExit("SOUL_FUSION_MODEL_TOKEN_REQUIRED")
     print(json.dumps({"event":"group_f.model.listening","host":HOST,"port":PORT,"model_sha":MODEL_SHA}),flush=True)
     ThreadingHTTPServer((HOST,PORT),Handler).serve_forever()
