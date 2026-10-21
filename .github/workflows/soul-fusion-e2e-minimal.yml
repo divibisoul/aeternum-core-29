@@ -98,7 +98,7 @@ jobs:
             -e SOUL_LOCAL_MODEL_ID="$SOUL_LOCAL_MODEL_ID" -e SOUL_LOCAL_MODEL_SHA="$SOUL_LOCAL_MODEL_SHA" \
             -e TRANSFORMERS_SOURCE_SHA="$TRANSFORMERS_SHA" -e PYTORCH_SOURCE_SHA="$PYTORCH_SOURCE_SHA" \
             --entrypoint python soul-transformers-pytorch-cpu:ci /app/infer.py --compile-smoke | tee "$RUNNER_TEMP/group-f-torch-compile.log"
-          grep -q '"status":"PASS"' "$RUNNER_TEMP/group-f-torch-compile.log"
+          grep -q '"status": "PASS"' "$RUNNER_TEMP/group-f-torch-compile.log"
       - name: Start local CPU inference service
         run: |
           set -euo pipefail
@@ -164,7 +164,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          THREAD_ID="soul-checkpoint-\${GITHUB_RUN_ID}-\${GITHUB_RUN_ATTEMPT}"
+          THREAD_ID="soul-checkpoint-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           TRACE_ID="$(openssl rand -hex 16)"
           python3 - "$THREAD_ID" "$TRACE_ID" > "$RUNNER_TEMP/checkpoint-prepare.json" <<'PY'
           import json,sys
