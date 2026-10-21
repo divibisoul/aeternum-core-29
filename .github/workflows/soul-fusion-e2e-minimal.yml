@@ -267,6 +267,9 @@ jobs:
           python -m venv "$RUNNER_TEMP/crewai-venv"
           "$RUNNER_TEMP/crewai-venv/bin/python" -m pip install --upgrade pip
           "$RUNNER_TEMP/crewai-venv/bin/python" -m pip install --no-cache-dir "$RUNNER_TEMP/crewai-upstream/lib/crewai"
+          # Use the core module from the same frozen monorepo SHA; the published wheel is missing eval_handshake.py at this snapshot.
+          "$RUNNER_TEMP/crewai-venv/bin/python" -m pip install --no-cache-dir --no-deps --force-reinstall "$RUNNER_TEMP/crewai-upstream/lib/crewai-core"
+          "$RUNNER_TEMP/crewai-venv/bin/python" -c "import crewai_core.eval_handshake; print('CREWAI_CORE_SOURCE_SHA=c6e500ab3730ccf3badb640c6e0170e5c6aa3882')"
       - name: Group A — execute CrewAI Flow against local model endpoint
         shell: bash
         run: |
