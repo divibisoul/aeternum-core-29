@@ -162,10 +162,22 @@ class Handler(BaseHTTPRequestHandler):
             request = json.loads(self.rfile.read(size))
             if not isinstance(request, dict):
                 raise ValueError("REQUEST_OBJECT_REQUIRED")
-            trace_id = str(request.get("trace_id") or self.headers.get("X-Soul-Trace-Id", "")).strip()
-            correlation_id = str(request.get("correlation_id") or self.headers.get("X-Correlation-Id", "")).strip()
-            if trace_id != self.headers.get("X-Soul-Trace-Id") or correlation_id != self.headers.get("X-Correlation-Id"):
-                raise ValueError("TRACE_HEADERS_MISMATCH")
+            header_trace = self.headers.get("X-Soul-Trace-Id", "").strip()
+            header_correlation = self.headers.get("X-Correlation-Id", "").strip()
+            trace_id = str(request.get("trace_id") or header_trace).strip()
+            correlation_id = str(request.get("correlation_id") or header_correlation).strip()
+            if header_trace and header_trace != trace_id:
+                raise ValueError("TRACE_HEADER_MISMATCH")
+            if header_correlation and header_correlation != correlation_id:
+                raise ValueError("CORRELATION_HEADER_MISMATCH")
+            if not trace_id and not correlation_id:
+                trace_id = correlation_id = uuid.uuid4().hex
+            elif not trace_id:
+                trace_id = correlation_id
+            elif not correlation_id:
+                correlation_id = trace_id
+            if trace_id != correlation_id:
+                raise ValueError("TRACE_CORRELATION_MISMATCH")
             send_json(self, 200, generate(request.get("messages"), request.get("max_tokens", 192), trace_id, correlation_id))
         except Exception as exc:
             print(json.dumps({

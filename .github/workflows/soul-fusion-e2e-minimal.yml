@@ -45,6 +45,9 @@ jobs:
           SOUL_MESH_SECRET="$(openssl rand -hex 32)"
           SOUL_FUSION_EXECUTION_TOKEN="$(openssl rand -hex 32)"
           SOUL_FUSION_MODEL_TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$SOUL_MESH_SECRET"
+          echo "::add-mask::$SOUL_FUSION_EXECUTION_TOKEN"
+          echo "::add-mask::$SOUL_FUSION_MODEL_TOKEN"
           {
             echo "SOUL_MESH_SECRET=$SOUL_MESH_SECRET"
             echo "SOUL_FUSION_EXECUTION_TOKEN=$SOUL_FUSION_EXECUTION_TOKEN"
@@ -251,6 +254,144 @@ jobs:
           echo $! > "$RUNNER_TEMP/n07-runtime.pid"
           for i in $(seq 1 40); do if curl -fsS http://127.0.0.1:18090/health; then exit 0; fi; sleep 1; done
           cat "$RUNNER_TEMP/n07-runtime.log"; exit 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: false
+      - name: Install frozen CrewAI source in isolated Python environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/crewAIInc/crewAI.git "$RUNNER_TEMP/crewai-upstream"
+          git -C "$RUNNER_TEMP/crewai-upstream" checkout --detach c6e500ab3730ccf3badb640c6e0170e5c6aa3882
+          test "$(git -C "$RUNNER_TEMP/crewai-upstream" rev-parse HEAD)" = "c6e500ab3730ccf3badb640c6e0170e5c6aa3882"
+          python -m venv "$RUNNER_TEMP/crewai-venv"
+          "$RUNNER_TEMP/crewai-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/crewai-venv/bin/python" -m pip install --no-cache-dir "$RUNNER_TEMP/crewai-upstream/lib/crewai"
+      - name: Group A — execute CrewAI Flow against local model endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          export OPENAI_API_KEY="$SOUL_FUSION_MODEL_TOKEN"
+          export OPENAI_BASE_URL="http://127.0.0.1:18072/v1"
+          cat > "$RUNNER_TEMP/crewai-flow-smoke.py" <<'PY'
+          import json, os
+          from pydantic import BaseModel
+          from crewai import LLM
+          from crewai.flow import Flow, listen, start
+
+          llm = LLM(
+              model="openai/local-flan-t5-small",
+              api_key=os.environ["OPENAI_API_KEY"],
+              base_url=os.environ["OPENAI_BASE_URL"],
+              custom_openai=True,
+          )
+          class FlowState(BaseModel):
+              plan: str = ""
+              artifact: str = ""
+          class SOULSpecializationFlow(Flow[FlowState]):
+              @start()
+              def plan(self) -> str:
+                  out = llm.call([{"role":"user","content":
+                    "As the SOUL planner, give one concise, testable implementation step for the N01 to N07 to LangGraph local-model route."}])
+                  self.state.plan = str(out).strip()
+                  return self.state.plan
+              @listen(plan)
+              def make_artifact(self, plan: str) -> str:
+                  out = llm.call([{"role":"user","content":
+                    "As the SOUL QA specialist, turn this implementation step into one testable acceptance criterion: " + plan}])
+                  self.state.artifact = str(out).strip()
+                  return self.state.artifact
+          flow = SOULSpecializationFlow()
+          final_output = flow.kickoff()
+          assert flow.state.plan, "CREWAI_FLOW_PLAN_EMPTY"
+          assert flow.state.artifact, "CREWAI_FLOW_ARTIFACT_EMPTY"
+          print(json.dumps({
+              "event":"group_a.crewai_flow.completed","state":"PASS",
+              "source_sha":"c6e500ab3730ccf3badb640c6e0170e5c6aa3882",
+              "steps":["plan","make_artifact"],"model_endpoint":os.environ["OPENAI_BASE_URL"],
+              "plan":flow.state.plan,"artifact":flow.state.artifact,
+              "output_type":type(final_output).__name__
+          },ensure_ascii=False))
+          PY
+          "$RUNNER_TEMP/crewai-venv/bin/python" "$RUNNER_TEMP/crewai-flow-smoke.py" | tee "$RUNNER_TEMP/crewai-flow-result.jsonl"
+      - name: Group A — execute frozen N07 CrewAI role runner with local model
+        shell: bash
+        run: |
+          set -euo pipefail
+          export OPENAI_API_KEY="$SOUL_FUSION_MODEL_TOKEN"
+          export OPENAI_BASE_URL="http://127.0.0.1:18072/v1"
+          export SOUL_N07_CREWAI_MODEL="openai/local-flan-t5-small"
+          python3 - "$RUNNER_TEMP/crewai-upstream/lib/crewai/src" > "$RUNNER_TEMP/crewai-role-request.json" <<'PY'
+          import json,sys
+          print(json.dumps({"goal":"Produce one concise, evidence-aware software implementation recommendation for the SOUL local CPU integration.",
+            "root":sys.argv[1],"roles":["Planner","QA Specialist"]}))
+          PY
+          "$RUNNER_TEMP/crewai-venv/bin/python" "$RUNNER_TEMP/Orquestrador-/scripts/crewai_runner.py" \
+            < "$RUNNER_TEMP/crewai-role-request.json" | tee "$RUNNER_TEMP/crewai-role-result.jsonl"
+          python3 - "$RUNNER_TEMP/crewai-role-result.jsonl" <<'PY'
+          import json,sys
+          result=None
+          for line in open(sys.argv[1],encoding="utf-8"):
+            try:
+              value=json.loads(line)
+              if isinstance(value,dict) and value.get("state"): result=value
+            except Exception: pass
+          assert result is not None, "CREWAI_RESULT_JSON_MISSING"
+          assert result.get("state")=="PASS", result
+          assert str(result.get("result","")).strip(), "CREWAI_RESULT_EMPTY"
+          print(json.dumps({"event":"group_a.crewai_roles.completed","state":"PASS",
+            "source_sha":"c6e500ab3730ccf3badb640c6e0170e5c6aa3882",
+            "roles":result.get("roles"),"output_chars":len(str(result["result"]))},ensure_ascii=False))
+          PY
+      - name: Install frozen MetaGPT source in isolated Python environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --no-checkout https://github.com/FoundationAgents/MetaGPT.git "$RUNNER_TEMP/metagpt-upstream"
+          git -C "$RUNNER_TEMP/metagpt-upstream" checkout --detach 11cdf466d042aece04fc6cfd13b28e1a70341b1f
+          test "$(git -C "$RUNNER_TEMP/metagpt-upstream" rev-parse HEAD)" = "11cdf466d042aece04fc6cfd13b28e1a70341b1f"
+          python -m venv "$RUNNER_TEMP/metagpt-venv"
+          "$RUNNER_TEMP/metagpt-venv/bin/python" -m pip install --upgrade pip setuptools wheel
+          "$RUNNER_TEMP/metagpt-venv/bin/python" -m pip install --no-cache-dir -r "$RUNNER_TEMP/metagpt-upstream/requirements.txt"
+          "$RUNNER_TEMP/metagpt-venv/bin/python" -m pip install --no-deps "$RUNNER_TEMP/metagpt-upstream"
+          mkdir -p "$HOME/.metagpt"
+          cat > "$HOME/.metagpt/config2.yaml" <<YAML
+          llm:
+            api_type: "openai"
+            model: "local-flan-t5-small"
+            base_url: "http://127.0.0.1:18072/v1"
+            api_key: "$SOUL_FUSION_MODEL_TOKEN"
+          YAML
+      - name: Group A — execute frozen MetaGPT project-artifact runner with local model
+        shell: bash
+        run: |
+          set -euo pipefail
+          export OPENAI_API_KEY="$SOUL_FUSION_MODEL_TOKEN"
+          export OPENAI_BASE_URL="http://127.0.0.1:18072/v1"
+          export METAGPT_PROJECT_ROOT="$RUNNER_TEMP/metagpt-upstream"
+          python3 - "$RUNNER_TEMP/metagpt-upstream" > "$RUNNER_TEMP/metagpt-request.json" <<'PY'
+          import json,sys
+          print(json.dumps({"goal":"Create a concise, structured software requirements artifact for the SOUL N01 to N07 to LangGraph local CPU integration. Define acceptance criteria and tests; do not claim tests pass.",
+            "root":sys.argv[1],"maxRounds":1}))
+          PY
+          "$RUNNER_TEMP/metagpt-venv/bin/python" "$RUNNER_TEMP/Orquestrador-/scripts/metagpt_runner.py" \
+            < "$RUNNER_TEMP/metagpt-request.json" | tee "$RUNNER_TEMP/metagpt-result.jsonl"
+          python3 - "$RUNNER_TEMP/metagpt-result.jsonl" <<'PY'
+          import json,sys
+          result=None
+          for line in open(sys.argv[1],encoding="utf-8"):
+            try:
+              value=json.loads(line)
+              if isinstance(value,dict) and value.get("state"): result=value
+            except Exception: pass
+          assert result is not None, "METAGPT_RESULT_JSON_MISSING"
+          assert result.get("state")=="PASS", result
+          assert str(result.get("history","")).strip(), "METAGPT_ARTIFACT_EMPTY"
+          print(json.dumps({"event":"group_a.metagpt.completed","state":"PASS",
+            "source_sha":"11cdf466d042aece04fc6cfd13b28e1a70341b1f",
+            "maxRounds":result.get("maxRounds"),"artifact_chars":len(str(result["history"]))},ensure_ascii=False))
+          PY
       - name: Start N01 Mesh HTTP gateway
         run: |
           set -euo pipefail
