@@ -103,6 +103,12 @@ export interface SystemMetrics {
   turboActive: boolean;
   packetsProcessed: number;
   tunelamentosRealizados: number;
+  vagalTone?: number;
+  activeVagusBranches?: number;
+  redundantVagusBranches?: number;
+  vagalSignalLatencyMs?: number;
+  droppedPackets?: number;
+  dropRate?: number;
   timestamp: number;
 }
 
@@ -129,4 +135,34 @@ export function createInformationPacket(
     timestamp: Date.now(),
     metadata,
   };
+}
+
+
+export interface ClareiraDeviceState {
+  batteryPercent: number;
+  charging: boolean;
+  batteryTemperatureC: number | null;
+  screenOn: boolean;
+  network: string;
+  shizukuStatus: string;
+  timestamp: number;
+  cpuFreqMhz?: number | null;
+  ramUsedMb?: number | null;
+  ramTotalMb?: number | null;
+  foregroundPackage?: string | null;
+  wifiEnabled?: boolean;
+  bluetoothEnabled?: boolean;
+}
+
+export interface ClareiraSnapshot {
+  schemaVersion: '1.1.0';
+  timestamp: number;
+  blueprintVersion: string;
+  status: 'INITIALIZED' | 'RUNNING' | 'STOPPED';
+  metrics: SystemMetrics;
+  nodes: ReturnType<import('./ProcessingNode').ProcessingNode['getMetrics']>[];
+  channels: ReturnType<import('./InformationChannel').InformationChannel['getMetrics']>[];
+  homeostasis: ReturnType<import('./HomeostasisManager').HomeostasisManager['getMetrics']>;
+  vagus: ReturnType<import('./VagusNerve').VagusNerve['snapshot']>;
+  deviceState?: ClareiraDeviceState;
 }

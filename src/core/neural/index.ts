@@ -20,3 +20,9 @@ export { InformationChannel } from './InformationChannel';
 export * from './types';
 
 export { ClareiraBridge } from './ClareiraBridge';
+
+export { VagusNerve } from './VagusNerve';
+export { ClareiraSaraBridge } from './ClareiraSaraBridge';
+export { ClareiraAndroidBridge } from './ClareiraAndroidBridge';
+export { InputTransducer } from './InputTransducer';
+export * from './SpecializedNuclei';
