@@ -11,6 +11,28 @@ const owners = {
 };
 const resolveOwner = (capability) => owners[capability] || null;
 const forward = async (target, message) => ({ ok: true, target, echoedCapability: message.capability, correlationId: message.correlationId });
+
+const failClosedCortex = createNeoCortex({ resolveOwner, forward });
+failClosedCortex.addGoal({
+  id: 'unverified-remote',
+  description: 'remote nodes must not be selected before a live capability is observed',
+  priority: 1,
+  requiredCapabilities: ['cognitive.synthesize'],
+});
+const blockedRemote = failClosedCortex.decide('unverified-remote');
+if (!blockedRemote.inhibited || blockedRemote.selectedNucleus !== undefined) {
+  throw new Error('NEOCORTEX_UNVERIFIED_REMOTE_MUST_FAIL_CLOSED');
+}
+const sharedRuntime = {
+  resolve: () => ({ taskId: 'fixture', capability: 'cognitive.synthesize', owner: 'N06', backend: 'REMOTE_MESH' }),
+  execute: async () => ({ state: 'fixture-only' }),
+  executeParallel: async () => [],
+  describe: () => ({ sharedRuntimeMarker: true }),
+};
+const injectedCortex = createNeoCortex({ resolveOwner, forward, superGPU: sharedRuntime });
+if (injectedCortex.describe().superGPU?.sharedRuntimeMarker !== true || injectedCortex.describe().sharedSuperGPU !== true) {
+  throw new Error('NEOCORTEX_MUST_USE_SHARED_SUPERGPU_INSTANCE');
+}
 const cortex = createNeoCortex({ resolveOwner, forward });
 
 for (const branch of topology.branches) cortex.registerNode({ nucleus: branch.nucleus, capabilities: [], salience: 1, load: 0, available: true });

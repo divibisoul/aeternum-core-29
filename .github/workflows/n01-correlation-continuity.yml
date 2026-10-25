@@ -74,3 +74,5 @@ jobs:
           git push origin "HEAD:${N01_LOCK_BRANCH}"
       - name: Verify N01 caller correlation continuity
         run: npm run mesh:correlation:check
+      - name: Verify prefrontal runtime topology and fail-closed routing
+        run: npm run neocortex:check
