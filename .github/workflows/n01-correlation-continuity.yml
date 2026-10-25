@@ -30,6 +30,24 @@ jobs:
           cache: npm
       - name: Regenerate npm lockfile from the committed manifest
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Assert the committed manifest and generated lock root agree
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+          assert.equal(lock.lockfileVersion, 3, 'N01 requires npm lockfile v3');
+          const root = lock.packages?.[''];
+          assert.ok(root, 'npm lockfile root package entry is missing');
+          for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+            assert.deepStrictEqual(root[section] ?? {}, manifest[section] ?? {}, `package-lock root ${section} must exactly match package.json`);
+            for (const name of Object.keys(manifest[section] ?? {})) {
+              assert.ok(lock.packages[`node_modules/${name}`], `direct dependency is absent from package-lock: ${name}`);
+            }
+          }
+          console.log('N01 manifest/lock root contract: PASS');
+          NODE
       - name: Install cleanly from the npm-generated lockfile
         run: npm ci --no-audit --no-fund
       - name: Commit npm-generated lockfile to N01 feature branch
