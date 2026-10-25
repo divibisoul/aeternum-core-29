@@ -14,6 +14,7 @@ on:
       - 'src/core/mesh/SoulMeshRouter.correlation.test.ts'
       - 'package.json'
       - 'package-lock.json'
+      - 'scripts/soul-local-distilbert-benchmark.py'
 permissions:
   contents: write
 
@@ -76,3 +77,26 @@ jobs:
         run: npm run mesh:correlation:check
       - name: Verify prefrontal runtime topology and fail-closed routing
         run: npm run neocortex:check
+
+  local-transformers-cpu:
+    name: DistilBERT CPU inference + SHA + latency
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout pinned SOUL source
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install isolated CPU model runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0
+          python -m pip install transformers==4.57.1 huggingface_hub safetensors
+      - name: Run real DistilBERT CPU benchmark (10 samples + torch.compile probe)
+        env:
+          HF_HUB_DISABLE_TELEMETRY: '1'
+          TOKENIZERS_PARALLELISM: 'false'
+        run: python scripts/soul-local-distilbert-benchmark.py
