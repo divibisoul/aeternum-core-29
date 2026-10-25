@@ -250,12 +250,15 @@ export function startSoulMeshRuntime(): () => void {
         return { planId: plan.id, results, summary: summarizeSuperCompute(results) };
       }
 
+      const declaredCapabilities = ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.resolve@1.0.0', 'external.capability.fabric.describe@1.0.0', 'external.capability.execute', 'external.capability.execute@1.0.0'];
+      const executableCapabilities = [...new Set(agents.describe().flatMap((agent) => agent.capabilities))];
       return {
         nucleus: 'N01',
         protocol: 'soul-mesh/1',
         contractVersion: '1.1.0',
-        capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'cognitive.intent', 'agi.process', 'ai.reasoning', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.resolve@1.0.0', 'external.capability.fabric.describe@1.0.0', 'external.capability.execute', 'external.capability.execute@1.0.0'],
-        peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
+        capabilities: declaredCapabilities, // legacy alias preserved
+        declaredCapabilities,
+        executableCapabilities,        peers: ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'],
         agent: 'N01-mesh-agent',
         timestamp: Date.now(),
       };

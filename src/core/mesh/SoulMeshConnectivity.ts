@@ -36,7 +36,7 @@ export async function syncR1Capabilities(transport: SoulMeshTransport, registry:
       if (payload.contractVersion !== SOUL_MESH_CONTRACT_VERSION) {
         throw new Error(`DISCOVERY_CONTRACT_MISMATCH:${peer}`);
       }
-      const raw = payload.capabilities ?? payload.declaredCapabilities ?? payload.executableCapabilities;
+      const raw = payload.executableCapabilities ?? payload.declaredCapabilities ?? payload.capabilities;
       if (!Array.isArray(raw)) throw new Error(`DISCOVERY_CAPABILITIES_MISSING:${peer}`);
       const capabilities = raw.map(String).filter(Boolean);
       const transports = Array.isArray(payload.transports) ? payload.transports.map(String).filter(Boolean) : undefined;

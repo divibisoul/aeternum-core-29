@@ -47,6 +47,28 @@ try {
     throw new Error(`N01_CANONICAL_DISCOVERY_FAILED:${JSON.stringify(discovery)}`);
   }
 
+  const describeCorrelationId = crypto.randomUUID();
+  const meshDescribe = await json(await fetch(`${baseUrl}/api/soul-mesh`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      protocol: 'soul-mesh/1', contractVersion: '1.1.0', id: crypto.randomUUID(),
+      correlationId: describeCorrelationId, source: 'N02', target: 'N01', kind: 'request',
+      capability: 'mesh.describe', payload: { requestedBy: 'local-contract-check' },
+      timestamp: Date.now(), nonce: crypto.randomUUID(),
+    }),
+  }));
+  const executableCapabilities = meshDescribe.body?.payload?.executableCapabilities;
+  if (meshDescribe.status !== 200 ||
+      meshDescribe.body?.correlationId !== describeCorrelationId ||
+      meshDescribe.body?.source !== 'N01' ||
+      meshDescribe.body?.target !== 'N02' ||
+      !Array.isArray(executableCapabilities) ||
+      !executableCapabilities.includes('mesh.describe') ||
+      !executableCapabilities.includes('mesh.ping')) {
+    throw new Error(`N01_EXECUTABLE_DISCOVERY_FAILED:${JSON.stringify(meshDescribe)}`);
+  }
+
   const register = await json(await fetch(`${baseUrl}/api/soul-mesh/register`, {
     method: 'POST',
     headers: {
@@ -111,7 +133,7 @@ try {
 
   for (const [name, ok] of Object.entries(checks)) if (!ok) throw new Error(`N01_LOCAL_CONTRACT_${name.toUpperCase()}_FAILED:${JSON.stringify(body)}`);
 
-  console.log(JSON.stringify({ stage: 'N01_LOCAL_RUNTIME_CONTRACT', ok: true, health: true, discovery: true, registration: true, n07ResponseRoute: true, superGpuLocalExecutorGuard: true, message: checks, correlationId, n07CorrelationId }, null, 2));
+  console.log(JSON.stringify({ stage: 'N01_LOCAL_RUNTIME_CONTRACT', ok: true, health: true, discovery: true, executableDiscovery: true, registration: true, n07ResponseRoute: true, superGpuLocalExecutorGuard: true, message: checks, correlationId, n07CorrelationId, describeCorrelationId }, null, 2));
 } finally {
   child.kill('SIGTERM');
   setTimeout(() => child.kill('SIGKILL'), 2_000).unref();
