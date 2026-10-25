@@ -23,21 +23,22 @@ export class SoulMeshRouter {
   setTrafficObserver(observer?: SoulMeshTrafficObserver):void{this.trafficObserver=observer;}
   private beginTransmit(message:SoulMeshMessage):unknown{return this.trafficObserver?.beforeSend?.(message);}
   private finishTransmit(message:SoulMeshMessage,receipt:unknown,error?:unknown):void{try{this.trafficObserver?.afterSend?.(message,receipt,error);}catch(observerError){console.error('[SoulMeshRouter] traffic observer error',observerError);}}
-  async request<T = unknown>(target: SoulNucleus, capability: string, payload: T): Promise<SoulMeshMessage> {
-    const correlationId = crypto.randomUUID();
+  async request<T = unknown>(target: SoulNucleus, capability: string, payload: T, correlationId?: string): Promise<SoulMeshMessage> {
+    const requestCorrelationId = correlationId?.trim() || crypto.randomUUID();
+    if (!requestCorrelationId) throw new Error('Soul Mesh correlationId is required');
     const message: SoulMeshMessage<T> = {
       protocol: SOUL_MESH_PROTOCOL, contractVersion: SOUL_MESH_CONTRACT_VERSION,
-      id: crypto.randomUUID(), correlationId, source: this.local, target,
+      id: crypto.randomUUID(), correlationId: requestCorrelationId, source: this.local, target,
       kind: 'request', capability, payload, timestamp: Date.now(),
     };
     let receipt:unknown;
     try{receipt=this.beginTransmit(message);}catch(error){return Promise.reject(error instanceof Error?error:new Error(String(error)));}
     return new Promise<SoulMeshMessage>((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(correlationId); reject(new Error(`Soul Mesh request timeout: ${target}/${capability}`)); }, this.timeoutMs);
-      this.pending.set(correlationId, { resolve, reject, timer });
+      const timer = setTimeout(() => { this.pending.delete(requestCorrelationId); reject(new Error(`Soul Mesh request timeout: ${target}/${capability}`)); }, this.timeoutMs);
+      this.pending.set(requestCorrelationId, { resolve, reject, timer });
       void this.transport.send(message).then(
         ()=>this.finishTransmit(message,receipt),
-        (error)=>{this.finishTransmit(message,receipt,error);clearTimeout(timer);this.pending.delete(correlationId);reject(error instanceof Error?error:new Error(String(error)));}
+        (error)=>{this.finishTransmit(message,receipt,error);clearTimeout(timer);this.pending.delete(requestCorrelationId);reject(error instanceof Error?error:new Error(String(error)));}
       );
     });
   }
