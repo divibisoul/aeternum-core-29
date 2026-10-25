@@ -48,7 +48,8 @@ function json(res, status, body) { const data = JSON.stringify(body); res.writeH
 function readBody(req) { return new Promise((resolve,reject)=>{ let raw=''; req.on('data',c=>{ raw+=c; if(raw.length>2_000_000){ req.destroy(); reject(new Error('PAYLOAD_TOO_LARGE')); }}); req.on('end',()=>{ try{resolve(raw?JSON.parse(raw):{});}catch{reject(new Error('INVALID_JSON'));} }); req.on('error',reject); }); }
 function nonceCleanup(){ const now=Date.now(); for(const [n,t] of seenNonces) if(now-t>120_000) seenNonces.delete(n); }
 function canonical(e){ const {hmac,...unsigned}=e; return JSON.stringify(unsigned); }
-function hmacFor(e){ return crypto.createHmac('sha256',SECRET).update(canonical(e)).digest('hex'); }
+function assertHmacSecret(){ if(Buffer.byteLength(SECRET,'utf8')<32) throw new Error('MESH_HMAC_SECRET_TOO_SHORT'); }
+function hmacFor(e){ assertHmacSecret(); return crypto.createHmac('sha256',SECRET).update(canonical(e)).digest('hex'); }
 function canonicalProtocol(e,nonce){ return JSON.stringify({
   protocol:e.protocol, contractVersion:e.contractVersion, id:e.id, correlationId:e.correlationId,
   source:e.source, target:e.target, kind:e.kind, capability:e.capability??null, payload:e.payload,
@@ -60,9 +61,10 @@ function canonicalLegacyResponse(body,nonce){ return JSON.stringify({
   type:body.kind==='error'?'ERROR':'TASK_RESULT',
   payload:{capability:body.capability??'',payload:body.payload??{}}
 }); }
-function protocolHmacFor(body,nonce=body.nonce??body.meta?.nonce){ return crypto.createHmac('sha256',SECRET).update(canonicalProtocol(body,nonce),'utf8').digest('hex'); }
+function protocolHmacFor(body,nonce=body.nonce??body.meta?.nonce){ assertHmacSecret(); return crypto.createHmac('sha256',SECRET).update(canonicalProtocol(body,nonce),'utf8').digest('hex'); }
 function protocolResponse(body,nonce=body.nonce??body.meta?.nonce){ 
   if(!SECRET)return body;
+  assertHmacSecret();
   return {...body,nonce,hmac:crypto.createHmac('sha256',SECRET).update(canonicalLegacyResponse(body,nonce),'utf8').digest('hex')};
 }
 function verifyProtocolEnvelope(e,req){

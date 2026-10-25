@@ -1,5 +1,5 @@
-export type SoulNodeId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'BROADCAST';
-export type MessageType = 'PING' | 'HEALTH' | 'CAPABILITY_REQUEST' | 'TASK' | 'TASK_RESULT' | 'ERROR';
+export type SoulNodeId = 'N01' | 'N02' | 'N03' | 'N04' | 'N05' | 'N06' | 'N07' | 'BROADCAST';
+export type MessageType = 'PING' | 'HEALTH' | 'DISCOVERY_REQUEST' | 'DISCOVERY_RESPONSE' | 'CAPABILITY_REQUEST' | 'TASK' | 'TASK_RESULT' | 'ERROR' | 'COMBO_REQUEST' | 'COMBO_RESULT' | 'EVENT';
 
 export interface SoulMeshEnvelope<T = unknown> {
   version: '1.0';
