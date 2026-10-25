@@ -1,0 +1,1036 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-09-28",
+  "repo": "divibisoul/aeternum-core-29",
+  "auditedRef": {
+    "branch": "main",
+    "sha": "ed3eebdd590155244212dc725bc0f6812754b3d3"
+  },
+  "baseline": {
+    "sha": "462fc7d4fc95bdff3307649a3b0c9abd9cffe98d",
+    "reason": "PR #37 base; commit immediately before the first N01 Clareira integration PR"
+  },
+  "phase1": {
+    "pr": 37,
+    "head": "2fe4fc660a24b0eb65af1548bcc1b4ee90d2d2ad",
+    "mergeCommit": "e4c41383c903f94dc0ce58316a290aa822885a6c"
+  },
+  "compare": {
+    "status": "ahead",
+    "aheadBy": 66,
+    "behindBy": 0,
+    "totalCommits": 66,
+    "fileCount": 49,
+    "deletedFiles": 0,
+    "renamedFiles": 0,
+    "files": [
+      {
+        "path": ".env.example",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 2,
+        "changes": 7,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/android-build.yml",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/main.yml",
+        "status": "modified",
+        "additions": 86,
+        "deletions": 608,
+        "changes": 694,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/n01-android-remediation-validation.yml",
+        "status": "added",
+        "additions": 47,
+        "deletions": 0,
+        "changes": 47,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/n01-deno-edge-validation.yml",
+        "status": "added",
+        "additions": 26,
+        "deletions": 0,
+        "changes": 26,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/n01-dependency-lock-repair.yml",
+        "status": "added",
+        "additions": 43,
+        "deletions": 0,
+        "changes": 43,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/n01-internal-mesh-diagnostic.yml",
+        "status": "added",
+        "additions": 41,
+        "deletions": 0,
+        "changes": 41,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/n01-mesh-boot-diagnostic.yml",
+        "status": "added",
+        "additions": 43,
+        "deletions": 0,
+        "changes": 43,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/n01-remediation-validation.yml",
+        "status": "added",
+        "additions": 56,
+        "deletions": 0,
+        "changes": 56,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/soul-n01-validation.yml",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "previous_filename": null
+      },
+      {
+        "path": ".github/workflows/soul-sentinel-build.yml",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "previous_filename": null
+      },
+      {
+        "path": "__tests__/core.spec.ts",
+        "status": "added",
+        "additions": 59,
+        "deletions": 0,
+        "changes": 59,
+        "previous_filename": null
+      },
+      {
+        "path": "docs/N01-ANDROID-VALIDATION-TRIGGER-2026-09-27.md",
+        "status": "added",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "previous_filename": null
+      },
+      {
+        "path": "docs/SOUL-N01-VALIDATION-2026-09-27.md",
+        "status": "added",
+        "additions": 15,
+        "deletions": 0,
+        "changes": 15,
+        "previous_filename": null
+      },
+      {
+        "path": "lib/soul-mesh/SoulMeshPeerResilience.test.ts",
+        "status": "modified",
+        "additions": 9,
+        "deletions": 8,
+        "changes": 17,
+        "previous_filename": null
+      },
+      {
+        "path": "package-lock.json",
+        "status": "modified",
+        "additions": 747,
+        "deletions": 263,
+        "changes": 1010,
+        "previous_filename": null
+      },
+      {
+        "path": "package.json",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 1,
+        "changes": 3,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/core-test.mjs",
+        "status": "added",
+        "additions": 12,
+        "deletions": 0,
+        "changes": 12,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/n01-chat-edge-contract-check.mjs",
+        "status": "added",
+        "additions": 20,
+        "deletions": 0,
+        "changes": 20,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/orchestrator_n07_optimized.py",
+        "status": "added",
+        "additions": 246,
+        "deletions": 0,
+        "changes": 246,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/soul-mesh-local-contract-check.mjs",
+        "status": "modified",
+        "additions": 21,
+        "deletions": 2,
+        "changes": 23,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/soul-mesh-server-entry.mjs",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/soul-mesh-server.mjs",
+        "status": "modified",
+        "additions": 33,
+        "deletions": 5,
+        "changes": 38,
+        "previous_filename": null
+      },
+      {
+        "path": "scripts/soul-supergpu.mjs",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 2,
+        "changes": 8,
+        "previous_filename": null
+      },
+      {
+        "path": "shared/clareira-contract.ts",
+        "status": "added",
+        "additions": 90,
+        "deletions": 0,
+        "changes": 90,
+        "previous_filename": null
+      },
+      {
+        "path": "src/App.tsx",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "previous_filename": null
+      },
+      {
+        "path": "src/components/AGIActivePanel.tsx",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "previous_filename": null
+      },
+      {
+        "path": "src/components/AGIDashboard.tsx",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 1,
+        "changes": 2,
+        "previous_filename": null
+      },
+      {
+        "path": "src/components/SystemStatusIndicator.tsx",
+        "status": "modified",
+        "additions": 4,
+        "deletions": 2,
+        "changes": 6,
+        "previous_filename": null
+      },
+      {
+        "path": "src/components/auth/ApiKeySetup.tsx",
+        "status": "modified",
+        "additions": 7,
+        "deletions": 4,
+        "changes": 11,
+        "previous_filename": null
+      },
+      {
+        "path": "src/components/layout/Telemetry.tsx",
+        "status": "modified",
+        "additions": 17,
+        "deletions": 9,
+        "changes": 26,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/EventBus.ts",
+        "status": "modified",
+        "additions": 6,
+        "deletions": 0,
+        "changes": 6,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/GenesisModule.ts",
+        "status": "added",
+        "additions": 77,
+        "deletions": 0,
+        "changes": 77,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/agi/SAIIC.ts",
+        "status": "modified",
+        "additions": 76,
+        "deletions": 56,
+        "changes": 132,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/agi/index.ts",
+        "status": "modified",
+        "additions": 50,
+        "deletions": 48,
+        "changes": 98,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/eventBus.ts",
+        "status": "added",
+        "additions": 62,
+        "deletions": 0,
+        "changes": 62,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/hortaCore.ts",
+        "status": "added",
+        "additions": 59,
+        "deletions": 0,
+        "changes": 59,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/index.ts",
+        "status": "added",
+        "additions": 14,
+        "deletions": 0,
+        "changes": 14,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/neural/ClareiraBridge.ts",
+        "status": "added",
+        "additions": 22,
+        "deletions": 0,
+        "changes": 22,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/neural/HomeostasisManager.ts",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 0,
+        "changes": 1,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/neural/ProcessingNode.ts",
+        "status": "modified",
+        "additions": 5,
+        "deletions": 0,
+        "changes": 5,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/neural/ProjetoClareira.ts",
+        "status": "modified",
+        "additions": 43,
+        "deletions": 0,
+        "changes": 43,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/neural/index.ts",
+        "status": "modified",
+        "additions": 2,
+        "deletions": 0,
+        "changes": 2,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/neuralCoordinates.ts",
+        "status": "added",
+        "additions": 36,
+        "deletions": 0,
+        "changes": 36,
+        "previous_filename": null
+      },
+      {
+        "path": "src/core/wormholeRegistry.ts",
+        "status": "added",
+        "additions": 67,
+        "deletions": 0,
+        "changes": 67,
+        "previous_filename": null
+      },
+      {
+        "path": "src/hooks/useProjetoClareira.ts",
+        "status": "modified",
+        "additions": 8,
+        "deletions": 1,
+        "changes": 9,
+        "previous_filename": null
+      },
+      {
+        "path": "src/integrations/supabase/previewAuthStorage.ts",
+        "status": "modified",
+        "additions": 1,
+        "deletions": 2,
+        "changes": 3,
+        "previous_filename": null
+      },
+      {
+        "path": "supabase/functions/chat/index.ts",
+        "status": "modified",
+        "additions": 106,
+        "deletions": 193,
+        "changes": 299,
+        "previous_filename": null
+      },
+      {
+        "path": "supabase/functions/check-api-key/index.ts",
+        "status": "modified",
+        "additions": 51,
+        "deletions": 66,
+        "changes": 117,
+        "previous_filename": null
+      }
+    ]
+  },
+  "visibleBranches": [
+    "audit/phase0-n01-forensics-2026-09-28",
+    "audit/2026-09-01-hardening",
+    "consolidacao-n01",
+    "divibisoul-patch-1",
+    "docs/hybrid-platform-contract-v1",
+    "eru-soul-fusion-2026-09-22",
+    "feat/aeternum-8-modules-2026-09-23",
+    "feat/forensic-infrastructure-r1",
+    "feat/forensic-infrastructure-r2-current",
+    "feat/forensic-reconcile-clareira-octacore-2026-09-28",
+    "feat/hybrid-federated-context-v2",
+    "feat/mesh-phase-1-contract-traceability",
+    "feat/mesh-phase-1-production-contract",
+    "feat/neural-canonical-parameters-2026-09-28",
+    "feat/neural-management-core-2026-09-28",
+    "feat/octacore-g1-android-r1",
+    "feat/octacore-g1-r1",
+    "feat/octacore-stage1-current-2026-09-27",
+    "feat/octacore-system-processor-r1-live",
+    "feat/octacore-system-processor-r1",
+    "feat/phase2-block1-core-2026-09-25",
+    "feat/phase2-block1-core-reconciled-2026-09-27",
+    "feat/sara-octacore-mesh-federation-r1",
+    "feat/soul-admin-android-plus",
+    "feat/soul-admin-android-plus-final",
+    "feature/groq-supergpu",
+    "feature/soul-cumulative-fusion-foundation",
+    "feature/web3-supabase-storage",
+    "fix/ci-verde",
+    "fix/n01-legacy-workflow-2026-09-27",
+    "fix/n01-runtime-truth-2026-09-27",
+    "fix/n01-runtime-truth-reconciled-2026-09-27",
+    "fix/n01-validation-remediation-2026-09-27",
+    "fix/reconcile-n01-execution-state-2026-09-28",
+    "fix/soul-sentinel-android-sdk-2026-09-27",
+    "forensic/mesh-clareira-reconcile-2026-09-28",
+    "forensic/reconciliation-2026-09-27",
+    "forensic/soul-master-plan-2026-09-01",
+    "hotfix/config-mesh",
+    "integrate/clareira-octapla-2026-09-25",
+    "integration/soul-fusion-2026-08-25",
+    "main",
+    "soul/lei-zero-f1-canonical-contract",
+    "soul-android-foundation",
+    "soul-apk-build",
+    "soul-apk-foundation",
+    "soul-apk-foundation-final",
+    "soul-apk-foundation-live",
+    "soul-apk-foundation-v2",
+    "soul-apk-foundation-v3",
+    "soul-apk-foundation-v4",
+    "soul-apk-foundation-v5",
+    "soul-apk-foundation-v6",
+    "soul-apk-foundation-v7",
+    "soul-apk-foundation-v8",
+    "soul-apk-foundation-v9",
+    "soul-apk-foundation-v10",
+    "soul-apk-integration",
+    "soul-apk-integration-2",
+    "soul-core-v0.2-events",
+    "soul-core-v0.2-events-2",
+    "soul-core-v0.2-events-3",
+    "soul-core-v0.2-events-4",
+    "soul-core-v0.2",
+    "soul-reconstruction-2026-08-26",
+    "soul-sentinel-v0.1-build2",
+    "soul-sentinel-v0.1",
+    "upgrade/hybrid-mesh-n04-standard",
+    "upgrade/n01-5x5-channels-v2",
+    "upgrade/n01-hybrid-ai-mesh-v2",
+    "upgrade/n01-intelligence-mesh-hardening-v1",
+    "upgrade/n01-mesh-foundation-v1",
+    "upgrade/n01-n02-hybrid-fabric",
+    "upgrade/n01-n02-mesh-integration-v1",
+    "upgrade/n01-rag-resilient-v1",
+    "upgrade/n01-rag-resilient-v2-clean",
+    "upgrade/n01-rag-resilient-v2",
+    "upgrade/soul-audit-live-repair-v1",
+    "upgrade/soul-n01-etapa2-v1",
+    "upgrade/soul-n01-fusion-registry-v1"
+  ],
+  "recentCommitSearch": {
+    "requested": 200,
+    "retrieved": 100,
+    "limitation": "The GitHub connector returned 100 results for this request; complete 200-entry log is NOT MEASURED through this connector."
+  },
+  "commitSearch": [
+    {
+      "sha": "ed3eebdd590155244212dc725bc0f6812754b3d3",
+      "message": "Merge pull request #46 from divibisoul/fix/n01-runtime-truth-reconciled-2026-09-27\n\nfix(N01): elimina telemetria sintética e false-green — reconciliado",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/ed3eebdd590155244212dc725bc0f6812754b3d3"
+    },
+    {
+      "sha": "9801165fa58a9c81a46cde05754bdb613fe93a3a",
+      "message": "fix(N01): eliminate synthetic telemetry and false-green runtime paths",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/9801165fa58a9c81a46cde05754bdb613fe93a3a"
+    },
+    {
+      "sha": "9d4074b0e945729c39b67105806129734118f2b5",
+      "message": "Merge pull request #43 from divibisoul/feat/phase2-block1-core-reconciled-2026-09-27\n\nFase 2 / Bloco 1 — Core Aeternum reconciliado sobre N01 + Clareira",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/9d4074b0e945729c39b67105806129734118f2b5"
+    },
+    {
+      "sha": "9c061050a57af57ac2be1350872e2307a5195a7b",
+      "message": "chore(N01): preserve legacy orchestrator source in Block 1 branch",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/9c061050a57af57ac2be1350872e2307a5195a7b"
+    },
+    {
+      "sha": "166592d4955c44fc4b68747e12c527bde00a792c",
+      "message": "chore(N01): align Block 1 branch with corrected lifecycle workflow",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/166592d4955c44fc4b68747e12c527bde00a792c"
+    },
+    {
+      "sha": "17f87c86bd8788b415ab580f147d501ae884b745",
+      "message": "Merge pull request #44 from divibisoul/fix/n01-legacy-workflow-2026-09-27\n\nfix(N01): restaura workflow legado como CI válido e não destrutivo",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/17f87c86bd8788b415ab580f147d501ae884b745"
+    },
+    {
+      "sha": "4341f2435aacd3b984f5bbce147d6bf056c8a6b0",
+      "message": "fix(N01): restore legacy lifecycle workflow as valid non-destructive CI",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/4341f2435aacd3b984f5bbce147d6bf056c8a6b0"
+    },
+    {
+      "sha": "3cb52d2877407d26da076cda7c285fb9d13e717c",
+      "message": "restore(N01): preserve legacy N07 orchestrator source as executable Python",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/3cb52d2877407d26da076cda7c285fb9d13e717c"
+    },
+    {
+      "sha": "5429e6c3bd2e2a90ff488925ebb88b0504f26e41",
+      "message": "test(N01): execute Aeternum Core unit suite in CI",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/5429e6c3bd2e2a90ff488925ebb88b0504f26e41"
+    },
+    {
+      "sha": "3e3800d1d28f0fea73b6ff6ee55de4fcad22b18b",
+      "message": "feat(N01): bootstrap Aeternum Core from App",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/3e3800d1d28f0fea73b6ff6ee55de4fcad22b18b"
+    },
+    {
+      "sha": "d3ab79f51f1d75a95d63ea873b32e0fd5bcce806",
+      "message": "test(N01): add Vite SSR runner for Aeternum Core",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/d3ab79f51f1d75a95d63ea873b32e0fd5bcce806"
+    },
+    {
+      "sha": "b5b6142ae20f66676bc09d9d3c3c631fb56cd417",
+      "message": "test(N01): add executable Aeternum Core unit coverage",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/b5b6142ae20f66676bc09d9d3c3c631fb56cd417"
+    },
+    {
+      "sha": "79de0b7abdc0e068c9d8069e2b7e1331ecaffd68",
+      "message": "feat(N01): expose Aeternum Core barrel and Genesis bootstrap",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/79de0b7abdc0e068c9d8069e2b7e1331ecaffd68"
+    },
+    {
+      "sha": "304f791acda41e8308850c535cf2f6f5411e7136",
+      "message": "feat(N01): add Aeternum Genesis manifest module",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/304f791acda41e8308850c535cf2f6f5411e7136"
+    },
+    {
+      "sha": "d13af88344bd83f13db2b81f68a16783f73142c5",
+      "message": "feat(N01): add deterministic neural coordinate utility",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/d13af88344bd83f13db2b81f68a16783f73142c5"
+    },
+    {
+      "sha": "e7ba26ad718ae368f9e31e330c90353267af66db",
+      "message": "feat(N01): add Aeternum signature registry without UI registry collision",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/e7ba26ad718ae368f9e31e330c90353267af66db"
+    },
+    {
+      "sha": "7be12caf2bbbc17b8b58139c9ffd3b3ae740ff44",
+      "message": "feat(N01): compose Aeternum hortaCore memory layer",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/7be12caf2bbbc17b8b58139c9ffd3b3ae740ff44"
+    },
+    {
+      "sha": "64cc0bc908a18a65d87c07c45f5042aa717bba64",
+      "message": "feat(N01): compose Aeternum nervoVago over canonical EventBus",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/64cc0bc908a18a65d87c07c45f5042aa717bba64"
+    },
+    {
+      "sha": "e4c41383c903f94dc0ce58316a290aa822885a6c",
+      "message": "Merge pull request #37 from divibisoul/integrate/clareira-octapla-2026-09-25\n\nN01 — Clareira canônica + EventBus — integração não destrutiva da Clareira",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/e4c41383c903f94dc0ce58316a290aa822885a6c"
+    },
+    {
+      "sha": "2fe4fc660a24b0eb65af1548bcc1b4ee90d2d2ad",
+      "message": "fix(N01): make federated Clareira packet routing deterministic",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/2fe4fc660a24b0eb65af1548bcc1b4ee90d2d2ad"
+    },
+    {
+      "sha": "c460af6c870bc7ba564469293337544ae69d80d5",
+      "message": "Merge pull request #42 from divibisoul/fix/soul-sentinel-android-sdk-2026-09-27\n\nfix(N01): corrige pacote legado no pipeline Android Soul Core",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/c460af6c870bc7ba564469293337544ae69d80d5"
+    },
+    {
+      "sha": "89119a876d04045f3c604aaafb8f8405c74e3a40",
+      "message": "chore(N01): synchronize Clareira branch lockfile",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/89119a876d04045f3c604aaafb8f8405c74e3a40"
+    },
+    {
+      "sha": "d58e82010a21b3bfe6483f541426eccbb5b77791",
+      "message": "chore(N01): synchronize Clareira branch package manifest",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/d58e82010a21b3bfe6483f541426eccbb5b77791"
+    },
+    {
+      "sha": "9ee6ba496f78250ffa9fda2b36aa5a30e2c6bead",
+      "message": "fix(N01): avoid obsolete Android SDK tools package",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/9ee6ba496f78250ffa9fda2b36aa5a30e2c6bead"
+    },
+    {
+      "sha": "f1863bfce26a1ae7ede0c9385e71b500aa73eda0",
+      "message": "Merge pull request #40 from divibisoul/fix/n01-validation-remediation-2026-09-27\n\nfix(N01): restore deterministic validation and Android CI",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/f1863bfce26a1ae7ede0c9385e71b500aa73eda0"
+    },
+    {
+      "sha": "cdfada9b4e95822cc4c43ceb94357b6d23ce9bab",
+      "message": "docs(N01): trigger fresh Android exact-head validation",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/cdfada9b4e95822cc4c43ceb94357b6d23ce9bab"
+    },
+    {
+      "sha": "657780fe595b3832e2ab0cd4ad9beb6acb625ee5",
+      "message": "fix(N01): use ESM import in chat edge contract check",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/657780fe595b3832e2ab0cd4ad9beb6acb625ee5"
+    },
+    {
+      "sha": "f1ce9ec305b810bd67eeca2a73064ff27597bbbb",
+      "message": "ci(N01): validate Supabase Edge functions with Deno",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/f1ce9ec305b810bd67eeca2a73064ff27597bbbb"
+    },
+    {
+      "sha": "8059117d09b57fbc854fe1370ab7be3a28160376",
+      "message": "fix(N01): reflect unified N07 provider architecture in setup UI",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/8059117d09b57fbc854fe1370ab7be3a28160376"
+    },
+    {
+      "sha": "5e847d4fedd87a69d875985c57f816207efee89e",
+      "message": "fix(N01): report N07 backend availability instead of legacy provider",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/5e847d4fedd87a69d875985c57f816207efee89e"
+    },
+    {
+      "sha": "35fa571caaf7b056de7035585d78f1324b7022ab",
+      "message": "test(N01): validate chat edge is N07-only",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/35fa571caaf7b056de7035585d78f1324b7022ab"
+    },
+    {
+      "sha": "873217baa9466f87ce0d2637f62d9aae08f5f0f0",
+      "message": "test(N01): enforce chat edge routing through N07",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/873217baa9466f87ce0d2637f62d9aae08f5f0f0"
+    },
+    {
+      "sha": "092a4ec5cb474dfb1d437afbccb62c701bdda642",
+      "message": "docs(N01): document server-side N07 edge configuration",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/092a4ec5cb474dfb1d437afbccb62c701bdda642"
+    },
+    {
+      "sha": "e7c2e472e09714783f12b1db1ac7f0add7ae236e",
+      "message": "fix(N01): route legacy chat edge function through N07 ingress",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/e7c2e472e09714783f12b1db1ac7f0add7ae236e"
+    },
+    {
+      "sha": "1b14c98f44212c7dd0b060e73ee643a34c29d93e",
+      "message": "fix(N01): move Mesh server startup outside request handler scope",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/1b14c98f44212c7dd0b060e73ee643a34c29d93e"
+    },
+    {
+      "sha": "c2f4ad6f37e4e95bfc3cd5e6b65799790fd22b27",
+      "message": "fix(N01): expose internal Mesh child lifecycle failures",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/c2f4ad6f37e4e95bfc3cd5e6b65799790fd22b27"
+    },
+    {
+      "sha": "fb6d9f24df7fb8c721342c1b4650bc76a13838cb",
+      "message": "ci(N01): isolate direct internal Mesh server boot",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/fb6d9f24df7fb8c721342c1b4650bc76a13838cb"
+    },
+    {
+      "sha": "5792e43a5b430fbff5664eaea5e1b46320226292",
+      "message": "fix(N01): diagnose Mesh boot on the actual contract ports",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/5792e43a5b430fbff5664eaea5e1b46320226292"
+    },
+    {
+      "sha": "4d4c44f437c6582b03147b4414338e57dc95aa5d",
+      "message": "ci(N01): add direct Mesh boot diagnostic",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/4d4c44f437c6582b03147b4414338e57dc95aa5d"
+    },
+    {
+      "sha": "1f7d2b06a8d2ab96954c616c01f7e3a6447b3897",
+      "message": "fix(N01): run local Mesh check through its managed process",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/1f7d2b06a8d2ab96954c616c01f7e3a6447b3897"
+    },
+    {
+      "sha": "22f6e2aaabbf127c2408db98a2b34ed83462fd1f",
+      "message": "ci(N01): add independent Android remediation validation",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/22f6e2aaabbf127c2408db98a2b34ed83462fd1f"
+    },
+    {
+      "sha": "2dae1e3860d313480b6b3ea6501a82c634153ec1",
+      "message": "ci(N01): add independent remediation validation",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/2dae1e3860d313480b6b3ea6501a82c634153ec1"
+    },
+    {
+      "sha": "6a17be2eada622b3bd8d533d3f60b7912c324372",
+      "message": "fix(N01): synchronize npm lockfile",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/6a17be2eada622b3bd8d533d3f60b7912c324372"
+    },
+    {
+      "sha": "27c0911f2a837acc4cda8edf07660305cce096c6",
+      "message": "fix(N01): expose local Mesh child startup diagnostics",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/27c0911f2a837acc4cda8edf07660305cce096c6"
+    },
+    {
+      "sha": "ae642dd380a5272e1d12f550604e33bf6896b2e0",
+      "message": "fix(N01): declare Vite used by build scripts",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/ae642dd380a5272e1d12f550604e33bf6896b2e0"
+    },
+    {
+      "sha": "c4ec31bffafc616f272a6c90ba5f05f1c5e1ba1c",
+      "message": "docs(N01): record live validation failures and remediation scope",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/c4ec31bffafc616f272a6c90ba5f05f1c5e1ba1c"
+    },
+    {
+      "sha": "971e330bbbc54d19cf1f4e605afb8baef1a2572b",
+      "message": "fix(N01): synchronize npm lockfile",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/971e330bbbc54d19cf1f4e605afb8baef1a2572b"
+    },
+    {
+      "sha": "a415841e55d9b5a133d2ea9cce99c1d5e7750309",
+      "message": "ci(N01): add canonical npm lock repair validation",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/a415841e55d9b5a133d2ea9cce99c1d5e7750309"
+    },
+    {
+      "sha": "932acebc84a5d1e2a3927d5679bb41dc6de25359",
+      "message": "fix(N01): remediate lib/soul-mesh/SoulMeshPeerResilience.test.ts",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/932acebc84a5d1e2a3927d5679bb41dc6de25359"
+    },
+    {
+      "sha": "db6c8c3d782f6d9009d0cba4bf607e5aab414ad3",
+      "message": "fix(N01): remediate src/integrations/supabase/previewAuthStorage.ts",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/db6c8c3d782f6d9009d0cba4bf607e5aab414ad3"
+    },
+    {
+      "sha": "909ec0528a674d24d01d2a33c732f8bb317087b6",
+      "message": "fix(N01): remediate .github/workflows/android-build.yml",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/909ec0528a674d24d01d2a33c732f8bb317087b6"
+    },
+    {
+      "sha": "63e8ee6f65c3c93e041eb82e7f52c5c658ecef17",
+      "message": "fix: correlate Clareira in-flight telemetry by correlationId",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/63e8ee6f65c3c93e041eb82e7f52c5c658ecef17"
+    },
+    {
+      "sha": "b977f1606f0a3c572dd89463dad82e8dbba28545",
+      "message": "fix: avoid duplicate Clareira drop telemetry",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/b977f1606f0a3c572dd89463dad82e8dbba28545"
+    },
+    {
+      "sha": "bfdee939091a6d7a2032b0d9caaa981c4e803c80",
+      "message": "fix: preserve original Clareira stimulus flow and add federated packet path",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/bfdee939091a6d7a2032b0d9caaa981c4e803c80"
+    },
+    {
+      "sha": "4c3f07edd5727a2faa398c9033b7c7662d0e5916",
+      "message": "fix: declare N01 as owner of Clareira capabilities",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/4c3f07edd5727a2faa398c9033b7c7662d0e5916"
+    },
+    {
+      "sha": "055ce97b76f2e43b3315d9a51cf1e6c409e23332",
+      "message": "fix: correlate Clareira telemetry to bridge-owned packets",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/055ce97b76f2e43b3315d9a51cf1e6c409e23332"
+    },
+    {
+      "sha": "5bc986b3fbf64f6faa98aae3def4d13323fc302b",
+      "message": "feat: emit Clareira degradation event on critical stress",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/5bc986b3fbf64f6faa98aae3def4d13323fc302b"
+    },
+    {
+      "sha": "a41e3ca1af435fff4870cdd5afb283c05fe13fc2",
+      "message": "feat: emit Clareira stop lifecycle event",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/a41e3ca1af435fff4870cdd5afb283c05fe13fc2"
+    },
+    {
+      "sha": "209a64cc18cea8fbf7c9018026199c247cd60f1d",
+      "message": "feat: expose executable Clareira ingress on N01 canonical Mesh",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/209a64cc18cea8fbf7c9018026199c247cd60f1d"
+    },
+    {
+      "sha": "eb34da0de0fb35219cce2987ccba9e3e55f71d54",
+      "message": "feat: expose Clareira federation through existing N01 hook",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/eb34da0de0fb35219cce2987ccba9e3e55f71d54"
+    },
+    {
+      "sha": "d4c0ba6115e514283d5f4ca8e82eae592685c9b5",
+      "message": "feat: export N01 Clareira bridge",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/d4c0ba6115e514283d5f4ca8e82eae592685c9b5"
+    },
+    {
+      "sha": "32c34ba5d7cb65a3ac9d78790b63bcfc01d3e0ad",
+      "message": "feat: emit Clareira packet processing telemetry",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/32c34ba5d7cb65a3ac9d78790b63bcfc01d3e0ad"
+    },
+    {
+      "sha": "0a29dcef64cc4173f940845c907e17c896d4fa03",
+      "message": "feat: expose Clareira lifecycle events on canonical EventBus",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/0a29dcef64cc4173f940845c907e17c896d4fa03"
+    },
+    {
+      "sha": "48c2fa7618c1eb2fdb35f46d4d7de6898584cd5f",
+      "message": "feat: accept federated Clareira packets without replacing local flow",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/48c2fa7618c1eb2fdb35f46d4d7de6898584cd5f"
+    },
+    {
+      "sha": "ad20908be5845c679cf9e9b34ad50374cb4172ea",
+      "message": "feat: connect Clareira contract to N01 runtime",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/ad20908be5845c679cf9e9b34ad50374cb4172ea"
+    },
+    {
+      "sha": "6a9cb5308e410b412d84edea66a88ec6690d8ca7",
+      "message": "feat: add shared Clareira federation contract",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/6a9cb5308e410b412d84edea66a88ec6690d8ca7"
+    },
+    {
+      "sha": "462fc7d4fc95bdff3307649a3b0c9abd9cffe98d",
+      "message": "fix(N01): align neural mesh checks with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/462fc7d4fc95bdff3307649a3b0c9abd9cffe98d"
+    },
+    {
+      "sha": "b2ca6c08b0b5bb536371a3dbccd6637d88557d4c",
+      "message": "fix(N01): align neural mesh checks with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/b2ca6c08b0b5bb536371a3dbccd6637d88557d4c"
+    },
+    {
+      "sha": "462236bc379793ce65e7e44604e1ab5c08796dc2",
+      "message": "fix(N01): align neural mesh checks with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/462236bc379793ce65e7e44604e1ab5c08796dc2"
+    },
+    {
+      "sha": "382273cfbb6c14f36af2f0ca10ed2582d83fe656",
+      "message": "fix(N01): align neural mesh checks with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/382273cfbb6c14f36af2f0ca10ed2582d83fe656"
+    },
+    {
+      "sha": "984fd4140b8b8f18fe61f9abcf9f5e764ec5b921",
+      "message": "test(N01): validate native agent fusion runtime path",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/984fd4140b8b8f18fe61f9abcf9f5e764ec5b921"
+    },
+    {
+      "sha": "79cbbbdf98093cd30d5a50e0f970e90c0eb53fca",
+      "message": "feat(N01): route native mesh agent through fusion runtime",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/79cbbbdf98093cd30d5a50e0f970e90c0eb53fca"
+    },
+    {
+      "sha": "62751f283244c72bee95a87fadfbdd6aa7534dcb",
+      "message": "feat(N01): export fusion runtime infrastructure",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/62751f283244c72bee95a87fadfbdd6aa7534dcb"
+    },
+    {
+      "sha": "ca48d15dd8d8b4d6f9cb6770831415e8fbed0999",
+      "message": "feat(N01): commission native mesh agent through fusion runtime",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/ca48d15dd8d8b4d6f9cb6770831415e8fbed0999"
+    },
+    {
+      "sha": "3d317c20681b8e5d24e6b99f9751531952cfa507",
+      "message": "fix(N01): register canonical N07 mesh capabilities",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/3d317c20681b8e5d24e6b99f9751531952cfa507"
+    },
+    {
+      "sha": "36e701b8d9b0a7e7524c743863e29b883e8515be",
+      "message": "fix(N01): align src/core/mesh/SoulMeshEnvironmentConfig.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/36e701b8d9b0a7e7524c743863e29b883e8515be"
+    },
+    {
+      "sha": "28f307a3994b802151f12d5526f9bdf954918e8a",
+      "message": "fix(N01): align src/core/mesh/SoulMeshEnvironmentConfig.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/28f307a3994b802151f12d5526f9bdf954918e8a"
+    },
+    {
+      "sha": "483d56c6d0e7dbc8abd633a02904d71cd889e10d",
+      "message": "fix(N01): align src/core/mesh/SoulMeshOwnership.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/483d56c6d0e7dbc8abd633a02904d71cd889e10d"
+    },
+    {
+      "sha": "62a60f85e3fea903c8db419158029958db0f1da7",
+      "message": "fix(N01): align scripts/soul-neocortex.mjs with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/62a60f85e3fea903c8db419158029958db0f1da7"
+    },
+    {
+      "sha": "ddb6589b9993fa21213cb627c63983f951425784",
+      "message": "fix(N01): align scripts/soul-supergpu.mjs with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/ddb6589b9993fa21213cb627c63983f951425784"
+    },
+    {
+      "sha": "3c527f5bae73cb9f08e7ba0dc5d30d1f8c6f95bb",
+      "message": "fix(N01): align src/soul-fusion/SoulSuperGPU.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/3c527f5bae73cb9f08e7ba0dc5d30d1f8c6f95bb"
+    },
+    {
+      "sha": "d696fa3198defe1393d0061fe4977be8fa2a69c5",
+      "message": "fix(N01): align src/soul-fusion/SoulSuperGPU.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/d696fa3198defe1393d0061fe4977be8fa2a69c5"
+    },
+    {
+      "sha": "48b646b1848127e8301d10c53e10bbfb054e3028",
+      "message": "fix(N01): align src/soul-fusion/SoulCognitiveFabric.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/48b646b1848127e8301d10c53e10bbfb054e3028"
+    },
+    {
+      "sha": "296c8e63bbfa1bc2a9639d4a801e665c53844978",
+      "message": "fix(N01): align src/soul-fusion/SoulNeuralGraph.ts with seven-nucleus topology",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/296c8e63bbfa1bc2a9639d4a801e665c53844978"
+    },
+    {
+      "sha": "480ad4d8ed8814e4aa2c3d69043390d90658e52c",
+      "message": "Fusão base do runtime criada\n\nX-Lovable-Edit-ID: edt-74ebeb34-47bc-4dba-9f3e-a2fb375f0dcf\nCo-authored-by: divibisoul <219317536+divibisoul@users.noreply.github.com>",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/480ad4d8ed8814e4aa2c3d69043390d90658e52c"
+    },
+    {
+      "sha": "b783d265819f9fec289dae422870b4189ffd9272",
+      "message": "Changes\n\nCo-authored-by: divibisoul <219317536+divibisoul@users.noreply.github.com>",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/b783d265819f9fec289dae422870b4189ffd9272"
+    },
+    {
+      "sha": "58414d8cdd3c2901a1cb767e89c44068a8754836",
+      "message": "Changes\n\nCo-authored-by: divibisoul <219317536+divibisoul@users.noreply.github.com>",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/58414d8cdd3c2901a1cb767e89c44068a8754836"
+    },
+    {
+      "sha": "2ac414f590aca00941f51d473bbdff392b3c19a0",
+      "message": "Work in progress",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/2ac414f590aca00941f51d473bbdff392b3c19a0"
+    },
+    {
+      "sha": "7230afc0f643bc9da2275b1d58d999832509354b",
+      "message": "fix: normalize legacy SARA payload before delegation",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/7230afc0f643bc9da2275b1d58d999832509354b"
+    },
+    {
+      "sha": "4db31aae76fcf7f6f906adeb28b991645cc95d1d",
+      "message": "test: verify public SARA health contract separately from authenticated operations",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/4db31aae76fcf7f6f906adeb28b991645cc95d1d"
+    },
+    {
+      "sha": "fce6ad73a0f1993682b498432e16ebeceeeb053f",
+      "message": "fix: align N01 SARA health capability availability with public contract",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/fce6ad73a0f1993682b498432e16ebeceeeb053f"
+    },
+    {
+      "sha": "0ad288a9819c05059ebe1be8382fad1ea308614c",
+      "message": "fix: allow public SARA health without service token",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/0ad288a9819c05059ebe1be8382fad1ea308614c"
+    },
+    {
+      "sha": "1bd16f8c7271cc9219cb5176c5d2f7ce315b61c9",
+      "message": "fix: make SARA external ownership explicit in N01 fusion",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/1bd16f8c7271cc9219cb5176c5d2f7ce315b61c9"
+    },
+    {
+      "sha": "e2b01ed3f3dbf15563f77dd884d05188e663d145",
+      "message": "docs: record SOUL nuclei to SARA federation state",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/e2b01ed3f3dbf15563f77dd884d05188e663d145"
+    },
+    {
+      "sha": "2eaa893a8c93c0091d1e567d08e2215602dcaa8d",
+      "message": "test: include SARA federation in Mesh regression",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/2eaa893a8c93c0091d1e567d08e2215602dcaa8d"
+    },
+    {
+      "sha": "bdebee0283b50d0135dedeb150230663e1973e22",
+      "message": "test: include SARA federation in N01 validation",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/bdebee0283b50d0135dedeb150230663e1973e22"
+    },
+    {
+      "sha": "d33d821066eae085c8372fa09ada35b1d9601dd1",
+      "message": "test: add N01 SARA federation check command",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/d33d821066eae085c8372fa09ada35b1d9601dd1"
+    },
+    {
+      "sha": "32fb6f161a611ffb0c644f92541f27f62f577795",
+      "message": "test: verify N01 SARA federation adapter correlation and errors",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/32fb6f161a611ffb0c644f92541f27f62f577795"
+    },
+    {
+      "sha": "983a440270bdf528536ba59a219882c2de616b49",
+      "message": "feat: route SARA capabilities through N01 Mesh gateway",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/983a440270bdf528536ba59a219882c2de616b49"
+    },
+    {
+      "sha": "0807b7c917f816a5ff837be3d79d81d5d6b6ff37",
+      "message": "fix: remove dead SARA adapter branch",
+      "html_url": "https://github.com/divibisoul/aeternum-core-29/commit/0807b7c917f816a5ff837be3d79d81d5d6b6ff37"
+    }
+  ],
+  "currentCommitChecks": [],
+  "prohibitedSignals": {
+    "windowPrompt": false,
+    "windowAlert": false,
+    "windowConfirm": false,
+    "generateResponseSearch": false,
+    "sleepCureFound": false,
+    "mathRandomHealthSimulationFoundInCurrentMain": true,
+    "mathRandomHealthSimulationPreexistingAtBaseline": true
+  },
+  "criticalFindings": {
+    "eventBus": "INTACT; current adds Clareira event types only.",
+    "moduleRegistry": "INTACT; inspected current file is byte-identical to baseline.",
+    "wormhole": "ADDITIVE; current registry does not replace ModuleRegistry.",
+    "clareiraNodeCount": "9 = NC-001 + NP-001..003 + NS-001..005.",
+    "app": "NOT REWRITTEN; baseline→main compare reports +1/-0.",
+    "precisionSelfLoopSoulMeshRouterSoulSuperCompute": "No baseline→main file delta in compare.",
+    "deletedOrRenamedBaselineFiles": "NONE in baseline→main compare.",
+    "neuralManagementCore": "Exists only on open PR #48 branch; not in main and not a baseline-restoration item."
+  },
+  "measurementLimits": {
+    "tags": "NOT MEASURED — connector exposes no tag enumeration operation.",
+    "recursiveTree": "NOT MEASURED — connector exposes no recursive repository tree/list operation.",
+    "allBranchesCommitByCommitDiff": "NOT MEASURED — branch names are fully enumerated, but exhaustive commit-object reconstruction per branch is not exposed.",
+    "lineByLineAllFiles": "NOT MEASURED — compare gives per-file stats; exact patches were extracted only for key high-risk changes."
+  }
+}
