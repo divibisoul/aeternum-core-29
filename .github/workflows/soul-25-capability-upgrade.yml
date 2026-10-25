@@ -60,3 +60,5 @@ jobs:
           PY
       - name: Test N01 manifest-backed upstream capability fabric
         run: bun run upstream:fabric:check
+      - name: Verify executable Mesh discovery over real local HTTP
+        run: node scripts/soul-mesh-local-contract-check.mjs
