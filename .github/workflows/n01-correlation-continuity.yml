@@ -14,6 +14,9 @@ on:
       - 'src/core/mesh/SoulMeshRouter.correlation.test.ts'
       - 'package.json'
       - 'package-lock.json'
+permissions:
+  contents: write
+
 jobs:
   verify-correlation-continuity:
     name: Real HTTP correlation continuity
@@ -25,7 +28,31 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Install from committed lockfile
+      - name: Regenerate npm lockfile from the committed manifest
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install cleanly from the npm-generated lockfile
         run: npm ci --no-audit --no-fund
+      - name: Commit npm-generated lockfile to N01 feature branch
+        if: github.event_name == 'push' && github.repository == 'divibisoul/aeternum-core-29' && github.ref == 'refs/heads/fusion/n01-correlation-continuity-mesh-20261016'
+        env:
+          N01_LOCK_BRANCH: fusion/n01-correlation-continuity-mesh-20261016
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'divibisoul/aeternum-core-29'
+          test "$(git branch --show-current)" = "$N01_LOCK_BRANCH"
+          if ! git diff --quiet -- package.json; then
+            echo 'Unexpected package.json mutation during lockfile-only regeneration.'
+            exit 1
+          fi
+          if git diff --quiet -- package-lock.json; then
+            echo 'NPM_LOCKFILE: already synchronized; no commit needed.'
+            exit 0
+          fi
+          git diff --check -- package-lock.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package-lock.json
+          git commit -m 'fix(N01): regenerate npm lockfile from package manifest' -- package-lock.json
+          git push origin "HEAD:${N01_LOCK_BRANCH}"
       - name: Verify N01 caller correlation continuity
         run: npm run mesh:correlation:check
