@@ -6,6 +6,8 @@ import {
   NeuralCoordinates,
   genesisModule,
 } from '../src/core';
+import { HortaCore } from '../src/core/hortaCore';
+import { AeternumHortaCore } from '../lib/aeternum/HortaCore';
 
 export async function run(): Promise<void> {
   let received: unknown;
@@ -24,6 +26,29 @@ export async function run(): Promise<void> {
   assert.equal(observed, 42);
   assert.equal(hortaCore.get<number>('core.test.observer'), 42);
   unsubscribeObserver();
+
+  const hortaAuthority = new HortaCore();
+  const historicalFacade = new AeternumHortaCore(2000, hortaAuthority);
+  historicalFacade.set('core.test.hortacore.single-authority', { healthy: true });
+  assert.deepEqual(
+    hortaAuthority.get('core.test.hortacore.single-authority'),
+    { healthy: true },
+  );
+
+  const synergy = hortaAuthority.beginSynergisticPulse({
+    source: 'N01',
+    targets: ['N02', 'N03', 'N04'],
+    bytes: 8,
+    correlationId: 'core-spec-horta-synergy',
+    capability: 'mesh.cooperation',
+    role: 'organ-cooperation',
+  });
+  assert.equal(synergy.status, 'accepted');
+  assert.equal(synergy.acceptedPulseIds.length, 3);
+  assert.equal(hortaAuthority.listFunctionalLinks().length, 3);
+  historicalFacade.completeSynergisticPulse(synergy.id, 'completed');
+  assert.equal(hortaAuthority.getSynergisticFlow(synergy.id)?.status, 'completed');
+  assert.equal(hortaAuthority.vascularHealth().completedPulses, 3);
 
   const testModuleId = 'core.spec.module';
   wormhole.register(testModuleId, { test: true }, {
