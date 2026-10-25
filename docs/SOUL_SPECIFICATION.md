@@ -8,7 +8,7 @@ This document is the current engineering source of truth for the Soul project. I
 
 ## Mission
 
-Soul is an adaptive cognitive layer for Android designed to translate natural human intent into safe, contextual, reversible computer actions while preserving user autonomy.
+Soul is a platform-agnostic adaptive cognitive layer designed to translate natural human intent into safe, contextual, reversible computer actions while preserving user autonomy. Android is one native device adapter; the web application is a first-class surface, and future app platforms must consume the same platform-neutral contracts.
 
 ## Core principles
 
