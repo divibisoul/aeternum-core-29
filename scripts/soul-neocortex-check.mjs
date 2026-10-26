@@ -4,11 +4,19 @@ import { createServer as createViteServer } from 'vite';
 
 const topology = JSON.parse(await readFile(new URL('../config/soul-neocortex-topology.json', import.meta.url), 'utf8'));
 const runtimeSource = await readFile(new URL('../src/core/mesh/SoulMeshRuntime.ts', import.meta.url), 'utf8');
+const peerClientSource = await readFile(new URL('../src/core/soul-mesh/peerClient.ts', import.meta.url), 'utf8');
 
 if (topology.branches.length !== 7) throw new Error('NEOCORTEX_REQUIRES_SEVEN_NUCLEI');
 if (topology.executiveFunctions.length < 8) throw new Error('NEOCORTEX_EXECUTIVE_FUNCTIONS_INCOMPLETE');
 if (topology.individualNucleiPreserved !== true) throw new Error('NUCLEUS_INDEPENDENCE_MUST_BE_PRESERVED');
 if (topology.hardwareGpu !== false) throw new Error('TOPOLOGY_MUST_NOT_CLAIM_HARDWARE_GPU');
+if (peerClientSource.includes('Math.random')) {
+  throw new Error('SOUL_MESH_IDENTIFIERS_AND_RETRY_JITTER_MUST_NOT_USE_MATH_RANDOM');
+}
+if (!peerClientSource.includes('getRandomValues')) {
+  throw new Error('SOUL_MESH_SECURE_RANDOM_FALLBACK_MISSING');
+}
+
 if (!runtimeSource.includes('agents.register(createN01PrefrontalOptimizerAgent())')) {
   throw new Error('N01_PREFRONTAL_AGENT_NOT_REGISTERED_IN_NATIVE_REGISTRY');
 }

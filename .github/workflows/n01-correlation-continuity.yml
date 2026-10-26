@@ -15,6 +15,16 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'scripts/soul-local-distilbert-benchmark.py'
+      - 'src/core/mesh/SoulMeshRuntime.ts'
+      - 'src/core/soul-mesh/peerClient.ts'
+      - 'src/soul-fusion/N01PrefrontalAgent.ts'
+      - 'src/soul-fusion/NeoCortexPrefrontal.ts'
+      - '__tests__/core.spec.ts'
+      - 'scripts/soul-neocortex-check.mjs'
+concurrency:
+  group: n01-correlation-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
