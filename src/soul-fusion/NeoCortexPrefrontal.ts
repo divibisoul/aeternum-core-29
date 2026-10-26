@@ -74,10 +74,12 @@ export class NeoCortexPrefrontal {
     const goal = this.goals.get(goalId);
     if (!goal) throw new Error(`GOAL_NOT_FOUND:${goalId}`);
     const selectedCapability = capability ?? goal.requiredCapabilities?.[0];
-    const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, timestamp: Date.now() };
-    const routes = this.graph.propagate(signal, selectedCapability);
     const candidates = selectedCapability ? this.cognitiveFabric.resolveCapability(selectedCapability) : [];
     const candidate = candidates[0];
+    // Permit local execution only when N01 owns the selected capability; remote
+    // nuclei remain candidates only after an agent descriptor is registered.
+    const signal: NeuralSignal = { id: `goal:${goal.id}`, source: 'N01', target: candidate?.nucleus === 'N01' ? 'N01' : undefined, kind: 'GOAL', activation: goal.priority, features: goal.requiredCapabilities ?? [], payload: goal.context, timestamp: Date.now() };
+    const routes = this.graph.propagate(signal, selectedCapability);
     const best = candidate ? routes.find((route) => route.target === candidate.nucleus) ?? routes[0] : routes[0];
     const evidence = selectedCapability && best ? this.cognitiveFabric.consensus(`capability:${best.target}`) : { confidence: 0, sources: 0, conflict: false };
     const meta = this.cognitiveFabric.metacognition(best?.weight ?? 0, evidence.confidence, evidence.conflict);

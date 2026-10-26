@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { N01AgentRegistry } from '../src/core/mesh/N01AgentRegistry';
+import { createSoulMeshMessage } from '../src/core/mesh/SoulMeshProtocol';
+import { createN01PrefrontalOptimizerAgent, N01_PREFRONTAL_OPTIMIZE_CAPABILITY } from '../src/soul-fusion/N01PrefrontalAgent';
 import {
   nervoVago,
   hortaCore,
@@ -52,6 +55,44 @@ export async function run(): Promise<void> {
   assert.equal(genesisResponse?.version, '3.1.0');
   assert.equal(genesisResponse?.hash, genesisModule && hortaCore.get('genesis.record')?.hash);
   unsubscribeGenesis();
+
+  const prefrontalRegistry = new N01AgentRegistry();
+  prefrontalRegistry.register(createN01PrefrontalOptimizerAgent());
+  const pfcRequest = createSoulMeshMessage({
+    source: 'N02',
+    target: 'N01',
+    kind: 'request',
+    capability: N01_PREFRONTAL_OPTIMIZE_CAPABILITY,
+    payload: {
+      goalId: 'core.spec.prefrontal',
+      description: 'Improve the fragile Mesh trace/correlation boundary',
+      weakPoint: 'mesh trace correlation retry',
+      priority: 0.9,
+      context: { source: 'core.spec', nonDestructive: true },
+    },
+    correlationId: 'corr-core-spec-prefrontal',
+    meta: { traceId: 'trace-core-spec-prefrontal' },
+  });
+  const pfcResponse = await prefrontalRegistry.execute(pfcRequest) as {
+    status: string;
+    agentId: string;
+    correlationId: string;
+    traceId: string;
+    decision: { inhibited: boolean; selectedNucleus?: string };
+    optimization: { actions?: Array<{ id: string }> };
+    execution: { backend: string; nucleus: string; latencyMs: number };
+  };
+  assert.equal(pfcResponse.status, 'completed');
+  assert.equal(pfcResponse.agentId, 'N01.neocortex-prefrontal-optimizer');
+  assert.equal(pfcResponse.correlationId, 'corr-core-spec-prefrontal');
+  assert.equal(pfcResponse.traceId, 'trace-core-spec-prefrontal');
+  assert.equal(pfcResponse.decision.inhibited, false);
+  assert.equal(pfcResponse.decision.selectedNucleus, 'N01');
+  assert.equal(pfcResponse.execution.backend, 'IN_PROCESS');
+  assert.equal(pfcResponse.execution.nucleus, 'N01');
+  assert.ok(Number.isFinite(pfcResponse.execution.latencyMs));
+  assert.ok((pfcResponse.optimization.actions?.length ?? 0) >= 3);
+  assert.ok(pfcResponse.optimization.actions?.some(action => action.id === 'preserve-correlation'));
 
   console.log('CORE_SPEC_OK');
 }

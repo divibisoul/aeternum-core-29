@@ -13,6 +13,7 @@ import { HortaCoreContinuityBridge } from '../HortaCoreContinuityBridge';
 import { HortaCoreMeshBridge } from './HortaCoreMeshBridge';
 import { storeRgoStageInHortaCore, type RgoStagePayload } from '../rgo/RgoHortaCore';
 import { createSupabaseVectorMemory } from '../../soul-fusion/SupabaseVectorMemory';
+import { createN01PrefrontalOptimizerAgent, N01_PREFRONTAL_OPTIMIZE_CAPABILITY, N01_PREFRONTAL_OPTIMIZER_AGENT_ID } from '../../soul-fusion/N01PrefrontalAgent';
 import { recoveredAeternumCapabilityBridge } from '../../../lib/aeternum/RecoveredAeternumCapabilityBridge';
 import { runLettaCode, type LettaRequest } from './LettaCodeAdapter';
 
@@ -28,7 +29,7 @@ export function startSoulMeshRuntime(): () => void {
   agents.register({
     id: 'N01-mesh-agent',
     name: 'N01 Mesh Agent',
-    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0'],
+    capabilities: ['mesh.handshake', 'mesh.health', 'mesh.capabilities', 'mesh.describe', 'supercompute.execute', 'rgo.hortacore.store', 'memory.gemini.embedding', 'memory.semantic.vector.recall', 'memory.semantic.vector.remember', 'memory.identity.letta-code@1.0.0', 'aeternum.architecture.guide', 'aeternum.blueprint.create', 'aeternum.neuralforge.create', 'external.capability.execute', 'external.capability.execute@1.0.0', N01_PREFRONTAL_OPTIMIZE_CAPABILITY],
     execute: async (message: SoulMeshMessage) => {
       if (message.capability === 'mesh.health') return { nucleus: 'N01', healthy: true, timestamp: Date.now() };
 
@@ -135,6 +136,9 @@ export function startSoulMeshRuntime(): () => void {
     },
   });
 
+  // Register the native executive specialist in the existing capability registry.
+  agents.register(createN01PrefrontalOptimizerAgent());
+
   // Commission the existing native N01 agent through the additive fusion
   // infrastructure. No capability implementation is copied or replaced.
   const processor = new N01AgentProcessor(agents, 'N01-mesh-agent');
@@ -144,6 +148,10 @@ export function startSoulMeshRuntime(): () => void {
   continuityBridge.connectHealthRegistry(healthRegistry);
   const processorRuntime = new ProcessorRuntime(processor, { healthRegistry, heartbeatIntervalMs: 10_000 });
   const runtimeReady = processorRuntime.start();
+
+  const prefrontalProcessor = new N01AgentProcessor(agents, N01_PREFRONTAL_OPTIMIZER_AGENT_ID);
+  const prefrontalRuntime = new ProcessorRuntime(prefrontalProcessor, { healthRegistry, heartbeatIntervalMs: 10_000 });
+  const prefrontalRuntimeReady = prefrontalRuntime.start();
 
   const meshAgentHandler = async (message: SoulMeshMessage) => {
     await runtimeReady;
@@ -161,6 +169,23 @@ export function startSoulMeshRuntime(): () => void {
     });
     return processorRuntime.execute(envelope);
   };
+  const prefrontalAgentHandler = async (message: SoulMeshMessage) => {
+    await prefrontalRuntimeReady;
+    if (message.capability !== N01_PREFRONTAL_OPTIMIZE_CAPABILITY) throw new Error('N01_PREFRONTAL_CAPABILITY_REQUIRED');
+    const envelope = createFusionEnvelope({
+      source: message.source,
+      target: 'N01',
+      capability: message.capability,
+      payload: message.payload,
+      kind: 'request',
+      correlationId: message.correlationId,
+      causationId: message.id,
+      traceId: message.meta?.traceId ?? message.correlationId,
+      now: message.timestamp,
+    });
+    return prefrontalRuntime.execute(envelope);
+  };
+
   const registrations = [
     router.onRequest('mesh.handshake', meshAgentHandler),
     router.onRequest('mesh.health', meshAgentHandler),
@@ -177,6 +202,7 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('aeternum.neuralforge.create', meshAgentHandler),
     router.onRequest('external.capability.execute', meshAgentHandler),
     router.onRequest('external.capability.execute@1.0.0', meshAgentHandler),
+    router.onRequest(N01_PREFRONTAL_OPTIMIZE_CAPABILITY, prefrontalAgentHandler),
   ];
 
   const unsubscribe = EventBus.on('soul:mesh:message', async (message) => {
@@ -196,5 +222,6 @@ export function startSoulMeshRuntime(): () => void {
     router.close();
     void transport.close();
     void runtimeReady.then(() => processorRuntime.stop());
+    void prefrontalRuntimeReady.then(() => prefrontalRuntime.stop());
   };
 }

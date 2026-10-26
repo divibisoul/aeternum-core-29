@@ -1,0 +1,111 @@
+name: N01 Correlation Continuity
+on:
+  push:
+    branches:
+      - fusion/n01-correlation-continuity-mesh-20261016
+  pull_request:
+    paths:
+      - 'src/core/mesh/SoulMeshRouter.ts'
+      - 'src/core/mesh/N01N02HybridLink.ts'
+      - 'src/core/mesh/SoulMeshHttpTransport.ts'
+      - 'lib/aeternum/RecoveredAeternumExternalCapabilityBridge.ts'
+      - 'lib/aeternum/RecoveredAeternumExternalCapabilityBridge.test.ts'
+      - 'scripts/soul-mesh-correlation-continuity-check.mjs'
+      - 'src/core/mesh/SoulMeshRouter.correlation.test.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/soul-local-distilbert-benchmark.py'
+      - 'src/core/mesh/SoulMeshRuntime.ts'
+      - 'src/core/soul-mesh/peerClient.ts'
+      - 'src/soul-fusion/N01PrefrontalAgent.ts'
+      - 'src/soul-fusion/NeoCortexPrefrontal.ts'
+      - '__tests__/core.spec.ts'
+      - 'scripts/soul-neocortex-check.mjs'
+concurrency:
+  group: n01-correlation-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  verify-correlation-continuity:
+    name: Real HTTP correlation continuity
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Regenerate npm lockfile from the committed manifest
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Assert the committed manifest and generated lock root agree
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
+          assert.equal(lock.lockfileVersion, 3, 'N01 requires npm lockfile v3');
+          const root = lock.packages?.[''];
+          assert.ok(root, 'npm lockfile root package entry is missing');
+          for (const section of ['dependencies', 'devDependencies', 'optionalDependencies']) {
+            assert.deepStrictEqual(root[section] ?? {}, manifest[section] ?? {}, `package-lock root ${section} must exactly match package.json`);
+            for (const name of Object.keys(manifest[section] ?? {})) {
+              assert.ok(lock.packages[`node_modules/${name}`], `direct dependency is absent from package-lock: ${name}`);
+            }
+          }
+          console.log('N01 manifest/lock root contract: PASS');
+          NODE
+      - name: Install cleanly from the npm-generated lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Commit npm-generated lockfile to N01 feature branch
+        if: github.event_name == 'push' && github.repository == 'divibisoul/aeternum-core-29' && github.ref == 'refs/heads/fusion/n01-correlation-continuity-mesh-20261016'
+        env:
+          N01_LOCK_BRANCH: fusion/n01-correlation-continuity-mesh-20261016
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'divibisoul/aeternum-core-29'
+          test "$(git branch --show-current)" = "$N01_LOCK_BRANCH"
+          if ! git diff --quiet -- package.json; then
+            echo 'Unexpected package.json mutation during lockfile-only regeneration.'
+            exit 1
+          fi
+          if git diff --quiet -- package-lock.json; then
+            echo 'NPM_LOCKFILE: already synchronized; no commit needed.'
+            exit 0
+          fi
+          git diff --check -- package-lock.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package-lock.json
+          git commit -m 'fix(N01): regenerate npm lockfile from package manifest' -- package-lock.json
+          git push origin "HEAD:${N01_LOCK_BRANCH}"
+      - name: Verify N01 caller correlation continuity
+        run: npm run mesh:correlation:check
+      - name: Verify prefrontal runtime topology and fail-closed routing
+        run: npm run neocortex:check
+
+  local-transformers-cpu:
+    name: DistilBERT CPU inference + SHA + latency
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout pinned SOUL source
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install isolated CPU model runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0
+          python -m pip install transformers==4.57.1 huggingface_hub safetensors
+      - name: Run real DistilBERT CPU benchmark (10 samples + torch.compile probe)
+        env:
+          HF_HUB_DISABLE_TELEMETRY: '1'
+          TOKENIZERS_PARALLELISM: 'false'
+        run: python scripts/soul-local-distilbert-benchmark.py

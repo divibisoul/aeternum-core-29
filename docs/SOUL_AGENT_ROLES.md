@@ -8,6 +8,7 @@ Este catálogo não cria um segundo registro de agentes. Ele documenta apenas re
 |---|---|---|---|
 | N01.cognitive-fabric | CATALOG_ONLY | Registrar agentes, resolver capability por disponibilidade/confiabilidade/latência, manter memória, evidência, observações, políticas aprendidas e homeostase. | `src/soul-fusion/SoulCognitiveFabric.ts` |
 | N01.neocortex-prefrontal | CATALOG_ONLY | Expor a fronteira prefrontal local para registrar agentes, fatos, evidências e avaliação de consenso. | `src/soul-fusion/NeoCortexPrefrontal.ts` |
+| N01.neocortex-prefrontal-optimizer | OPERATIONAL_LOCAL | Registra metas e memória, decide capability, executa plano tipado pelo runtime N01 e emite saída correlacionada via Mesh; backend `IN_PROCESS`, sem alegar GPU física ou inferência generativa. | `src/soul-fusion/N01PrefrontalAgent.ts`, `src/core/mesh/SoulMeshRuntime.ts`, `__tests__/core.spec.ts` |
 | N01.gateway-mesh | CATALOG_ONLY | Manter o gateway Mesh canônico e o contexto de runtime/dispositivo do N01. | `scripts/soul-mesh-server.mjs`, `src/core/EventBus.ts`, `src/core/hortaCore.ts` |
 
 **Regra:** estes nomes são catálogo estrutural até existir registro/executor explícito no runtime. Não declarar ONLINE/EXECUTABLE por este documento.
