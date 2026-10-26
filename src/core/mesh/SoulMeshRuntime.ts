@@ -15,6 +15,9 @@ import { storeRgoStageInHortaCore, type RgoStagePayload } from '../rgo/RgoHortaC
 import { createSupabaseVectorMemory } from '../../soul-fusion/SupabaseVectorMemory';
 import { recoveredAeternumCapabilityBridge } from '../../../lib/aeternum/RecoveredAeternumCapabilityBridge';
 import { runLettaCode, type LettaRequest } from './LettaCodeAdapter';
+import { NeoCortexPrefrontal } from '../../soul-fusion/NeoCortexPrefrontal';
+import { SoulNeuralGraph } from '../../soul-fusion/SoulNeuralGraph';
+import { SoulSuperGPU } from '../../soul-fusion/SoulSuperGPU';
 import { canonicalOwnerForExternalProvider, describeN01ExternalCapabilityFabric, resolveN01ExternalProvider } from '../fusion/N01ExternalCapabilityFabric';
 
 /** Boots Aeternum as a live Soul Mesh N01 nucleus. */
@@ -25,6 +28,65 @@ export function startSoulMeshRuntime(): () => void {
   router.setTrafficObserver(hortaMeshBridge);
   const agents = new N01AgentRegistry();
   const vectorMemory = createSupabaseVectorMemory();
+
+  // A real specialist agent for the prefrontal executive. Remote nuclei remain
+  // unavailable until an actual health/capability handshake confirms them.
+  const prefrontalGraph = new SoulNeuralGraph();
+  prefrontalGraph.registerNode({
+    nucleus: 'N01',
+    capabilities: ['cortex.prefrontal.optimize', 'cortex.prefrontal.status'],
+    salience: 1,
+    load: 0,
+    available: true,
+  });
+  for (const nucleus of ['N02', 'N03', 'N04', 'N05', 'N06', 'N07'] as const) {
+    prefrontalGraph.registerNode({ nucleus, capabilities: [], salience: 0, load: 1, available: false });
+  }
+  const prefrontal = new NeoCortexPrefrontal(prefrontalGraph, new SoulSuperGPU());
+  prefrontal.registerAgent({
+    id: 'N01-prefrontal-specialist',
+    nucleus: 'N01',
+    capabilities: ['cortex.prefrontal.optimize', 'cortex.prefrontal.status'],
+    tools: ['soul-neural-graph', 'soul-supergpu', 'soul-cognitive-fabric', 'mesh-trace'],
+    reliability: 1,
+    latencyMs: 0,
+    available: true,
+    version: '1.0.0',
+  });
+  agents.register({
+    id: 'N01-prefrontal-specialist',
+    name: 'N01 NeoCortex Prefrontal Specialist',
+    capabilities: ['cortex.prefrontal.optimize', 'cortex.prefrontal.status'],
+    execute: async (message: SoulMeshMessage) => {
+      const traceId = message.meta?.traceId ?? message.correlationId;
+      if (message.capability === 'cortex.prefrontal.status') {
+        return { nucleus: 'N01', agent: 'N01-prefrontal-specialist', traceId, cortex: prefrontal.describe() };
+      }
+      if (message.capability !== 'cortex.prefrontal.optimize') throw new Error('PREFRONTAL_CAPABILITY_UNSUPPORTED');
+      const input = message.payload;
+      if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('PREFRONTAL_GOAL_REQUIRED');
+      const goal = input as { id?: unknown; description?: unknown; priority?: unknown; requiredCapabilities?: unknown; context?: unknown };
+      if (typeof goal.id !== 'string' || typeof goal.description !== 'string') throw new Error('PREFRONTAL_GOAL_ID_AND_DESCRIPTION_REQUIRED');
+      const requiredCapabilities = Array.isArray(goal.requiredCapabilities)
+        ? goal.requiredCapabilities.filter((value): value is string => typeof value === 'string')
+        : ['cortex.prefrontal.optimize'];
+      prefrontal.addGoal({
+        id: goal.id,
+        description: goal.description,
+        priority: typeof goal.priority === 'number' ? goal.priority : 0.5,
+        requiredCapabilities,
+        context: goal.context,
+      });
+      return {
+        nucleus: 'N01',
+        agent: 'N01-prefrontal-specialist',
+        traceId,
+        correlationId: message.correlationId,
+        decision: prefrontal.decide(goal.id, 'cortex.prefrontal.optimize'),
+        cortex: prefrontal.describe(),
+      };
+    },
+  });
 
   agents.register({
     id: 'N01-mesh-agent',
@@ -205,6 +267,8 @@ export function startSoulMeshRuntime(): () => void {
     router.onRequest('aeternum.neuralforge.create', meshAgentHandler),
     router.onRequest('external.capability.execute', meshAgentHandler),
     router.onRequest('external.capability.execute@1.0.0', meshAgentHandler),
+    router.onRequest('cortex.prefrontal.optimize', meshAgentHandler),
+    router.onRequest('cortex.prefrontal.status', meshAgentHandler),
     router.onRequest('external.capability.resolve@1.0.0', meshAgentHandler),
     router.onRequest('external.capability.fabric.describe@1.0.0', meshAgentHandler),
   ];
